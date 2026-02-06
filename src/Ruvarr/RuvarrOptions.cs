@@ -1,8 +1,8 @@
-﻿using Ruvarr.Internals.FFmpeg;
-using Ruvarr.Internals.Ruv;
-using Ruvarr.Internals.Tvdb;
+﻿using Ruvarr.FFmpeg;
+using Ruvarr.Ruv;
+using Ruvarr.Tvdb;
 
-namespace Ruvarr.Internals;
+namespace Ruvarr;
 
 internal sealed class RuvarrOptions
 {

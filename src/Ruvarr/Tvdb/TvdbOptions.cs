@@ -1,4 +1,4 @@
-﻿namespace Ruvarr.Internals.Tvdb;
+﻿namespace Ruvarr.Tvdb;
 
 internal sealed class TvdbOptions
 {

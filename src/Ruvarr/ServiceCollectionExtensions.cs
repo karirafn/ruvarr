@@ -2,8 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-using Ruvarr.Internals;
-using Ruvarr.Internals.Ruv;
+using Ruvarr.Ruv;
 
 namespace Ruvarr;
 

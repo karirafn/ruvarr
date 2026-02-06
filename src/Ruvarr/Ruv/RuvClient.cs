@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using Ruvarr.Internals.Builders;
 using Ruvarr.Models;
 
-namespace Ruvarr.Internals.Ruv;
+namespace Ruvarr.Ruv;
 
 internal sealed class RuvClient(HttpClient client, IOptions<RuvarrOptions> options) : IRuvClient
 {
