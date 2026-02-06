@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Ruvarr.Models;
+namespace Ruvarr.Ruv.Models;
 
 public sealed record class RuvCategory(
     [property: JsonPropertyName("title")] string Title,

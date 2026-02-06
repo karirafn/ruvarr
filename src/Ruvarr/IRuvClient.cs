@@ -1,5 +1,4 @@
-﻿
-using Ruvarr.Models;
+﻿using Ruvarr.Ruv.Models;
 
 namespace Ruvarr;
 

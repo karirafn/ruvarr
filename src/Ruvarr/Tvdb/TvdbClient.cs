@@ -1,9 +1,9 @@
 ﻿namespace Ruvarr.Tvdb;
 
-internal sealed class TvdbClient
+internal sealed class TvdbClient(HttpClient client)
 {
     public static async Task LoginAsync()
     {
-        object response =
+        // Method intentionally left empty.
     }
 }

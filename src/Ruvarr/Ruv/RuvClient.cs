@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
 
 using Ruvarr.Internals.Builders;
-using Ruvarr.Models;
+using Ruvarr.Ruv.Models;
 
 namespace Ruvarr.Ruv;
 
