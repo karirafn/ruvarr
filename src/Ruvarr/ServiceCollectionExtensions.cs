@@ -2,8 +2,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-using Ruvarr.Internals.Clients;
-using Ruvarr.Internals.Options;
+using Ruvarr.Internals;
+using Ruvarr.Internals.Ruv;
 
 namespace Ruvarr;
 

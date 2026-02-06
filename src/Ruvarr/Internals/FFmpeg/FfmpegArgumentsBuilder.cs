@@ -1,4 +1,4 @@
-﻿namespace Ruvarr.Internals.Builders;
+﻿namespace Ruvarr.Internals.FFmpeg;
 
 internal sealed class FfmpegArgumentsBuilder
 {

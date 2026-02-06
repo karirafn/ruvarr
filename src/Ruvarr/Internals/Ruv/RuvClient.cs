@@ -4,10 +4,9 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
 
 using Ruvarr.Internals.Builders;
-using Ruvarr.Internals.Options;
 using Ruvarr.Models;
 
-namespace Ruvarr.Internals.Clients;
+namespace Ruvarr.Internals.Ruv;
 
 internal sealed class RuvClient(HttpClient client, IOptions<RuvarrOptions> options) : IRuvClient
 {

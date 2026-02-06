@@ -1,4 +1,4 @@
-﻿namespace Ruvarr.Internals.Options;
+﻿namespace Ruvarr.Internals.FFmpeg;
 
 internal sealed class FfmpegOptions
 {

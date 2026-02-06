@@ -1,4 +1,4 @@
-﻿namespace Ruvarr.Internals.Options;
+﻿namespace Ruvarr.Internals.Ruv;
 
 internal sealed class RuvOptions
 {
