@@ -6,6 +6,7 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="LICENSE" />
+    <File Path="nuget.config" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Ruvarr.Console/Ruvarr.Console.csproj" />
