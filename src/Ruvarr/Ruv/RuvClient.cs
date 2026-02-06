@@ -3,12 +3,12 @@ using System.Net.Http.Json;
 
 using Microsoft.Extensions.Options;
 
-using Ruvarr.Internals.Builders;
+using Ruvarr.FFmpeg;
 using Ruvarr.Ruv.Models;
 
 namespace Ruvarr.Ruv;
 
-internal sealed class RuvClient(HttpClient client, IOptions<RuvarrOptions> options) : IRuvClient
+internal sealed class RuvClient(HttpClient client, IOptions<FfmpegOptions> options) : IRuvClient
 {
     public async Task<RuvFeaturedTv?> GetFeaturedTv(CancellationToken cancellationToken = default)
     {
@@ -32,7 +32,7 @@ internal sealed class RuvClient(HttpClient client, IOptions<RuvarrOptions> optio
         ArgumentNullException.ThrowIfNull(episode);
 
         string filename = $"{program.Title} - {episode.Title}.mp4";
-        string outputFile = Path.Join(options.Value.Ffmpeg.OutputFolder, filename);
+        string outputFile = Path.Join(options.Value.OutputFolder, filename);
         string arguments = new FfmpegArgumentsBuilder()
             .WithInput(episode.File)
             .WithLogLevel("verbose")
@@ -47,7 +47,7 @@ internal sealed class RuvClient(HttpClient client, IOptions<RuvarrOptions> optio
 
         ProcessStartInfo psi = new()
         {
-            FileName = options.Value.Ffmpeg.ExecutablePath,
+            FileName = options.Value.ExecutablePath,
             Arguments = arguments,
             RedirectStandardOutput = true,
             RedirectStandardError = true,

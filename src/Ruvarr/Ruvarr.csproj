@@ -8,4 +8,8 @@
     <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Tvdb\Models\" />
+  </ItemGroup>
+
 </Project>
