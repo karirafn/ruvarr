@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddRuvarr(this IServiceCollection services)
     {
+        services.AddMemoryCache();
         services.AddFfmpeg();
         services.AddTvdb();
         services.AddRuv();
