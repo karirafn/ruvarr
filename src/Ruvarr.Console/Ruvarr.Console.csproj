@@ -4,4 +4,8 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Ruvarr\Ruvarr.csproj" />
+  </ItemGroup>
+
 </Project>
