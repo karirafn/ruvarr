@@ -1,2 +1,5 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ruvarr.Console/Ruvarr.Console.csproj" />
+  </Folder>
 </Solution>
