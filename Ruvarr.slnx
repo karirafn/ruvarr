@@ -3,4 +3,7 @@
     <Project Path="src/Ruvarr.Console/Ruvarr.Console.csproj" />
     <Project Path="src/Ruvarr/Ruvarr.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ruvarr.UnitTests/Ruvarr.UnitTests.csproj" />
+  </Folder>
 </Solution>
