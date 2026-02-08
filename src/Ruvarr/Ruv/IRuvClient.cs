@@ -1,6 +1,6 @@
 ﻿using Ruvarr.Ruv.Models;
 
-namespace Ruvarr;
+namespace Ruvarr.Ruv;
 
 public interface IRuvClient
 {
