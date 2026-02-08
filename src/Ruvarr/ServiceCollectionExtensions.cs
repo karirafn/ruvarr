@@ -15,6 +15,18 @@ public static class ServiceCollectionExtensions
         services.AddTvdb();
         services.AddRuv();
 
+        services.AddDbContext<RuvarrDbContext>(options =>
+        {
+            options.UseSqlite(connectionString);
+            options.UseSnakeCaseNamingConvention();
+        });
+
+        using RuvarrDbContext dbContext = services.BuildServiceProvider()
+            .GetRequiredService<RuvarrDbContext>();
+
+        dbContext.Database.EnsureCreated();
+        dbContext.Database.Migrate();
+
         return services;
     }
 }
