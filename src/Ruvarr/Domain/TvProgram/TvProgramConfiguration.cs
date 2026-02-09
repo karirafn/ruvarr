@@ -13,6 +13,12 @@ internal sealed class TvProgramConfiguration : IEntityTypeConfiguration<TvProgra
         builder.Property(x => x.RuvId)
             .IsRequired();
 
+        builder.Property(x => x.RuvChannel)
+            .HasMaxLength(64)
+            .IsUnicode(true)
+            .IsFixedLength(false)
+            .IsRequired();
+
         builder.Property(x => x.RuvName)
             .HasMaxLength(256)
             .IsUnicode(true)
