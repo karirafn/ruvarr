@@ -18,6 +18,14 @@ internal sealed class RuvClient(HttpClient client, IOptions<FfmpegOptions> optio
         return response;
     }
 
+    public async Task<RuvFeaturedTv?> GetKidsTvAsync(CancellationToken cancellationToken = default)
+    {
+        RuvFeaturedTv? response = await client.GetFromJsonAsync<RuvFeaturedTv>("/api/programs/featured/krakkaruv", cancellationToken)
+            .ConfigureAwait(false);
+
+        return response;
+    }
+
     public async Task<RuvTvProgram?> GetProgramAsync(int seriesId, CancellationToken cancellationToken = default)
     {
         RuvTvProgram? response = await client.GetFromJsonAsync<RuvTvProgram>($"/api/programs/program/{seriesId}/all", cancellationToken)
