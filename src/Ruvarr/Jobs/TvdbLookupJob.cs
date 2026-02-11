@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Quartz;
 
 using Ruvarr.Domain.Programs;
+using Ruvarr.Domain.Series;
 using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Models;
 
@@ -46,8 +47,15 @@ internal sealed class TvdbLookupJob(ILogger<TvdbLookupJob> logger, RuvarrDbConte
             return;
         }
 
-        logger.LogInformation("Updating RÚV TV program with TVDB data id: '{Id}', type: '{Type}', name: '{Name}'", match.TvdbId, match.Type, match.Name);
-        program.MatchTvdb(match.TvdbId, match.Type, match.Name);
+        TvdbSeries? entity = await dbContext
+            .Set<TvdbSeries>()
+            .Where(x => x.TvdbId == match.TvdbId)
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false)
+            ?? TvdbSeries.Create(match.TvdbId, match.Type, match.Name);
+
+        logger.LogInformation("Updating RÚV TV program with TVDB data id: '{Id}', type: '{Type}', name: '{Name}'", entity.TvdbId, entity.Type, entity.Name);
+        program.MatchTvdb(entity);
 
         await dbContext.SaveChangesAsync()
             .ConfigureAwait(false);

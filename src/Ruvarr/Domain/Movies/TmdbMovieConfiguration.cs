@@ -12,6 +12,9 @@ internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovi
         builder.Property<int>("id");
         builder.HasKey("id");
 
+        builder.HasIndex(x => x.TmdbId)
+            .IsUnique();
+
         builder.Property(x => x.TmdbId)
             .IsRequired();
 

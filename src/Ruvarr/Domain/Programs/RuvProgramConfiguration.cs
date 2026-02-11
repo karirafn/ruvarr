@@ -10,6 +10,9 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
         builder.Property<int>("id");
         builder.HasKey("id");
 
+        builder.HasIndex(x => x.RuvId)
+            .IsUnique();
+
         builder.Property(x => x.RuvId)
             .IsRequired();
 

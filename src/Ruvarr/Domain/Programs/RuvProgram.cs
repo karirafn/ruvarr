@@ -41,30 +41,20 @@ internal sealed class RuvProgram
         Created = DateTime.UtcNow,
     };
 
-    public void MatchTvdb(string id, string type, string name)
+    public void MatchTvdb(TvdbSeries series)
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(name))
-        {
-            return;
-        }
-
         LookupCount++;
         NextLookup = null;
         Matched = DateTime.UtcNow;
-        Series = TvdbSeries.Create(id, type, name);
+        Series = series;
     }
 
-    public void MatchTmdb(int id, string name)
+    public void MatchTmdb(TmdbMovie movie)
     {
-        if (id < 1 || string.IsNullOrWhiteSpace(name))
-        {
-            return;
-        }
-
         LookupCount++;
         NextLookup = null;
         Matched = DateTime.UtcNow;
-        Movie = TmdbMovie.Create(id, name);
+        Movie = movie;
     }
 
     public void ScheduleLookup()

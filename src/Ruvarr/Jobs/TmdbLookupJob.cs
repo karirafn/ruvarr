@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
+using Ruvarr.Domain.Movies;
 using Ruvarr.Domain.Programs;
 
 using TMDbLib.Client;
@@ -69,8 +70,13 @@ internal sealed class TmdbLookupJob(ILogger<TmdbLookupJob> logger, RuvarrDbConte
         }
 
         SearchMovie match = matches[0];
+        TmdbMovie entity = await dbContext.Set<TmdbMovie>()
+            .Where(x => x.TmdbId == match.Id)
+            .FirstOrDefaultAsync()
+            .ConfigureAwait(false)
+            ?? TmdbMovie.Create(match.Id, match.Title ?? match.OriginalTitle ?? string.Empty);
 
-        program.MatchTmdb(match.Id, match.Title ?? match.OriginalTitle ?? string.Empty);
+        program.MatchTmdb(entity);
 
         await dbContext.SaveChangesAsync()
             .ConfigureAwait(false);

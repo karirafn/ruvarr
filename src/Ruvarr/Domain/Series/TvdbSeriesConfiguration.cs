@@ -10,6 +10,9 @@ internal sealed class TvdbSeriesConfiguration : IEntityTypeConfiguration<TvdbSer
         builder.Property<int>("id");
         builder.HasKey("id");
 
+        builder.HasIndex(x => x.TvdbId)
+            .IsUnique();
+
         builder.Property(x => x.TvdbId)
             .HasMaxLength(16)
             .IsUnicode(false)
