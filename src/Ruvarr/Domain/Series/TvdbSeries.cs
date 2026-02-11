@@ -1,10 +1,10 @@
-﻿using Ruvarr.Domain.RuvProgram;
+﻿using Ruvarr.Domain.Programs;
 
 namespace Ruvarr.Domain.Series;
 
 internal sealed class TvdbSeries
 {
-    private readonly List<RuvProgram>
+    private readonly List<RuvProgram> _programs = [];
 
     private TvdbSeries()
     {
@@ -15,6 +15,8 @@ internal sealed class TvdbSeries
     public required string Type { get; init; }
 
     public required string Name { get; init; }
+
+    public IReadOnlyList<RuvProgram> Programs => [.. _programs];
 
     internal static TvdbSeries Create(string id, string type, string name)
     {

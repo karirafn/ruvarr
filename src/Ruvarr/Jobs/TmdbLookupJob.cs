@@ -20,7 +20,7 @@ internal sealed class TmdbLookupJob(ILogger<TmdbLookupJob> logger, RuvarrDbConte
     {
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => !x.HasMultipleEpisodes)
-            .Where(x => x.TmdbId == null)
+            .Where(x => x.Movie == null)
             .OrderBy(x => x.NextLookup)
             .FirstOrDefaultAsync()
             .ConfigureAwait(false);

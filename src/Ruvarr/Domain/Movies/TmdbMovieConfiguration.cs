@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
+using Ruvarr.Domain.Series;
+
 namespace Ruvarr.Domain.Movies;
 
 internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovie>
@@ -17,5 +19,9 @@ internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovi
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false);
+
+        builder.Metadata
+            .FindNavigation(nameof(TvdbSeries.Programs))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

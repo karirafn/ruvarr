@@ -18,7 +18,7 @@ internal sealed class TvdbLookupJob(ILogger<TvdbLookupJob> logger, RuvarrDbConte
     {
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
-            .Where(x => x.TvdbId == null)
+            .Where(x => x.Series == null)
             .OrderBy(x => x.NextLookup)
             .FirstOrDefaultAsync()
             .ConfigureAwait(false);

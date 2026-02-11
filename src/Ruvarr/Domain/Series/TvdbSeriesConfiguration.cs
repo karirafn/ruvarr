@@ -24,5 +24,9 @@ internal sealed class TvdbSeriesConfiguration : IEntityTypeConfiguration<TvdbSer
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false);
+
+        builder.Metadata
+            .FindNavigation(nameof(TvdbSeries.Programs))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }
