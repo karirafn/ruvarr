@@ -8,7 +8,7 @@ using Ruvarr.Ruv.Models;
 
 namespace Ruvarr.Jobs;
 
-internal sealed class RuvSeriesSyncJob(IRuvClient ruv, RuvarrDbContext dbContext) : IJob
+internal sealed class RuvProgramSyncJob(IRuvClient ruv, RuvarrDbContext dbContext) : IJob
 {
     private static readonly string[] ExcludedChannels = ["Fréttastofa sjónvarps", "Íþróttadeild", "Rás 1", "Rás 2"];
 

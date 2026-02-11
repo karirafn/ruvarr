@@ -1,4 +1,7 @@
-﻿namespace Ruvarr.Domain.RuvProgram;
+﻿using Ruvarr.Domain.Movies;
+using Ruvarr.Domain.Series;
+
+namespace Ruvarr.Domain.RuvProgram;
 
 internal sealed class RuvProgram
 {
@@ -8,11 +11,11 @@ internal sealed class RuvProgram
 
     public required int RuvId { get; init; }
 
-    public required string RuvChannel { get; init; }
+    public required string Channel { get; init; }
 
-    public required string RuvName { get; init; }
+    public required string Name { get; init; }
 
-    public required string? RuvForeignName { get; init; }
+    public required string? ForeignName { get; init; }
 
     public required bool HasMultipleEpisodes { get; init; }
 
@@ -24,22 +27,16 @@ internal sealed class RuvProgram
 
     public int LookupCount { get; private set; }
 
-    public string? TvdbId { get; private set; }
+    public TvdbSeries? Series { get; private set; }
 
-    public string? TvdbType { get; private set; }
-
-    public string? TvdbName { get; private set; }
-
-    public int? TmdbId { get; private set; }
-
-    public string? TmdbName { get; private set; }
+    public TmdbMovie? Movie { get; private set; }
 
     public static RuvProgram Create(int id, string channgel, string name, string? foreignName, bool multipleEpisodes) => new()
     {
         RuvId = id,
-        RuvChannel = channgel,
-        RuvName = name,
-        RuvForeignName = foreignName,
+        Channel = channgel,
+        Name = name,
+        ForeignName = foreignName,
         HasMultipleEpisodes = multipleEpisodes,
         Created = DateTime.UtcNow,
     };
@@ -54,9 +51,7 @@ internal sealed class RuvProgram
         LookupCount++;
         NextLookup = null;
         Matched = DateTime.UtcNow;
-        TvdbId = id;
-        TvdbType = type;
-        TvdbName = name;
+        Series = TvdbSeries.Create(id, type, name);
     }
 
     public void MatchTmdb(int id, string name)
@@ -69,8 +64,7 @@ internal sealed class RuvProgram
         LookupCount++;
         NextLookup = null;
         Matched = DateTime.UtcNow;
-        TmdbId = id;
-        TmdbName = name;
+        Movie = TmdbMovie.Create(id, name);
     }
 
     public void ScheduleLookup()

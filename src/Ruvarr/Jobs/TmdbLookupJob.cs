@@ -30,11 +30,11 @@ internal sealed class TmdbLookupJob(ILogger<TmdbLookupJob> logger, RuvarrDbConte
             return;
         }
 
-        logger.LogInformation("Processing RÚV program '{Name}'", program.RuvName);
+        logger.LogInformation("Processing RÚV program '{Name}'", program.Name);
 
-        string searchText = string.IsNullOrWhiteSpace(program.RuvForeignName)
-            ? program.RuvName
-            : program.RuvForeignName;
+        string searchText = string.IsNullOrWhiteSpace(program.ForeignName)
+            ? program.Name
+            : program.ForeignName;
 
         SearchContainer<SearchMovie>? result = await tmdb.SearchMovieAsync(searchText)
             .ConfigureAwait(false);

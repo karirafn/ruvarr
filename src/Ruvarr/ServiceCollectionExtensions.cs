@@ -26,8 +26,8 @@ public static class ServiceCollectionExtensions
 
         services.AddQuartz(options =>
         {
-            JobKey seriesSync = new(nameof(RuvSeriesSyncJob));
-            options.AddJob<RuvSeriesSyncJob>(x => x.WithIdentity(seriesSync))
+            JobKey seriesSync = new(nameof(RuvProgramSyncJob));
+            options.AddJob<RuvProgramSyncJob>(x => x.WithIdentity(seriesSync))
                 .AddTrigger(trigger => trigger
                     .ForJob(seriesSync)
                     .StartNow()

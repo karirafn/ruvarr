@@ -1,0 +1,21 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Ruvarr.Domain.Movies;
+
+internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovie>
+{
+    public void Configure(EntityTypeBuilder<TmdbMovie> builder)
+    {
+        builder.Property<int>("id");
+        builder.HasKey("id");
+
+        builder.Property(x => x.TmdbId)
+            .IsRequired();
+
+        builder.Property(x => x.TmdbName)
+            .HasMaxLength(256)
+            .IsUnicode(true)
+            .IsFixedLength(false);
+    }
+}

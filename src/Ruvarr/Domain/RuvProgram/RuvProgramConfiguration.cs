@@ -13,39 +13,19 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
         builder.Property(x => x.RuvId)
             .IsRequired();
 
-        builder.Property(x => x.RuvChannel)
+        builder.Property(x => x.Channel)
             .HasMaxLength(64)
             .IsUnicode(true)
             .IsFixedLength(false)
             .IsRequired();
 
-        builder.Property(x => x.RuvName)
+        builder.Property(x => x.Name)
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false)
             .IsRequired();
 
-        builder.Property(x => x.RuvForeignName)
-            .HasMaxLength(256)
-            .IsUnicode(true)
-            .IsFixedLength(false);
-
-        builder.Property(x => x.TmdbName)
-            .HasMaxLength(256)
-            .IsUnicode(true)
-            .IsFixedLength(false);
-
-        builder.Property(x => x.TvdbId)
-            .HasMaxLength(16)
-            .IsUnicode(false)
-            .IsFixedLength(false);
-
-        builder.Property(x => x.TvdbType)
-            .HasMaxLength(16)
-            .IsUnicode(false)
-            .IsFixedLength(false);
-
-        builder.Property(x => x.TvdbName)
+        builder.Property(x => x.ForeignName)
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false);
