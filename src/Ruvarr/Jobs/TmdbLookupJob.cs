@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Domain.RuvProgram;
+using Ruvarr.Domain.Programs;
 
 using TMDbLib.Client;
 using TMDbLib.Objects.General;

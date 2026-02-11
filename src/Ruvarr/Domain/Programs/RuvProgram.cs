@@ -1,7 +1,7 @@
 ﻿using Ruvarr.Domain.Movies;
 using Ruvarr.Domain.Series;
 
-namespace Ruvarr.Domain.RuvProgram;
+namespace Ruvarr.Domain.Programs;
 
 internal sealed class RuvProgram
 {

@@ -1,7 +1,11 @@
-﻿namespace Ruvarr.Domain.Series;
+﻿using Ruvarr.Domain.RuvProgram;
+
+namespace Ruvarr.Domain.Series;
 
 internal sealed class TvdbSeries
 {
+    private readonly List<RuvProgram>
+
     private TvdbSeries()
     {
     }
