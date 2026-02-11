@@ -1,11 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Ruvarr.Domain.TvProgram;
+namespace Ruvarr.Domain.RuvProgram;
 
-internal sealed class TvProgramConfiguration : IEntityTypeConfiguration<TvProgram>
+internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProgram>
 {
-    public void Configure(EntityTypeBuilder<TvProgram> builder)
+    public void Configure(EntityTypeBuilder<RuvProgram> builder)
     {
         builder.Property<int>("id");
         builder.HasKey("id");
@@ -26,6 +26,11 @@ internal sealed class TvProgramConfiguration : IEntityTypeConfiguration<TvProgra
             .IsRequired();
 
         builder.Property(x => x.RuvForeignName)
+            .HasMaxLength(256)
+            .IsUnicode(true)
+            .IsFixedLength(false);
+
+        builder.Property(x => x.TmdbName)
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false);

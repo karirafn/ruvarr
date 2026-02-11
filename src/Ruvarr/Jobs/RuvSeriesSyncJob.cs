@@ -2,7 +2,7 @@
 
 using Quartz;
 
-using Ruvarr.Domain.TvProgram;
+using Ruvarr.Domain.RuvProgram;
 using Ruvarr.Ruv;
 using Ruvarr.Ruv.Models;
 
@@ -36,17 +36,17 @@ internal sealed class RuvSeriesSyncJob(IRuvClient ruv, RuvarrDbContext dbContext
             return;
         }
 
-        List<TvProgram> existingTvPrograms = await dbContext.Set<TvProgram>()
+        List<RuvProgram> existingTvPrograms = await dbContext.Set<RuvProgram>()
             .Where(x => ruvIds.Contains(x.RuvId))
             .ToListAsync()
             .ConfigureAwait(false);
 
         List<int> existingRuvIds = [.. existingTvPrograms.Select(x => x.RuvId)];
-        List<TvProgram> newPrograms = [.. programs
+        List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
-            .Select(x => TvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes))];
+            .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes))];
 
-        dbContext.Set<TvProgram>()
+        dbContext.Set<RuvProgram>()
             .AddRange(newPrograms);
 
         await dbContext.SaveChangesAsync()

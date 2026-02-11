@@ -1,8 +1,8 @@
-﻿namespace Ruvarr.Domain.TvProgram;
+﻿namespace Ruvarr.Domain.RuvProgram;
 
-internal sealed class TvProgram
+internal sealed class RuvProgram
 {
-    private TvProgram()
+    private RuvProgram()
     {
     }
 
@@ -30,7 +30,11 @@ internal sealed class TvProgram
 
     public string? TvdbName { get; private set; }
 
-    public static TvProgram Create(int id, string channgel, string name, string? foreignName, bool multipleEpisodes) => new()
+    public int? TmdbId { get; private set; }
+
+    public string? TmdbName { get; private set; }
+
+    public static RuvProgram Create(int id, string channgel, string name, string? foreignName, bool multipleEpisodes) => new()
     {
         RuvId = id,
         RuvChannel = channgel,
@@ -53,6 +57,20 @@ internal sealed class TvProgram
         TvdbId = id;
         TvdbType = type;
         TvdbName = name;
+    }
+
+    public void MatchTmdb(int id, string name)
+    {
+        if (id < 1 || string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        LookupCount++;
+        NextLookup = null;
+        Matched = DateTime.UtcNow;
+        TmdbId = id;
+        TmdbName = name;
     }
 
     public void ScheduleLookup()

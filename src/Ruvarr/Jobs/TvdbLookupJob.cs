@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Domain.TvProgram;
+using Ruvarr.Domain.RuvProgram;
 using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Models;
 
@@ -16,7 +16,7 @@ internal sealed class TvdbLookupJob(ILogger<TvdbLookupJob> logger, RuvarrDbConte
 
     public async Task Execute(IJobExecutionContext context)
     {
-        TvProgram? program = await dbContext.Set<TvProgram>()
+        RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
             .Where(x => x.TvdbId == null)
             .OrderBy(x => x.NextLookup)
