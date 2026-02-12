@@ -1,0 +1,59 @@
+﻿using System.Diagnostics;
+
+using Microsoft.Extensions.Options;
+
+namespace Ruvarr.FFmpeg;
+
+internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegService
+{
+    public async Task DownloadAsync(Uri uri, string filename, string title)
+    {
+        string output = Path.Join(options.Value.OutputFolder, filename);
+        string arguments = new FfmpegArgumentsBuilder()
+            .WithInput(uri)
+            .WithLogLevel("verbose")
+            .WithCodec("copy")
+            .WithAudioBitStreamFilter("aac_adtstoasc")
+            .WithOutput(output)
+            .OverwriteOutputFiles()
+            .ShowStats()
+            .HideCopyrightBanner()
+            .WithMetadata("title", title)
+            .Build();
+
+        ProcessStartInfo psi = new()
+        {
+            FileName = options.Value.ExecutablePath,
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using Process process = new() { StartInfo = psi };
+
+        process.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data != null)
+            {
+                Console.WriteLine(e.Data);
+            }
+        };
+
+        process.ErrorDataReceived += (_, e) =>
+        {
+            if (e.Data != null)
+            {
+                Console.WriteLine(e.Data);
+            }
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        await process.WaitForExitAsync()
+            .ConfigureAwait(false);
+    }
+}

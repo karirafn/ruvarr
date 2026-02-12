@@ -11,6 +11,8 @@ internal static class ServiceCollectionExtensions
             .Configure<IConfiguration>((options, configuration)
                 => configuration.GetRequiredSection(FfmpegOptions.SectionName).Bind(options));
 
+        services.AddScoped<IFfmpegService, FfmpegService>();
+
         return services;
     }
 }
