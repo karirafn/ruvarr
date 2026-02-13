@@ -2,7 +2,7 @@
 
 namespace Ruvarr.Ruv.Models;
 
-public sealed record class RuvEpisode(
+public sealed record class RuvTvEpisode(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("number")] int Number,
     [property: JsonPropertyName("series_id")] int SeriesId,

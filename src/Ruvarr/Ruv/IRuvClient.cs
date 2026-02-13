@@ -10,5 +10,5 @@ public interface IRuvClient
 
     Task<RuvTvProgram?> GetProgramAsync(int seriesId, CancellationToken cancellationToken = default);
 
-    Task DownloadEpisodeAsync(RuvTvProgram program, RuvEpisode episode);
+    Task DownloadEpisodeAsync(RuvTvProgram program, RuvTvEpisode episode);
 }

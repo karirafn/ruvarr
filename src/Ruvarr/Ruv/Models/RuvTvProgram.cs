@@ -18,7 +18,7 @@ public sealed record class RuvTvProgram(
     [property: JsonPropertyName("categories")] IReadOnlyList<RuvCategory> Categories,
     [property: JsonPropertyName("division")] string Division,
     [property: JsonPropertyName("multiple_episodes")] bool MultipleEpisodes,
-    [property: JsonPropertyName("episodes")] IReadOnlyList<RuvEpisode> Episodes,
+    [property: JsonPropertyName("episodes")] IReadOnlyList<RuvTvEpisode> Episodes,
     [property: JsonPropertyName("reverse_episode_order")] bool ReverseEpisodeOrder,
     [property: JsonPropertyName("web_available_episodes")] int WebAvailableEpisodes,
     [property: JsonPropertyName("vod_avilable_episodes")] int VodAvailableEpisodes,

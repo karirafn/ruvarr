@@ -31,7 +31,7 @@ internal sealed class RuvClient(HttpClient client, IFfmpegService ffmpegService)
         return response;
     }
 
-    public Task DownloadEpisodeAsync(RuvTvProgram program, RuvEpisode episode)
+    public Task DownloadEpisodeAsync(RuvTvProgram program, RuvTvEpisode episode)
     {
         ArgumentNullException.ThrowIfNull(program);
         ArgumentNullException.ThrowIfNull(episode);

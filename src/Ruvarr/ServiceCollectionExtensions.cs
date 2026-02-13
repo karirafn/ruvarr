@@ -34,6 +34,14 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInHours(6)
                     .RepeatForever()));
 
+            JobKey episodeSync = new(nameof(RuvEpisodesSyncJob));
+            options.AddJob<RuvEpisodesSyncJob>(x => x.WithIdentity(episodeSync))
+                .AddTrigger(trigger => trigger
+                    .ForJob(episodeSync)
+                    .StartAt(DateTimeOffset.UtcNow.AddSeconds(30))
+                    .WithSimpleSchedule(x => x.WithIntervalInHours(6)
+                    .RepeatForever()));
+
             JobKey tmdbLookup = new(nameof(TmdbLookupJob));
             options.AddJob<TmdbLookupJob>(x => x.WithIdentity(tmdbLookup))
                 .AddTrigger(trigger => trigger

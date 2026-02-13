@@ -1,10 +1,13 @@
-﻿using Ruvarr.Domain.Movies;
+﻿using Ruvarr.Domain.Episodes;
+using Ruvarr.Domain.Movies;
 using Ruvarr.Domain.Series;
 
 namespace Ruvarr.Domain.Programs;
 
 internal sealed class RuvProgram
 {
+    private readonly List<RuvEpisode> _episodes = [];
+
     private RuvProgram()
     {
     }
@@ -30,6 +33,8 @@ internal sealed class RuvProgram
     public TvdbSeries? Series { get; private set; }
 
     public TmdbMovie? Movie { get; private set; }
+
+    public IReadOnlyList<RuvEpisode> Episodes => [.. _episodes];
 
     public static RuvProgram Create(int id, string channgel, string name, string? foreignName, bool multipleEpisodes) => new()
     {
@@ -70,5 +75,16 @@ internal sealed class RuvProgram
             4 => now.AddDays(1),
             _ => now.AddDays(7)
         };
+    }
+
+    public void TryAddEpisode(string id, Uri uri, string title)
+    {
+        if (_episodes.Any(x => x.RuvId == id))
+        {
+            return;
+        }
+
+        RuvEpisode episode = RuvEpisode.Create(id, uri, title);
+        _episodes.Add(episode);
     }
 }
