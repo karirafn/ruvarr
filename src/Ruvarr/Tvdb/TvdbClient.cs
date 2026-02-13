@@ -47,6 +47,26 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
         return response;
     }
 
+    public async Task<SeriesData?> GetSeriesAsync(int id, CancellationToken cancellationToken = default)
+    {
+        await SetAuthorizationHeader(cancellationToken).ConfigureAwait(false);
+
+        SeriesResponse? response = await client.GetFromJsonAsync<SeriesResponse>($"v4/series/{id}/episodes/default", cancellationToken)
+            .ConfigureAwait(false);
+
+        return response?.Data;
+    }
+
+    public async Task<EpisodeTranslation?> GetEpisodeTranslationAsync(int id, string language = "isl", CancellationToken cancellationToken = default)
+    {
+        await SetAuthorizationHeader(cancellationToken).ConfigureAwait(false);
+
+        EpisodeTranslationResponse? response = await client.GetFromJsonAsync<EpisodeTranslationResponse>($"v4/episodes/{id}/translations/{language}", cancellationToken)
+            .ConfigureAwait(false);
+
+        return response?.Data;
+    }
+
     private async Task SetAuthorizationHeader(CancellationToken cancellationToken)
     {
         if (!memoryCache.TryGetValue(TvdbOptions.AccessTokenCacheKey, out string? accessToken))

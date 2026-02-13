@@ -4,6 +4,15 @@ namespace Ruvarr.Tvdb;
 
 public interface ITvdbClient
 {
+    Task<SeriesData?> GetSeriesAsync(
+        int id,
+        CancellationToken cancellationToken = default);
+
+    Task<EpisodeTranslation?> GetEpisodeTranslationAsync(
+        int id,
+        string language = "isl",
+        CancellationToken cancellationToken = default);
+
     Task<SearchResponse> SearchAsync(
         string? query = null,
         string? type = null,
