@@ -26,34 +26,34 @@ public static class ServiceCollectionExtensions
 
         services.AddQuartz(options =>
         {
-            JobKey seriesSync = new(nameof(RuvProgramSyncJob));
-            options.AddJob<RuvProgramSyncJob>(x => x.WithIdentity(seriesSync))
+            JobKey ruvSeriesSync = new(nameof(RuvProgramSyncJob));
+            options.AddJob<RuvProgramSyncJob>(x => x.WithIdentity(ruvSeriesSync))
                 .AddTrigger(trigger => trigger
-                    .ForJob(seriesSync)
+                    .ForJob(ruvSeriesSync)
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithIntervalInHours(6)
                     .RepeatForever()));
 
-            JobKey episodeSync = new(nameof(RuvEpisodesSyncJob));
-            options.AddJob<RuvEpisodesSyncJob>(x => x.WithIdentity(episodeSync))
+            JobKey ruvEpisodeSync = new(nameof(RuvEpisodesSyncJob));
+            options.AddJob<RuvEpisodesSyncJob>(x => x.WithIdentity(ruvEpisodeSync))
                 .AddTrigger(trigger => trigger
-                    .ForJob(episodeSync)
+                    .ForJob(ruvEpisodeSync)
                     .StartAt(DateTimeOffset.UtcNow.AddSeconds(30))
                     .WithSimpleSchedule(x => x.WithIntervalInHours(6)
                     .RepeatForever()));
 
-            JobKey tmdbLookup = new(nameof(TmdbLookupJob));
-            options.AddJob<TmdbLookupJob>(x => x.WithIdentity(tmdbLookup))
+            JobKey tmdbMovieLookup = new(nameof(TmdbMovieLookupJob));
+            options.AddJob<TmdbMovieLookupJob>(x => x.WithIdentity(tmdbMovieLookup))
                 .AddTrigger(trigger => trigger
-                    .ForJob(tmdbLookup)
+                    .ForJob(tmdbMovieLookup)
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
 
-            JobKey tvdbLookup = new(nameof(TvdbLookupJob));
-            options.AddJob<TvdbLookupJob>(x => x.WithIdentity(tvdbLookup))
+            JobKey tvdbSeriesLookup = new(nameof(TvdbSeriesLookupJob));
+            options.AddJob<TvdbSeriesLookupJob>(x => x.WithIdentity(tvdbSeriesLookup))
                 .AddTrigger(trigger => trigger
-                    .ForJob(tvdbLookup)
+                    .ForJob(tvdbSeriesLookup)
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));

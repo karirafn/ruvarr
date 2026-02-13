@@ -15,7 +15,7 @@ using TMDbLib.Objects.Search;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal sealed class TmdbLookupJob(ILogger<TmdbLookupJob> logger, RuvarrDbContext dbContext, TMDbClient tmdb) : IJob
+internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TMDbClient tmdb) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {

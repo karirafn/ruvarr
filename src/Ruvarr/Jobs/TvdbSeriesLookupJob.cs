@@ -11,7 +11,7 @@ using Ruvarr.Tvdb.Models;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal sealed class TvdbLookupJob(ILogger<TvdbLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob
+internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob
 {
     private static readonly List<string> RomanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 
