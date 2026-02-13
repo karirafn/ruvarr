@@ -40,6 +40,7 @@ internal sealed class RuvEpisode
     public void Match(int season, int episode)
     {
         Matched = DateTime.UtcNow;
+        NextLookup = null;
         SeasonNumber = season;
         EpisodeNumber = episode;
     }
