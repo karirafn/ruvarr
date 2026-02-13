@@ -1,6 +1,6 @@
-﻿using Ruvarr.Domain.Programs;
+﻿using Ruvarr.Domain.Ruv;
 
-namespace Ruvarr.Domain.Movies;
+namespace Ruvarr.Domain.Tmdb;
 
 internal sealed class TmdbMovie
 {

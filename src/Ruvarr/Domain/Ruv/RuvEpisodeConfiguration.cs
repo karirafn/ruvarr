@@ -1,13 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Ruvarr.Domain.Episodes;
+namespace Ruvarr.Domain.Ruv;
 
-internal sealed class RuvConfiguration : IEntityTypeConfiguration<RuvEpisode>
+internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpisode>
 {
     public void Configure(EntityTypeBuilder<RuvEpisode> builder)
     {
-
         builder.Property<int>("id");
         builder.HasKey("id");
 

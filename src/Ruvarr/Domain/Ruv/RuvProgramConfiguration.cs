@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Ruvarr.Domain.Programs;
+namespace Ruvarr.Domain.Ruv;
 
 internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProgram>
 {

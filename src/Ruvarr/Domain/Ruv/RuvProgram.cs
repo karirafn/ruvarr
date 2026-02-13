@@ -1,8 +1,7 @@
-﻿using Ruvarr.Domain.Episodes;
-using Ruvarr.Domain.Movies;
-using Ruvarr.Domain.Series;
+﻿using Ruvarr.Domain.Tmdb;
+using Ruvarr.Domain.Tvdb;
 
-namespace Ruvarr.Domain.Programs;
+namespace Ruvarr.Domain.Ruv;
 
 internal sealed class RuvProgram
 {

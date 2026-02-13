@@ -4,8 +4,8 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Domain.Movies;
-using Ruvarr.Domain.Programs;
+using Ruvarr.Domain.Ruv;
+using Ruvarr.Domain.Tmdb;
 
 using TMDbLib.Client;
 using TMDbLib.Objects.General;

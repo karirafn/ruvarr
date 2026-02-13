@@ -2,7 +2,7 @@
 
 using Quartz;
 
-using Ruvarr.Domain.Programs;
+using Ruvarr.Domain.Ruv;
 using Ruvarr.Ruv;
 using Ruvarr.Ruv.Models;
 
