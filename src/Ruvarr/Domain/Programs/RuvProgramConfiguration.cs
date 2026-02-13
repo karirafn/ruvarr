@@ -32,5 +32,8 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false);
+
+        builder.Navigation(x => x.Episodes)
+            .AutoInclude();
     }
 }
