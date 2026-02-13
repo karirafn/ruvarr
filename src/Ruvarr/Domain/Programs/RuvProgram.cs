@@ -84,7 +84,7 @@ internal sealed class RuvProgram
             return;
         }
 
-        RuvEpisode episode = RuvEpisode.Create(id, uri, title);
+        RuvEpisode episode = RuvEpisode.Create(this, id, uri, title);
         _episodes.Add(episode);
     }
 }

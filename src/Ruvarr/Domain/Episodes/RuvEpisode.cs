@@ -1,10 +1,14 @@
-﻿namespace Ruvarr.Domain.Episodes;
+﻿using Ruvarr.Domain.Programs;
+
+namespace Ruvarr.Domain.Episodes;
 
 internal sealed class RuvEpisode
 {
     private RuvEpisode()
     {
     }
+
+    public required RuvProgram Program { get; init; }
 
     public required string RuvId { get; init; }
 
@@ -18,10 +22,11 @@ internal sealed class RuvEpisode
 
     public DateTime? Downloaded { get; private set; }
 
-    public static RuvEpisode Create(string id, Uri uri, string title)
+    public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title)
     {
         return new RuvEpisode()
         {
+            Program = program,
             RuvId = id,
             Uri = uri,
             Title = title,

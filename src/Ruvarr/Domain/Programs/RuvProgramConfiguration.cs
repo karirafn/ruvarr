@@ -33,6 +33,10 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
             .IsUnicode(true)
             .IsFixedLength(false);
 
+        builder.HasMany(x => x.Episodes)
+            .WithOne(x => x.Program)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.Navigation(x => x.Episodes)
             .AutoInclude();
     }
