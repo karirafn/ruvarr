@@ -42,10 +42,17 @@ internal sealed class TmdbLookupJob(ILogger<TmdbLookupJob> logger, RuvarrDbConte
 
         if (result is null || result.Results is null)
         {
+            program.ScheduleLookup();
+
+            await dbContext.SaveChangesAsync()
+                .ConfigureAwait(false);
+
             return;
         }
 
-        List<SearchMovie> matches = [.. result.Results.Where(x => x.Title == searchText || x.OriginalTitle == searchText)];
+        List<SearchMovie> matches = [.. result.Results
+            .Where(x => x.MediaType == MediaType.Movie)
+            .Where(x => x.Title == searchText || x.OriginalTitle == searchText)];
 
         if (matches is [] && result.Results.Count == 1)
         {
@@ -66,6 +73,11 @@ internal sealed class TmdbLookupJob(ILogger<TmdbLookupJob> logger, RuvarrDbConte
 
         if (matches.Count != 1)
         {
+            program.ScheduleLookup();
+
+            await dbContext.SaveChangesAsync()
+                .ConfigureAwait(false);
+
             return;
         }
 
