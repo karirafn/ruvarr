@@ -12,6 +12,10 @@ internal sealed class RuvEpisode
 
     public required string Title { get; init; }
 
+    public int? SeasonNumber { get; private set; }
+
+    public int? EpisodeNumber { get; private set; }
+
     public DateTime? Downloaded { get; private set; }
 
     public static RuvEpisode Create(string id, Uri uri, string title)
@@ -22,6 +26,12 @@ internal sealed class RuvEpisode
             Uri = uri,
             Title = title,
         };
+    }
+
+    public void Match(int season, int episode)
+    {
+        SeasonNumber = season;
+        EpisodeNumber = episode;
     }
 
     public void Download()
