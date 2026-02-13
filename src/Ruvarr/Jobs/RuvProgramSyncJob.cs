@@ -42,9 +42,13 @@ internal sealed class RuvProgramSyncJob(IRuvClient ruv, RuvarrDbContext dbContex
             .ConfigureAwait(false);
 
         List<int> existingRuvIds = [.. existingTvPrograms.Select(x => x.RuvId)];
+        List<RuvProgram> removedPrograms = [.. existingTvPrograms.Where(x => !ruvIds.Contains(x.RuvId))];
         List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
             .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes))];
+
+        dbContext.Set<RuvProgram>()
+            .RemoveRange(removedPrograms);
 
         dbContext.Set<RuvProgram>()
             .AddRange(newPrograms);
