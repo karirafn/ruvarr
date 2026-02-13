@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInHours(6)
                     .RepeatForever()));
 
+            // Start this job 30 seconds after series sync job to ensure series exist on first run
             JobKey ruvEpisodeSync = new(nameof(RuvEpisodesSyncJob));
             options.AddJob<RuvEpisodesSyncJob>(x => x.WithIdentity(ruvEpisodeSync))
                 .AddTrigger(trigger => trigger
