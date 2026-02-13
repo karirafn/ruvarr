@@ -52,6 +52,11 @@ internal sealed class RuvEpisode
 
     public void ScheduleLookup()
     {
+        if (SeasonNumber is not null)
+        {
+            return;
+        }
+
         LookupCount++;
 
         DateTime now = DateTime.UtcNow;
