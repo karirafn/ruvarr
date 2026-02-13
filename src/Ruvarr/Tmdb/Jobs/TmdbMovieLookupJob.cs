@@ -4,15 +4,15 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Domain.Ruv;
-using Ruvarr.Domain.Tmdb;
+using Ruvarr.Ruv.Domain;
+using Ruvarr.Tmdb.Domain;
 
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Movies;
 using TMDbLib.Objects.Search;
 
-namespace Ruvarr.Jobs;
+namespace Ruvarr.Tmdb.Jobs;
 
 [DisallowConcurrentExecution]
 internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TMDbClient tmdb) : IJob

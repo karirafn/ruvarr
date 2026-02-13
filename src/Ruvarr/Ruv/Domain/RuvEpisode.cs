@@ -1,4 +1,4 @@
-﻿namespace Ruvarr.Domain.Ruv;
+﻿namespace Ruvarr.Ruv.Domain;
 
 internal sealed class RuvEpisode
 {

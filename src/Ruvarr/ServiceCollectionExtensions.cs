@@ -6,9 +6,11 @@ using Microsoft.Extensions.Options;
 using Quartz;
 
 using Ruvarr.FFmpeg;
-using Ruvarr.Jobs;
 using Ruvarr.Ruv;
+using Ruvarr.Ruv.Jobs;
+using Ruvarr.Tmdb.Jobs;
 using Ruvarr.Tvdb;
+using Ruvarr.Tvdb.Jobs;
 
 using TMDbLib.Client;
 

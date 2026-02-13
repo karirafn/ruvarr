@@ -2,11 +2,10 @@
 
 using Quartz;
 
-using Ruvarr.Domain.Ruv;
-using Ruvarr.Ruv;
+using Ruvarr.Ruv.Domain;
 using Ruvarr.Ruv.Models;
 
-namespace Ruvarr.Jobs;
+namespace Ruvarr.Ruv.Jobs;
 
 internal sealed class RuvProgramSyncJob(IRuvClient ruv, RuvarrDbContext dbContext) : IJob
 {

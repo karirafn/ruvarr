@@ -3,12 +3,11 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Domain.Ruv;
-using Ruvarr.Domain.Tvdb;
-using Ruvarr.Tvdb;
+using Ruvarr.Ruv.Domain;
+using Ruvarr.Tvdb.Domain;
 using Ruvarr.Tvdb.Models;
 
-namespace Ruvarr.Jobs;
+namespace Ruvarr.Tvdb.Jobs;
 
 [DisallowConcurrentExecution]
 internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob
