@@ -18,6 +18,12 @@ internal sealed class RuvEpisode
 
     public int? EpisodeNumber { get; private set; }
 
+    public int LookupCount { get; private set; }
+
+    public DateTime? Matched { get; private set; }
+
+    public DateTime? NextLookup { get; private set; }
+
     public DateTime? Downloaded { get; private set; }
 
     public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title)
@@ -33,6 +39,7 @@ internal sealed class RuvEpisode
 
     public void Match(int season, int episode)
     {
+        Matched = DateTime.UtcNow;
         SeasonNumber = season;
         EpisodeNumber = episode;
     }
@@ -40,5 +47,20 @@ internal sealed class RuvEpisode
     public void Download()
     {
         Downloaded = DateTime.UtcNow;
+    }
+
+    public void ScheduleLookup()
+    {
+        LookupCount++;
+
+        DateTime now = DateTime.UtcNow;
+        NextLookup = LookupCount switch
+        {
+            1 => now.AddHours(1),
+            2 => now.AddHours(2),
+            3 => now.AddHours(4),
+            4 => now.AddDays(1),
+            _ => now.AddDays(7)
+        };
     }
 }
