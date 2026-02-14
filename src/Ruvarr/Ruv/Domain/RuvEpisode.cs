@@ -14,6 +14,8 @@ internal sealed class RuvEpisode
 
     public required string Title { get; init; }
 
+    public int? TvdbId { get; private set; }
+
     public int? SeasonNumber { get; private set; }
 
     public int? EpisodeNumber { get; private set; }
@@ -37,10 +39,11 @@ internal sealed class RuvEpisode
         };
     }
 
-    public void Match(int season, int episode)
+    public void Match(int tvdbId, int season, int episode)
     {
         Matched = DateTime.UtcNow;
         NextLookup = null;
+        TvdbId = tvdbId;
         SeasonNumber = season;
         EpisodeNumber = episode;
     }

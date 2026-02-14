@@ -61,6 +61,14 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
 
+            JobKey tvdbEpisodeLookup = new(nameof(TvdbEpisodeLookupJob));
+            options.AddJob<TvdbEpisodeLookupJob>(x => x.WithIdentity(tvdbEpisodeLookup))
+                .AddTrigger(trigger => trigger
+                    .ForJob(tvdbEpisodeLookup)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .RepeatForever()));
+
         });
         services.AddQuartzHostedService(x => x.WaitForJobsToComplete = true);
 
