@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Globalization;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Quartz;
@@ -16,6 +18,8 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
 
     public async Task Execute(IJobExecutionContext context)
     {
+        logger.LogInformation("Starting Tvdb series lookup job");
+
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
             .Where(x => x.Series == null)
@@ -25,10 +29,9 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
 
         if (program is null)
         {
+            logger.LogInformation("No RÚV program pending TVDB series lookup");
             return;
         }
-
-        logger.LogInformation("Processing RÚV program '{Name}'", program.Name);
 
         string searchText = string.IsNullOrWhiteSpace(program.ForeignName)
             ? program.Name
@@ -39,10 +42,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
 
         if (match is null)
         {
-            program.ScheduleLookup();
-            _ = dbContext.SaveChangesAsync()
-                .ConfigureAwait(false);
-
+            await ScheduleLookupAsync(program).ConfigureAwait(false);
             return;
         }
 
@@ -53,10 +53,21 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             .ConfigureAwait(false)
             ?? TvdbSeries.Create(match.TvdbId, match.Type, match.Name);
 
-        logger.LogInformation("Updating RÚV TV program with TVDB data id: '{Id}', type: '{Type}', name: '{Name}'", entity.TvdbId, entity.Type, entity.Name);
+        logger.LogInformation("Found TVDB series match '{Name}'", entity.Name);
         program.MatchTvdb(entity);
 
         await dbContext.SaveChangesAsync()
+            .ConfigureAwait(false);
+    }
+
+    private async Task ScheduleLookupAsync(RuvProgram program)
+    {
+        program.ScheduleLookup();
+        logger.LogInformation(
+            "TVDB returned no series matches. Next series lookup scheduled on {Timestamp}",
+            program.NextLookup?.ToString("yyyy-MM-dd hh:mm:ss", CultureInfo.InvariantCulture));
+
+        _ = await dbContext.SaveChangesAsync()
             .ConfigureAwait(false);
     }
 
@@ -69,7 +80,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             return Task.FromResult(default(Datum?));
         }
 
-        logger.LogInformation("Roman numerals detected... trimming");
+        logger.LogInformation("Roman numerals detected in series name... trimming");
         searchText = string.Join(' ', parts[..^1]).Trim();
 
         return SearchTvdbAsync(searchText);
@@ -82,7 +93,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             return null;
         }
 
-        logger.LogInformation("Looking up '{Name}' on the TVDB", searchText);
+        logger.LogInformation("Searching TVDB for series '{Name}'", searchText);
 
         SearchResponse response = await tvdb.SearchAsync(query: searchText)
             .ConfigureAwait(false);
@@ -103,7 +114,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             matches = [.. data.Where(x => x.Translations.TryGetValue("isl", out string? islName) && islName.Equals(searchText, StringComparison.OrdinalIgnoreCase))];
         }
 
-        logger.LogInformation("Tvdb returned '{Count}' exact match(es)", matches.Count);
+        logger.LogInformation("Tvdb returned '{Count}' exact match(es) for series {Name}", matches.Count, searchText);
 
         return matches.Count == 1 ? matches[0] : null;
     }

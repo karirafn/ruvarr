@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 using Quartz;
 
@@ -7,26 +8,32 @@ using Ruvarr.Ruv.Models;
 
 namespace Ruvarr.Ruv.Jobs;
 
-internal sealed class RuvProgramSyncJob(IRuvClient ruv, RuvarrDbContext dbContext) : IJob
+internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvClient ruv, RuvarrDbContext dbContext) : IJob
 {
     private static readonly string[] ExcludedChannels = ["Fréttastofa sjónvarps", "Íþróttadeild", "Rás 1", "Rás 2"];
 
     public async Task Execute(IJobExecutionContext context)
     {
+        logger.LogInformation("Starting RÚV programs sync job");
+
         RuvFeaturedTv? kids = await ruv.GetKidsTvAsync()
             .ConfigureAwait(false);
+        List<RuvTvProgram> kidsPograms = kids?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
+        logger.LogInformation("Found {Count} Krakka RÚV programs", kidsPograms.Count);
 
         RuvFeaturedTv? featured = await ruv.GetFeaturedTv()
             .ConfigureAwait(false);
+        List<RuvTvProgram> featuredPrograms = featured?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
+        logger.LogInformation("Found {Count} featured RÚV programs", featuredPrograms.Count);
 
-        IReadOnlyList<RuvTvProgram> featuredPrograms = featured?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
-        IReadOnlyList<RuvTvProgram> kidsPograms = kids?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
-        IReadOnlyList<RuvTvProgram> allPrograms = [.. featuredPrograms, .. kidsPograms];
+        List<RuvTvProgram> allPrograms = [.. featuredPrograms, .. kidsPograms];
+        logger.LogInformation("Found {Count} total RÚV programs", allPrograms.Count);
 
         List<RuvTvProgram> programs = [.. allPrograms
             .Where(x => !ExcludedChannels.Contains(x.Channel))
             .Where(x => x.WebAvailableEpisodes > 0)
             .DistinctBy(x => x.Id)];
+        logger.LogInformation("Found {Count} distinct RÚV programs", programs.Count);
 
         List<int> ruvIds = [.. programs.Select(x => x.Id)];
 
@@ -39,12 +46,16 @@ internal sealed class RuvProgramSyncJob(IRuvClient ruv, RuvarrDbContext dbContex
             .Where(x => ruvIds.Contains(x.RuvId))
             .ToListAsync()
             .ConfigureAwait(false);
+        logger.LogInformation("Found {Count} programs in database", existingTvPrograms.Count);
 
         List<int> existingRuvIds = [.. existingTvPrograms.Select(x => x.RuvId)];
         List<RuvProgram> removedPrograms = [.. existingTvPrograms.Where(x => !ruvIds.Contains(x.RuvId))];
+        logger.LogInformation("Removing {Count} programs from database", removedPrograms.Count);
+
         List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
             .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes))];
+        logger.LogInformation("Adding {Count} new programs to database", newPrograms.Count);
 
         dbContext.Set<RuvProgram>()
             .RemoveRange(removedPrograms);
