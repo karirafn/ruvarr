@@ -16,10 +16,9 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
     {
         logger.LogInformation("Starting TVDB episode lookup job");
 
-        RuvProgram? program = await dbContext.Set<RuvProgram>()
-            .Where(p => p.Series!.TvdbId != null)
-            .SelectMany(p => p.Episodes)
-            .Where(e => e.TvdbId == null)
+        RuvProgram? program = await dbContext.Set<RuvEpisode>()
+            .Where(x => x.Program.Series!.TvdbId != null)
+            .Where(x => x.TvdbId == null)
             .Where(e => e.NextLookup == null || e.NextLookup <= DateTime.UtcNow)
             .OrderBy(e => e.NextLookup)
             .Select(e => e.Program)
@@ -43,8 +42,12 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
             return;
         }
 
+        List<int> matchedIds = [.. program.Episodes.Select(x => x.TvdbId).OfType<int>()];
+
         logger.LogInformation("Series {Name} has {Count} episodes", seriesData.Series.Name, seriesData.Episodes.Count);
-        List<Episode> translatedEpisodes = [.. seriesData.Episodes.Where(x => x.NameTranslations.Contains("isl"))];
+        List<Episode> translatedEpisodes = [.. seriesData.Episodes
+            .Where(x => !matchedIds.Contains(x.Id))
+            .Where(x => x.NameTranslations.Contains("isl"))];
         logger.LogInformation("Found {Count} episodes with Icelandic titles", translatedEpisodes.Count);
 
         foreach (Episode translatedEpisode in translatedEpisodes)
@@ -65,7 +68,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
             }
 
             RuvEpisode? episode = program.Episodes
-                .SingleOrDefault(x => x.Title == translation.Name);
+                .SingleOrDefault(x => x.Title.Equals(translation.Name, StringComparison.OrdinalIgnoreCase));
 
             if (episode is null)
             {

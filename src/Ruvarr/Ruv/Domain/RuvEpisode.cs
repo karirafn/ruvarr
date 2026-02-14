@@ -55,7 +55,7 @@ internal sealed class RuvEpisode
 
     public void ScheduleLookup()
     {
-        if (SeasonNumber is not null)
+        if (TvdbId is not null)
         {
             return;
         }
