@@ -14,4 +14,8 @@
     <PackageReference Include="TMDbLib" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ruvarr.UnitTests" />
+  </ItemGroup>
+
 </Project>
