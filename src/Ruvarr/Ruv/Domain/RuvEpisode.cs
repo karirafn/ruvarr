@@ -56,7 +56,7 @@ internal sealed partial class RuvEpisode
         EpisodeNumber = episode;
     }
 
-    public void Download()
+    public void MarkDownloaded()
     {
         Downloaded = DateTime.UtcNow;
     }

@@ -8,6 +8,8 @@ using Quartz;
 using Ruvarr.FFmpeg;
 using Ruvarr.Ruv;
 using Ruvarr.Ruv.Jobs;
+using Ruvarr.Sonarr;
+using Ruvarr.Sonarr.jobs;
 using Ruvarr.Tmdb.Jobs;
 using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Jobs;
@@ -24,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddFfmpeg();
         services.AddTmdb();
         services.AddTvdb();
+        services.AddSonarr();
         services.AddRuv();
 
         services.AddQuartz(options =>
@@ -67,6 +70,14 @@ public static class ServiceCollectionExtensions
                     .ForJob(tvdbEpisodeLookup)
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .RepeatForever()));
+
+            JobKey downloadMissing = new(nameof(DownloadMissingEpisodesJob));
+            options.AddJob<DownloadMissingEpisodesJob>(x => x.WithIdentity(downloadMissing))
+                .AddTrigger(trigger => trigger
+                    .ForJob(downloadMissing)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithIntervalInHours(1)
                     .RepeatForever()));
 
         });

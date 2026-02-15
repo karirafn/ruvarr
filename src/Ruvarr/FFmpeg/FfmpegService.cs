@@ -33,22 +33,6 @@ internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegSe
 
         using Process process = new() { StartInfo = psi };
 
-        process.OutputDataReceived += (_, e) =>
-        {
-            if (e.Data != null)
-            {
-                Console.WriteLine(e.Data);
-            }
-        };
-
-        process.ErrorDataReceived += (_, e) =>
-        {
-            if (e.Data != null)
-            {
-                Console.WriteLine(e.Data);
-            }
-        };
-
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
