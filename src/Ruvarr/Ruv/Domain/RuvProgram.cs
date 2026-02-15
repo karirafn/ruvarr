@@ -35,10 +35,10 @@ internal sealed class RuvProgram
 
     public IReadOnlyList<RuvEpisode> Episodes => [.. _episodes];
 
-    public static RuvProgram Create(int id, string channgel, string name, string? foreignName, bool multipleEpisodes) => new()
+    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes) => new()
     {
         RuvId = id,
-        Channel = channgel,
+        Channel = channel,
         Name = name,
         ForeignName = foreignName,
         HasMultipleEpisodes = multipleEpisodes,
