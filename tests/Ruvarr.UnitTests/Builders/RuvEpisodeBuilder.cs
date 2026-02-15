@@ -8,6 +8,7 @@ internal sealed class RuvEpisodeBuilder
     private string _ruvId = Guid.NewGuid().ToString()[..6];
     private Uri _uri = new("http://test.com");
     private string _title = "Test Episode";
+    private string _description = "Description";
     private DateTime _firstRun = DateTime.UtcNow;
 
     public RuvEpisodeBuilder WithProgram(RuvProgram program)
@@ -34,6 +35,12 @@ internal sealed class RuvEpisodeBuilder
         return this;
     }
 
+    public RuvEpisodeBuilder WithDescription(string description)
+    {
+        _description = description;
+        return this;
+    }
+
     public RuvEpisodeBuilder WithFirstRun(DateTime firstRun)
     {
         _firstRun = firstRun;
@@ -45,5 +52,6 @@ internal sealed class RuvEpisodeBuilder
         id: _ruvId,
         uri: _uri,
         title: _title,
+        description: _description,
         firstRun: _firstRun);
 }

@@ -16,6 +16,8 @@ internal sealed partial class RuvEpisode
 
     public required string Title { get; init; }
 
+    public required string Description { get; init; }
+
     public required DateTime FirstRun { get; init; }
 
     public int? TvdbId { get; private set; }
@@ -32,7 +34,7 @@ internal sealed partial class RuvEpisode
 
     public DateTime? Downloaded { get; private set; }
 
-    public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, DateTime firstRun)
+    public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, string description, DateTime firstRun)
     {
         return new RuvEpisode()
         {
@@ -40,6 +42,7 @@ internal sealed partial class RuvEpisode
             RuvId = id,
             Uri = uri,
             Title = title,
+            Description = description,
             FirstRun = firstRun,
         };
     }
