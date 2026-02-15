@@ -1,5 +1,4 @@
-﻿
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -21,7 +20,7 @@ internal class DownloadMissingEpisodesJob(
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync()
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(pageSize: int.MaxValue)
             .ConfigureAwait(false);
 
         List<int?> missingEpisodeIds = [.. missingEpisodes.Select(x => x.TvdbId)];
@@ -45,15 +44,38 @@ internal class DownloadMissingEpisodesJob(
                 episode.EpisodeNumber,
                 episode.Title);
 
+            MissingEpisode missingEpisode = missingEpisodes.First(x => x.TvdbId == episode.TvdbId);
+
             string filename = $"{episode.Program.Series!.Name} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}.mp4";
-            string filepath = Path.Join(options.Value.EpisodeDownloadDirectory, filename);
+            string filepath = Path.Join(options.Value.DownloadsRootDirectory, options.Value.EpisodeDownloadDirectory, filename);
             await ffmpeg.DownloadAsync(episode.Uri, filepath, episode.Title)
+                .ConfigureAwait(false);
+
+            IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(options.Value.EpisodeDownloadDirectory)
+                .ConfigureAwait(false);
+
+            string importPath = Path.Join(options.Value.EpisodeDownloadDirectory, filename);
+            ManualImportFile file = manualImportFiles.First(x => x.Path == importPath);
+
+            ManualImportRequest request = new(
+                Path: importPath,
+                SeriesId: missingEpisode.SeriesId,
+                EpisodeIds: [missingEpisode.Id],
+                Quality: file.Quality,
+                Languages: file.Languages,
+                ReleaseGroup: "RÚV");
+            await sonarr.ManualImportFilesAsync([request])
                 .ConfigureAwait(false);
 
             episode.MarkDownloaded();
 
             await dbContext.SaveChangesAsync()
                 .ConfigureAwait(false);
+        }
+
+        if (episodes.Count > 0)
+        {
+            logger.LogInformation("Finished downloading {Count} episodes", episodes.Count);
         }
     }
 }

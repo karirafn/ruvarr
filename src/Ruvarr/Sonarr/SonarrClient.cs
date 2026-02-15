@@ -20,4 +20,23 @@ internal sealed class SonarrClient(HttpClient httpClient) : ISonarrClient
 
         return response?.Records ?? [];
     }
+
+    public Task ManualImportFilesAsync(IEnumerable<ManualImportRequest> files)
+    {
+        ManualImportCommand command = new(files);
+        return httpClient.PostAsJsonAsync("api/v3/command", command);
+    }
+
+    public async Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder)
+    {
+        NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);
+        parameters.Add("folder", folder);
+
+        string path = $"api/v3/manualimport?{HttpUtility.UrlPathEncode(parameters.ToString())}";
+
+        IReadOnlyList<ManualImportFile>? response = await httpClient.GetFromJsonAsync<IReadOnlyList<ManualImportFile>>(path)
+            .ConfigureAwait(false);
+
+        return response ?? [];
+    }
 }
