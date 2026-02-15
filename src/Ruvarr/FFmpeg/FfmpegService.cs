@@ -6,15 +6,14 @@ namespace Ruvarr.FFmpeg;
 
 internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegService
 {
-    public async Task DownloadAsync(Uri uri, string filename, string title)
+    public async Task DownloadAsync(Uri uri, string filepath, string title)
     {
-        string output = Path.Join(options.Value.OutputFolder, filename);
         string arguments = new FfmpegArgumentsBuilder()
             .WithInput(uri)
             .WithLogLevel("verbose")
             .WithCodec("copy")
             .WithAudioBitStreamFilter("aac_adtstoasc")
-            .WithOutput(output)
+            .WithOutput(filepath)
             .OverwriteOutputFiles()
             .ShowStats()
             .HideCopyrightBanner()

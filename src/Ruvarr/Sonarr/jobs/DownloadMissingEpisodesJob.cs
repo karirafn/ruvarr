@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Quartz;
 
@@ -15,7 +16,8 @@ internal class DownloadMissingEpisodesJob(
     ILogger<DownloadMissingEpisodesJob> logger,
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
-    IFfmpegService ffmpeg) : IJob
+    IFfmpegService ffmpeg,
+    IOptions<FfmpegOptions> options) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -43,8 +45,10 @@ internal class DownloadMissingEpisodesJob(
                 episode.EpisodeNumber,
                 episode.Title);
 
+            string folder = $"{options.Value.OutputFolder}/tv";
             string filename = $"{episode.Program.Series!.Name} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}.mp4";
-            await ffmpeg.DownloadAsync(episode.Uri, filename, episode.Title)
+            string filepath = Path.Join(folder, filename);
+            await ffmpeg.DownloadAsync(episode.Uri, filepath, episode.Title)
                 .ConfigureAwait(false);
 
             episode.MarkDownloaded();
