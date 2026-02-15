@@ -35,7 +35,7 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
             logger.LogDebug("Adding episodes to RÚV program '{Name}'", program.Name);
 
             ruvProgram.Episodes
-                .Where(e => program.TryAddEpisode(e.Id, e.File, e.Title))
+                .Where(e => program.TryAddEpisode(e.Id, e.File, e.Title, e.FirstRun))
                 .ToList()
                 .ForEach(e => logger.LogInformation("Added RÚV episode '{EpisodeName}' to program '{Name}'", e.Title, program.Name));
 
