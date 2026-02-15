@@ -17,7 +17,7 @@ internal class DownloadMissingEpisodesJob(
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
     IFfmpegService ffmpeg,
-    IOptions<FfmpegOptions> options) : IJob
+    IOptions<RuvarrOptions> options) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -45,9 +45,8 @@ internal class DownloadMissingEpisodesJob(
                 episode.EpisodeNumber,
                 episode.Title);
 
-            string folder = $"{options.Value.OutputFolder}/tv";
             string filename = $"{episode.Program.Series!.Name} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}.mp4";
-            string filepath = Path.Join(folder, filename);
+            string filepath = Path.Join(options.Value.EpisodeDownloadDirectory, filename);
             await ffmpeg.DownloadAsync(episode.Uri, filepath, episode.Title)
                 .ConfigureAwait(false);
 

@@ -22,6 +22,10 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddRuvarr(this IServiceCollection services, string dbConnectionString)
     {
+        services.AddOptions<RuvarrOptions>()
+            .Configure<IConfiguration>((options, configuration)
+                => configuration.GetRequiredSection(RuvarrOptions.SectionName).Bind(options));
+
         services.AddMemoryCache();
         services.AddFfmpeg();
         services.AddTmdb();
