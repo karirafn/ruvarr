@@ -68,7 +68,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
             }
 
             RuvEpisode? episode = program.Episodes
-                .SingleOrDefault(x => x.Title.Equals(translation.Name, StringComparison.OrdinalIgnoreCase));
+                .SingleOrDefault(x => x.IsMatch(translation.Name));
 
             if (episode is null)
             {

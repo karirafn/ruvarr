@@ -1,6 +1,8 @@
-﻿namespace Ruvarr.Ruv.Domain;
+﻿using System.Text.RegularExpressions;
 
-internal sealed class RuvEpisode
+namespace Ruvarr.Ruv.Domain;
+
+internal sealed partial class RuvEpisode
 {
     private RuvEpisode()
     {
@@ -72,4 +74,42 @@ internal sealed class RuvEpisode
             _ => now.AddDays(7)
         };
     }
+
+    public bool IsMatch(string value)
+    {
+        if (Title.Equals(value, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        string title = Title;
+        string[] parts = title.Split(' ');
+
+        if (parts.Length > 1 && NumberPrefixRegex().IsMatch(parts[0]))
+        {
+            title = string.Join(' ', parts[1..]);
+        }
+
+        title = Sanitize(title);
+        value = Sanitize(value);
+
+        return title.Equals(value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string Sanitize(string value)
+    {
+        value = AlphaNumericRegex().Replace(value, string.Empty);
+        value = ExtraWhiteSpacesRegex().Replace(value, " ");
+
+        return value;
+    }
+
+    [GeneratedRegex(@"^\d+\.$")]
+    private static partial Regex NumberPrefixRegex();
+
+    [GeneratedRegex(@"[^a-zA-Z0-9]")]
+    private static partial Regex AlphaNumericRegex();
+
+    [GeneratedRegex(@" +")]
+    private static partial Regex ExtraWhiteSpacesRegex();
 }
