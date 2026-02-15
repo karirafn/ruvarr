@@ -76,14 +76,16 @@ internal sealed class RuvProgram
         };
     }
 
-    public void TryAddEpisode(string id, Uri uri, string title)
+    public bool TryAddEpisode(string id, Uri uri, string title)
     {
         if (_episodes.Any(x => x.RuvId == id))
         {
-            return;
+            return false;
         }
 
         RuvEpisode episode = RuvEpisode.Create(this, id, uri, title);
         _episodes.Add(episode);
+
+        return true;
     }
 }

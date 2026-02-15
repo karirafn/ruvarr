@@ -21,7 +21,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        logger.LogInformation("Starting TMDB movie lookup job");
+        logger.LogDebug("Starting TMDB movie lookup job");
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => !x.HasMultipleEpisodes)
@@ -32,7 +32,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
 
         if (program is null)
         {
-            logger.LogInformation("No RÚV program pending TMDB lookup");
+            logger.LogDebug("No RÚV program pending TMDB lookup");
             return;
         }
 
@@ -40,7 +40,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
             ? program.Name
             : program.ForeignName;
 
-        logger.LogInformation("Searching TMDB for '{Name}'", searchText);
+        logger.LogDebug("Searching TMDB for '{Name}'", searchText);
         SearchContainer<SearchMovie>? result = await tmdb.SearchMovieAsync(searchText)
             .ConfigureAwait(false);
 
@@ -56,7 +56,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
 
         if (matches is [] && result.Results.Count == 1)
         {
-            logger.LogInformation("TMDB returned single match but title and original title did not match '{Name}'. Checking translations", searchText);
+            logger.LogDebug("TMDB returned single match but title and original title did not match '{Name}'. Checking translations", searchText);
             Movie? movie = await tmdb.GetMovieAsync(result.Results[0].Id, MovieMethods.Translations)
                 .ConfigureAwait(false);
 
@@ -68,7 +68,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
 
             if (!string.IsNullOrWhiteSpace(icelandicName) && icelandicName == searchText)
             {
-                logger.LogInformation("Matched TMDB icelandic translation '{Name}'", searchText);
+                logger.LogDebug("Matched TMDB icelandic translation '{Name}'", searchText);
                 matches.Add(result.Results[0]);
             }
         }
@@ -88,14 +88,19 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
 
         program.MatchTmdb(entity);
 
-        await dbContext.SaveChangesAsync()
+        int added = await dbContext.SaveChangesAsync()
             .ConfigureAwait(false);
+
+        if (added > 0)
+        {
+            logger.LogInformation("Matched RÚV program '{Program}' with movie '{Movie}'", program.Name, match.Title);
+        }
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program)
     {
         program.ScheduleLookup();
-        logger.LogInformation(
+        logger.LogDebug(
             "TMDB returned no matches. Next lookup scheduled on {Timestamp}",
             program.NextLookup?.ToString("yyyy-MM-dd - hh:mm", CultureInfo.InvariantCulture));
 

@@ -12,17 +12,17 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        logger.LogInformation("Starting RÚV episode sync job");
+        logger.LogDebug("Starting RÚV episode sync job");
 
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
             .ToListAsync()
             .ConfigureAwait(false);
-        logger.LogInformation("Found {Count} programs with multiple episodes in database", programs.Count);
+        logger.LogDebug("Found {Count} RÚV programs with multiple episodes in database", programs.Count);
 
         foreach (RuvProgram program in programs)
         {
-            logger.LogInformation("Getting episodes for RÚV program '{Name}'", program.Name);
+            logger.LogDebug("Getting episodes for RÚV program '{Name}'", program.Name);
 
             RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(program.RuvId)
                 .ConfigureAwait(false);
@@ -32,13 +32,14 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
                 continue;
             }
 
-            logger.LogInformation("Adding episodes to RÚV program '{Name}'", program.Name);
-            foreach (RuvTvEpisode episode in ruvProgram.Episodes)
-            {
-                program.TryAddEpisode(episode.Id, episode.File, episode.Title);
-            }
+            logger.LogDebug("Adding episodes to RÚV program '{Name}'", program.Name);
 
-            await dbContext.SaveChangesAsync()
+            ruvProgram.Episodes
+                .Where(e => program.TryAddEpisode(e.Id, e.File, e.Title))
+                .ToList()
+                .ForEach(e => logger.LogInformation("Added RÚV episode '{EpisodeName}' to program '{Name}'", e.Title, program.Name));
+
+            _ = await dbContext.SaveChangesAsync()
                 .ConfigureAwait(false);
         }
     }

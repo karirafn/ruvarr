@@ -14,7 +14,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        logger.LogInformation("Starting TVDB episode lookup job");
+        logger.LogDebug("Starting TVDB episode lookup job");
 
         RuvProgram? program = await dbContext.Set<RuvEpisode>()
             .Where(x => x.Program.Series!.TvdbId != null)
@@ -27,11 +27,11 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
 
         if (program is null || program.Series is null || !int.TryParse(program.Series.TvdbId, out int seriesId) || seriesId < 1)
         {
-            logger.LogInformation("No RÚV program pending TVDB episode lookup");
+            logger.LogDebug("No RÚV program pending TVDB episode lookup");
             return;
         }
 
-        logger.LogInformation("Getting TVDB series data");
+        logger.LogDebug("Getting TVDB series data");
         SeriesData? seriesData = await tvdb.GetSeriesAsync(seriesId)
             .ConfigureAwait(false);
 
@@ -44,15 +44,15 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
 
         List<int> matchedIds = [.. program.Episodes.Select(x => x.TvdbId).OfType<int>()];
 
-        logger.LogInformation("Series {Name} has {Count} episodes", seriesData.Series.Name, seriesData.Episodes.Count);
+        logger.LogDebug("Series {Name} has {Count} episodes", seriesData.Series.Name, seriesData.Episodes.Count);
         List<Episode> translatedEpisodes = [.. seriesData.Episodes
             .Where(x => !matchedIds.Contains(x.Id))
             .Where(x => x.NameTranslations.Contains("isl"))];
-        logger.LogInformation("Found {Count} episodes with Icelandic titles", translatedEpisodes.Count);
+        logger.LogDebug("Found {Count} episodes with Icelandic titles", translatedEpisodes.Count);
 
         foreach (Episode translatedEpisode in translatedEpisodes)
         {
-            logger.LogInformation(
+            logger.LogDebug(
                 "Querying TVDB translation for {SeriesName} S{Season:D2}E{Episode:D2} {EpisodeName}",
                 seriesData.Series.Name,
                 translatedEpisode.SeasonNumber,
@@ -63,7 +63,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
 
             if (translation is null)
             {
-                logger.LogWarning("TVDB episode translation not found");
+                logger.LogDebug("TVDB episode translation not found");
                 continue;
             }
 
@@ -72,17 +72,18 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
 
             if (episode is null)
             {
-                logger.LogInformation("TVDB episode translation did not match any RÚV episodes");
+                logger.LogDebug("TVDB episode translation did not match any RÚV episodes");
                 continue;
             }
 
             logger.LogInformation(
-                "TVDB episode {SeriesName} S{Season:D2}E{Episode:D2} {EpisodeName} matched RÚV episode {Title}",
+                "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}'",
+                episode.Title,
+                program.Name,
                 seriesData.Series.Name,
                 translatedEpisode.SeasonNumber,
                 translatedEpisode.Number,
-                translatedEpisode.Name,
-                episode.Title);
+                translatedEpisode.Name);
             episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number);
         }
 
