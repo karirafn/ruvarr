@@ -1,0 +1,41 @@
+﻿using Ruvarr.Ruv.Domain;
+
+namespace Ruvarr.UnitTests.Builders;
+
+internal sealed class RuvEpisodeBuilder
+{
+    private RuvProgram _program = new RuvProgramBuilder().Build();
+    private string _ruvId = Guid.NewGuid().ToString()[..6];
+    private Uri _uri = new("http://test.com");
+    private string _title = "Test Episode";
+
+    public RuvEpisodeBuilder WithProgram(RuvProgram program)
+    {
+        _program = program;
+        return this;
+    }
+
+    public RuvEpisodeBuilder WithRuvId(string ruvId)
+    {
+        _ruvId = ruvId;
+        return this;
+    }
+
+    public RuvEpisodeBuilder WithUri(Uri uri)
+    {
+        _uri = uri;
+        return this;
+    }
+
+    public RuvEpisodeBuilder WithTitle(string title)
+    {
+        _title = title;
+        return this;
+    }
+
+    public RuvEpisode Build() => RuvEpisode.Create(
+        program: _program,
+        id: _ruvId,
+        uri: _uri,
+        title: _title);
+}
