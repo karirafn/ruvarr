@@ -77,7 +77,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(downloadMissing)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInHours(1)
+                    .WithSimpleSchedule(x => x.WithIntervalInMinutes(1)
                     .RepeatForever()));
 
         });
