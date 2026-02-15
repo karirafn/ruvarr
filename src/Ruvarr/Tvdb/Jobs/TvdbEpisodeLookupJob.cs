@@ -67,14 +67,14 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
                 continue;
             }
 
-            RuvEpisode? episode = program.Episodes
-                .SingleOrDefault(x => x.IsMatch(translation.Name));
+            List<RuvEpisode> episodes = [.. program.Episodes.Where(x => x.IsMatch(translation.Name))];
 
-            if (episode is null)
+            if (episodes.Count != 1)
             {
-                logger.LogDebug("TVDB episode translation did not match any RÚV episodes");
                 continue;
             }
+
+            RuvEpisode episode = episodes[0];
 
             logger.LogInformation(
                 "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}'",
