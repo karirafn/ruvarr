@@ -9,7 +9,7 @@ using Ruvarr.FFmpeg;
 using Ruvarr.Ruv;
 using Ruvarr.Ruv.Jobs;
 using Ruvarr.Sonarr;
-using Ruvarr.Sonarr.jobs;
+using Ruvarr.Sonarr.Jobs;
 using Ruvarr.Tmdb.Jobs;
 using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Jobs;

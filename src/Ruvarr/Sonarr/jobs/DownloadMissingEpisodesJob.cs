@@ -8,7 +8,7 @@ using Ruvarr.FFmpeg;
 using Ruvarr.Ruv.Domain;
 using Ruvarr.Sonarr.Models;
 
-namespace Ruvarr.Sonarr.jobs;
+namespace Ruvarr.Sonarr.Jobs;
 
 [DisallowConcurrentExecution]
 internal class DownloadMissingEpisodesJob(
