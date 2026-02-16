@@ -12,7 +12,7 @@ using Ruvarr.Sonarr.Models;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal class DownloadMissingEpisodesJob(
+internal sealed class DownloadMissingEpisodesJob(
     ILogger<DownloadMissingEpisodesJob> logger,
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
