@@ -1,5 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 
+using Ruvarr.Extensions;
+
 namespace Ruvarr.Ruv.Domain;
 
 internal sealed partial class RuvEpisode
@@ -96,26 +98,9 @@ internal sealed partial class RuvEpisode
             title = string.Join(' ', parts[1..]);
         }
 
-        title = Sanitize(title);
-        value = Sanitize(value);
-
-        return title.Equals(value, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string Sanitize(string value)
-    {
-        value = AlphaNumericRegex().Replace(value, string.Empty);
-        value = ExtraWhiteSpacesRegex().Replace(value, " ");
-
-        return value;
+        return title.EqualsSanitized(value);
     }
 
     [GeneratedRegex(@"^\d+\.$")]
     private static partial Regex NumberPrefixRegex();
-
-    [GeneratedRegex(@"[^a-zA-Z0-9]")]
-    private static partial Regex AlphaNumericRegex();
-
-    [GeneratedRegex(@" +")]
-    private static partial Regex ExtraWhiteSpacesRegex();
 }

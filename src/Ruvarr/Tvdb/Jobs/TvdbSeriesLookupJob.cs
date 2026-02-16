@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
+using Ruvarr.Extensions;
 using Ruvarr.Ruv.Domain;
 using Ruvarr.Tvdb.Domain;
 using Ruvarr.Tvdb.Models;
@@ -14,8 +15,6 @@ namespace Ruvarr.Tvdb.Jobs;
 [DisallowConcurrentExecution]
 internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob
 {
-    private static readonly List<string> RomanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
-
     public async Task Execute(IJobExecutionContext context)
     {
         logger.LogDebug("Starting Tvdb series lookup job");
@@ -23,6 +22,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
             .Where(x => x.Series == null)
+            .Where(x => x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)
             .OrderBy(x => x.NextLookup)
             .FirstOrDefaultAsync()
             .ConfigureAwait(false);
@@ -33,12 +33,10 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             return;
         }
 
-        string searchText = string.IsNullOrWhiteSpace(program.ForeignName)
-            ? program.Name
-            : program.ForeignName;
-
-        Datum? match = await SearchTvdbAsync(searchText).ConfigureAwait(false)
-            ?? await TryRemovingRomanNumeralEnding(searchText).ConfigureAwait(false);
+        Datum? match = await SearchTvdbAsync(program.ForeignName, checkTranslations: false).ConfigureAwait(false)
+            ?? await TryRemovingRomanNumeralEnding(program.ForeignName, checkTranslations: false).ConfigureAwait(false)
+            ?? await SearchTvdbAsync(program.Name, checkTranslations: true).ConfigureAwait(false)
+            ?? await TryRemovingRomanNumeralEnding(program.Name, checkTranslations: true).ConfigureAwait(false);
 
         if (match is null)
         {
@@ -75,22 +73,16 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             .ConfigureAwait(false);
     }
 
-    private Task<Datum?> TryRemovingRomanNumeralEnding(string searchText)
+    private Task<Datum?> TryRemovingRomanNumeralEnding(string? searchText, bool checkTranslations)
     {
-        string[] parts = searchText.Split(' ');
+        string? trimmed = searchText.WithoutRomanNumeralEnding();
 
-        if (!RomanNumerals.Contains(parts[^1]))
-        {
-            return Task.FromResult(default(Datum?));
-        }
-
-        logger.LogDebug("Roman numerals detected in series name... trimming");
-        searchText = string.Join(' ', parts[..^1]).Trim();
-
-        return SearchTvdbAsync(searchText);
+        return searchText == trimmed
+            ? Task.FromResult(default(Datum?))
+            : SearchTvdbAsync(trimmed, checkTranslations);
     }
 
-    private async Task<Datum?> SearchTvdbAsync(string searchText)
+    private async Task<Datum?> SearchTvdbAsync(string? searchText, bool checkTranslations)
     {
         if (string.IsNullOrWhiteSpace(searchText))
         {
@@ -102,21 +94,11 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
         SearchResponse response = await tvdb.SearchAsync(query: searchText)
             .ConfigureAwait(false);
 
-        List<Datum> data = [.. response.Data
-            .Where(x => x.Type == "series")
-            .Select(x => x with
-        {
-            Name = x.Name
-                // Remove soft hyphens (https://en.wikipedia.org/wiki/Soft_hyphen)
-                .Replace("\u00AD", string.Empty, StringComparison.OrdinalIgnoreCase)
-        })];
+        List<Datum> data = [.. response.Data.Where(x => x.Type == "series")];
 
-        List<Datum> matches = [.. data.Where(x => x.Name.Equals(searchText, StringComparison.OrdinalIgnoreCase))];
-
-        if (matches is [])
-        {
-            matches = [.. data.Where(x => x.Translations.TryGetValue("isl", out string? islName) && islName.Equals(searchText, StringComparison.OrdinalIgnoreCase))];
-        }
+        List<Datum> matches = checkTranslations
+            ? [.. data.Where(x => x.Translations.TryGetValue("isl", out string? islName) && islName.EqualsSanitized(searchText))]
+            : [.. data.Where(x => x.Name.EqualsSanitized(searchText))];
 
         logger.LogDebug("Tvdb returned '{Count}' exact match(es) for series {Name}", matches.Count, searchText);
 
