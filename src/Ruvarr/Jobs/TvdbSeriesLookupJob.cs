@@ -7,10 +7,11 @@ using Quartz;
 
 using Ruvarr.Extensions;
 using Ruvarr.Ruv.Domain;
+using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Domain;
 using Ruvarr.Tvdb.Models;
 
-namespace Ruvarr.Tvdb.Jobs;
+namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
 internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob

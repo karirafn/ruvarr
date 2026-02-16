@@ -3,10 +3,11 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
+using Ruvarr.Ruv;
 using Ruvarr.Ruv.Domain;
 using Ruvarr.Ruv.Models;
 
-namespace Ruvarr.Ruv.Jobs;
+namespace Ruvarr.Jobs;
 
 internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvClient ruv, RuvarrDbContext dbContext) : IJob
 {

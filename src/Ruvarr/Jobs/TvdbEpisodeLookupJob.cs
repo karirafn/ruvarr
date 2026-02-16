@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 using Quartz;
 
 using Ruvarr.Ruv.Domain;
+using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Models;
 
-namespace Ruvarr.Tvdb.Jobs;
+namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
 internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob

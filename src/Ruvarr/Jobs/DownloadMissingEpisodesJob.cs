@@ -6,9 +6,10 @@ using Quartz;
 
 using Ruvarr.FFmpeg;
 using Ruvarr.Ruv.Domain;
+using Ruvarr.Sonarr;
 using Ruvarr.Sonarr.Models;
 
-namespace Ruvarr.Sonarr.Jobs;
+namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
 internal class DownloadMissingEpisodesJob(
