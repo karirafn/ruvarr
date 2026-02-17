@@ -27,7 +27,8 @@ internal class DownloadQueueProcessor(
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
             .Include(x => x.Episode)
             .ThenInclude(x => x.Program)
-            .Where(x => x.Episode.DownloadQueueItem == null)
+            .Where(x => x.Downloaded == null)
+            .OrderBy(x => x.Created)
             .FirstOrDefaultAsync()
             .ConfigureAwait(false);
 
