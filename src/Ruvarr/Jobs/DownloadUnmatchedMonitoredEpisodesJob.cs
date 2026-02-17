@@ -48,6 +48,7 @@ internal sealed class DownloadUnmatchedMonitoredEpisodesJob(
 
         ruvEpisodes
             .Where(x => seriesIds.Contains(int.Parse(x.Program.Series!.TvdbId, CultureInfo.InvariantCulture)))
+            .DistinctBy(x => x.RuvId)
             .ToList()
             .ForEach(dbContext.EnqueueDownload);
 

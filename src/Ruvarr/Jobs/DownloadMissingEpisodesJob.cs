@@ -35,7 +35,9 @@ internal sealed class DownloadMissingEpisodesJob(
             .ToListAsync()
             .ConfigureAwait(false);
 
-        episodes.ForEach(dbContext.EnqueueDownload);
+        episodes.DistinctBy(x => x.RuvId)
+            .ToList()
+            .ForEach(dbContext.EnqueueDownload);
 
         await dbContext.SaveChangesAsync()
             .ConfigureAwait(false);
