@@ -37,6 +37,7 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
 
         builder.HasMany(x => x.Episodes)
             .WithOne(x => x.Program)
+            .HasForeignKey("program_id")
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(x => x.Series)
