@@ -7,6 +7,8 @@ internal sealed class TvdbSeriesConfiguration : IEntityTypeConfiguration<TvdbSer
 {
     public void Configure(EntityTypeBuilder<TvdbSeries> builder)
     {
+        builder.ToTable("series");
+
         builder.Property<int>("id");
         builder.HasKey("id");
 

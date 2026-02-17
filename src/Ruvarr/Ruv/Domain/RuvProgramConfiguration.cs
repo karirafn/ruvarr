@@ -1,12 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
+using Ruvarr.Tmdb.Domain;
+
 namespace Ruvarr.Ruv.Domain;
 
 internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProgram>
 {
     public void Configure(EntityTypeBuilder<RuvProgram> builder)
     {
+        builder.ToTable("programs");
+
         builder.Property<int>("id");
         builder.HasKey("id");
 
@@ -36,6 +40,14 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
         builder.HasMany(x => x.Episodes)
             .WithOne(x => x.Program)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Series)
+            .WithMany()
+            .HasForeignKey("series_id");
+
+        builder.HasOne(x => x.Movie)
+            .WithOne()
+            .HasForeignKey<TmdbMovie>("movie_id");
 
         builder.Navigation(x => x.Episodes)
             .AutoInclude();

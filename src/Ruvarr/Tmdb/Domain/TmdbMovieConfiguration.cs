@@ -9,6 +9,8 @@ internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovi
 {
     public void Configure(EntityTypeBuilder<TmdbMovie> builder)
     {
+        builder.ToTable("movies");
+
         builder.Property<int>("id");
         builder.HasKey("id");
 

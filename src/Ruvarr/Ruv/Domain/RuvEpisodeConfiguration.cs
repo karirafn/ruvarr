@@ -1,12 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
+using Ruvarr.Downloads.Domain;
+
 namespace Ruvarr.Ruv.Domain;
 
 internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpisode>
 {
     public void Configure(EntityTypeBuilder<RuvEpisode> builder)
     {
+        builder.ToTable("episodes");
+
         builder.Property<int>("id");
         builder.HasKey("id");
 
@@ -33,5 +37,10 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
             .IsUnicode(false)
             .IsFixedLength(false)
             .IsRequired();
+
+        builder.HasOne(x => x.DownloadQueueItem)
+            .WithOne(x => x.Episode)
+            .HasForeignKey<RuvEpisode>("download_queue_item_id")
+            .HasPrincipalKey<DownloadQueueItem>("id");
     }
 }
