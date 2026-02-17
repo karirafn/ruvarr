@@ -97,14 +97,20 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
 
         logger.LogDebug("Searching TVDB for series '{Name}'", searchText);
 
-        SearchResponse response = await tvdb.SearchAsync(query: searchText)
+        SearchResponse response = await tvdb.SearchAsync(query: searchText, type: "series")
             .ConfigureAwait(false);
 
-        List<Datum> data = [.. response.Data.Where(x => x.Type == "series")];
+        List<Datum> matches = [];
 
-        List<Datum> matches = checkTranslations
-            ? [.. data.Where(x => x.Translations.TryGetValue("isl", out string? islName) && islName.EqualsSanitized(searchText))]
-            : [.. data.Where(x => x.Name.EqualsSanitized(searchText))];
+        if (checkTranslations)
+        {
+            matches.AddRange(response.Data.Where(x => x.Translations.TryGetValue("isl", out string? islName) && islName.EqualsSanitized(searchText)));
+        }
+
+        if (matches is [])
+        {
+            matches.AddRange(response.Data.Where(x => x.Name.EqualsSanitized(searchText)));
+        }
 
         logger.LogDebug("Tvdb returned '{Count}' exact match(es) for series {Name}", matches.Count, searchText);
 
