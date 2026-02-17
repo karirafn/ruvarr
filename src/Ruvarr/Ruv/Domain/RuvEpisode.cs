@@ -55,26 +55,29 @@ internal sealed partial class RuvEpisode
     {
         StringBuilder builder = new();
 
-        if (!string.IsNullOrWhiteSpace(Program.Series?.Name))
+        if (string.IsNullOrWhiteSpace(Program.Series?.Name))
+        {
+            builder.Append(Program.Name);
+        }
+        else
         {
             builder.Append(Program.Series.Name);
         }
 
-        builder.Append(' ');
+        builder.Append('.');
 
         if (SeasonNumber is not null && EpisodeNumber is not null)
         {
-            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}E{1:D2} ", SeasonNumber, EpisodeNumber);
-        }
-        else
-        {
-            builder.Append("- ");
+            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}E{1:D2}.", SeasonNumber, EpisodeNumber);
         }
 
         builder.Append(Title.RemovePunctiation());
+        builder.Append("-RUV");
         builder.Append(".mp4");
 
-        return builder.ToString().Trim();
+        return builder.ToString()
+            .Replace(' ', '.')
+            .Trim();
     }
 
     public void Match(int tvdbId, int season, int episode)
