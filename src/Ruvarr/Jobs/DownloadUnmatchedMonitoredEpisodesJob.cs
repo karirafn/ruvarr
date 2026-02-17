@@ -2,11 +2,10 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using Quartz;
 
-using Ruvarr.FFmpeg;
+using Ruvarr.Downloads;
 using Ruvarr.Ruv.Domain;
 using Ruvarr.Sonarr;
 using Ruvarr.Sonarr.Models;
@@ -17,9 +16,7 @@ namespace Ruvarr.Jobs;
 internal sealed class DownloadUnmatchedMonitoredEpisodesJob(
     ILogger<DownloadUnmatchedMonitoredEpisodesJob> logger,
     RuvarrDbContext dbContext,
-    ISonarrClient sonarr,
-    IFfmpegService ffmpeg,
-    IOptions<RuvarrOptions> options) : IJob
+    ISonarrClient sonarr) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -49,31 +46,12 @@ internal sealed class DownloadUnmatchedMonitoredEpisodesJob(
             .ToListAsync()
             .ConfigureAwait(false);
 
-        List<RuvEpisode> missingMonitoredRuvEpisodes = [.. ruvEpisodes.Where(x => seriesIds.Contains(int.Parse(x.Program.Series!.TvdbId, CultureInfo.InvariantCulture)))];
+        ruvEpisodes
+            .Where(x => seriesIds.Contains(int.Parse(x.Program.Series!.TvdbId, CultureInfo.InvariantCulture)))
+            .ToList()
+            .ForEach(dbContext.EnqueueDownload);
 
-        foreach (RuvEpisode episode in missingMonitoredRuvEpisodes)
-        {
-            logger.LogInformation("Downloading {Program} {Title}", episode.Program.Series!.Name, episode.Title);
-            string directory = Path.Join(options.Value.DownloadsRootDirectory, options.Value.EpisodeDownloadDirectory, episode.Program.Series!.Name);
-            string filepath = Path.Join(directory, episode.ToFilename());
-
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            await ffmpeg.DownloadAsync(episode.Uri, filepath, episode.Title)
-                .ConfigureAwait(false);
-
-            episode.MarkDownloaded();
-
-            await dbContext.SaveChangesAsync()
-                .ConfigureAwait(false);
-        }
-
-        if (missingMonitoredRuvEpisodes.Count > 0)
-        {
-            logger.LogInformation("Finished downloading {Count} episodes", missingMonitoredRuvEpisodes.Count);
-        }
+        await dbContext.SaveChangesAsync()
+            .ConfigureAwait(false);
     }
 }

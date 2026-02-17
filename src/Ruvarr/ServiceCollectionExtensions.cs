@@ -89,6 +89,14 @@ public static class ServiceCollectionExtensions
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithIntervalInMinutes(1)
                     .RepeatForever()));
+
+            JobKey downloadQueue = new(nameof(DownloadQueueProcessor));
+            options.AddJob<DownloadQueueProcessor>(x => x.WithIdentity(downloadQueue))
+                .AddTrigger(trigger => trigger
+                    .ForJob(downloadQueue)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .RepeatForever()));
         });
         services.AddQuartzHostedService(x => x.WaitForJobsToComplete = true);
 
