@@ -41,7 +41,7 @@ internal sealed class DownloadUnmatchedMonitoredEpisodesJob(
             .Include(x => x.Program)
             .Where(x => x.Program.Series != null)
             .Where(x => x.TvdbId == null)
-            .Where(x => x.Downloaded == null)
+            .Where(x => x.DownloadQueueItem == null)
             .Where(x => x.Title.StartsWith("Þáttur "))
             .ToListAsync()
             .ConfigureAwait(false);

@@ -27,7 +27,7 @@ internal class DownloadQueueProcessor(
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
             .Include(x => x.Episode)
             .ThenInclude(x => x.Program)
-            .Where(x => x.Episode.Downloaded == null)
+            .Where(x => x.Episode.DownloadQueueItem == null)
             .FirstOrDefaultAsync()
             .ConfigureAwait(false);
 
@@ -50,7 +50,7 @@ internal class DownloadQueueProcessor(
         await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title)
             .ConfigureAwait(false);
 
-        item.Episode.MarkDownloaded();
+        item.MarkDownloaded();
 
         await dbContext.SaveChangesAsync()
             .ConfigureAwait(false);

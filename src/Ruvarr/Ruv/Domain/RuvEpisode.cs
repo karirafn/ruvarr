@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
+using Ruvarr.Downloads.Domain;
 using Ruvarr.Extensions;
 
 namespace Ruvarr.Ruv.Domain;
@@ -36,7 +37,7 @@ internal sealed partial class RuvEpisode
 
     public DateTime? NextLookup { get; private set; }
 
-    public DateTime? Downloaded { get; private set; }
+    public DownloadQueueItem? DownloadQueueItem { get; private set; }
 
     public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, string description, DateTime firstRun)
     {
@@ -89,10 +90,7 @@ internal sealed partial class RuvEpisode
         EpisodeNumber = episode;
     }
 
-    public void MarkDownloaded()
-    {
-        Downloaded = DateTime.UtcNow;
-    }
+    public void Download() => DownloadQueueItem = DownloadQueueItem.Create(this);
 
     public void ScheduleLookup()
     {

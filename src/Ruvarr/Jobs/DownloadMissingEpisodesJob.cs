@@ -29,7 +29,7 @@ internal sealed class DownloadMissingEpisodesJob(
             .Include(x => x.Program)
             .Where(x => x.TvdbId != null)
             .Where(x => missingEpisodeIds.Contains(x.TvdbId))
-            .Where(x => x.Downloaded == null)
+            .Where(x => x.DownloadQueueItem == null)
             .OrderBy(x => x.SeasonNumber)
             .ThenBy(x => x.EpisodeNumber)
             .ToListAsync()

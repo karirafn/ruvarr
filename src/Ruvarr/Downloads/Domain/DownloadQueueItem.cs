@@ -12,9 +12,13 @@ internal sealed class DownloadQueueItem
 
     public required DateTime Created { get; init; }
 
+    public DateTime? Downloaded { get; private set; }
+
     public static DownloadQueueItem Create(RuvEpisode episode) => new()
     {
         Episode = episode,
         Created = DateTime.UtcNow,
     };
+
+    public void MarkDownloaded() => Downloaded = DateTime.UtcNow;
 }
