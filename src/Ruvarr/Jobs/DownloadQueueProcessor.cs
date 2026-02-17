@@ -40,7 +40,10 @@ internal class DownloadQueueProcessor(
 
         logger.LogInformation("Downloading {Program} {Title}", item.Episode.Program.Name, item.Episode.Title);
         string filename = item.Episode.ToFilename();
-        string directory = Path.Join(options.Value.DownloadsRootDirectory, options.Value.EpisodeDownloadDirectory, item.Episode.Program.Name);
+        string directory = Path.Join(
+            options.Value.DownloadsRootDirectory,
+            options.Value.EpisodeDownloadDirectory,
+            item.Episode.Program.Series?.Name ?? item.Episode.Program.Name);
         string filepath = Path.Join(directory, filename);
 
         if (!Directory.Exists(directory))
@@ -84,18 +87,18 @@ internal class DownloadQueueProcessor(
         string importPath = Path.Join(options.Value.EpisodeDownloadDirectory, item.Episode.Program.Name, filename);
         ManualImportFile file = manualImportFiles.First(x => x.Path == importPath);
         ManualImportRequest request = new(
-                Path: importPath,
-                SeriesId: missingEpisode.SeriesId,
-                EpisodeIds: [missingEpisode.Id],
-                Quality: file.Quality,
-                Languages: file.Languages,
-                ReleaseGroup: "RÚV");
+            Path: importPath,
+            SeriesId: missingEpisode.SeriesId,
+            EpisodeIds: [missingEpisode.Id],
+            Quality: file.Quality,
+            Languages: file.Languages,
+            ReleaseGroup: "RUV");
 
         logger.LogDebug("Starting manual import of {Program} S{Season:D2}E{Episode:D2} {Title} into Sonarr",
-                item.Episode.Program.Name,
-                item.Episode.SeasonNumber,
-                item.Episode.EpisodeNumber,
-                item.Episode.Title);
+            item.Episode.Program.Name,
+            item.Episode.SeasonNumber,
+            item.Episode.EpisodeNumber,
+            item.Episode.Title);
         await sonarr.ManualImportFilesAsync([request])
             .ConfigureAwait(false);
     }
