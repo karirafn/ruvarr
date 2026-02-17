@@ -7,6 +7,14 @@ namespace Ruvarr.Downloads;
 
 internal static class DbContextExtensions
 {
-    internal static void EnqueueDownload(this DbContext dbContext, RuvEpisode episode) =>
-        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
+    internal static void EnqueueDownload(this DbContext dbContext, RuvEpisode episode)
+    {
+        if (episode.DownloadQueueItem != null)
+        {
+            return;
+        }
+
+        dbContext.Set<DownloadQueueItem>()
+            .Add(DownloadQueueItem.Create(episode));
+    }
 }
