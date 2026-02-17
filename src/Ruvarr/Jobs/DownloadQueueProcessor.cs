@@ -82,10 +82,10 @@ internal class DownloadQueueProcessor(
         }
 
         IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(options.Value.EpisodeDownloadDirectory)
-                .ConfigureAwait(false);
+            .ConfigureAwait(false);
 
         string importPath = Path.Join(options.Value.EpisodeDownloadDirectory, item.Episode.Program.Name, filename);
-        ManualImportFile file = manualImportFiles.First(x => x.Path == importPath);
+        ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
         ManualImportRequest request = new(
             Path: importPath,
             SeriesId: missingEpisode.SeriesId,
