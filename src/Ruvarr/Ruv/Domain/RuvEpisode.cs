@@ -65,18 +65,22 @@ internal sealed partial class RuvEpisode
             builder.Append(Program.Series.Name);
         }
 
-        builder.Append('.');
+        builder.Append(' ');
 
         if (SeasonNumber is not null && EpisodeNumber is not null)
         {
-            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}E{1:D2}.", SeasonNumber, EpisodeNumber);
+            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}E{1:D2}", SeasonNumber, EpisodeNumber);
+        }
+        else
+        {
+            builder.Append(Title);
         }
 
-        builder.Append(Title.RemovePunctiation());
         builder.Append("-RUV");
-        builder.Append(".mp4");
+        builder.Append(" mp4");
 
         return builder.ToString()
+            .RemovePunctiation()
             .Replace(' ', '.')
             .Trim();
     }

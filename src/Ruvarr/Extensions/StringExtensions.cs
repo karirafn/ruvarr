@@ -36,7 +36,8 @@ internal static partial class StringExtensions
     internal static string RemovePunctiation(this string input) => input
         .RemoveNonAlphaNumericCharacters()
         .RemoveExtraWhitespaces()
-        .RemoveSoftHyphens();
+        .RemoveSoftHyphens()
+        .Replace(".", string.Empty, StringComparison.OrdinalIgnoreCase);
 
     private static string RemoveNonAlphaNumericCharacters(this string input) => NonAlphaNumericCharactersRegex().Replace(input, " ");
 
