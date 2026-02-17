@@ -10,14 +10,12 @@ internal sealed class DownloadQueueItemConfiguration : IEntityTypeConfiguration<
         builder.Property<int>("id");
         builder.HasKey("id");
 
-        builder.Property(x => x.Episode)
-            .IsRequired();
-
         builder.Property(x => x.Created)
             .IsRequired();
 
         builder.HasOne(x => x.Episode)
             .WithOne()
-            .HasForeignKey("episode_id");
+            .HasForeignKey<DownloadQueueItem>("episode_id")
+            .IsRequired();
     }
 }
