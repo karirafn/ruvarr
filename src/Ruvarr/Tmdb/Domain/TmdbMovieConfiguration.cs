@@ -25,6 +25,9 @@ internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovi
             .IsUnicode(true)
             .IsFixedLength(false);
 
+        builder.HasMany(x => x.Programs)
+            .WithOne(x => x.Movie);
+
         builder.Metadata
             .FindNavigation(nameof(TvdbSeries.Programs))?
             .SetPropertyAccessMode(PropertyAccessMode.Field);
