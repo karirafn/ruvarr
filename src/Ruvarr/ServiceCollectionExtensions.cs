@@ -82,6 +82,13 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInMinutes(1)
                     .RepeatForever()));
 
+            JobKey downloadUnmatched = new(nameof(DownloadUnmatchedMonitoredEpisodesJob));
+            options.AddJob<DownloadUnmatchedMonitoredEpisodesJob>(x => x.WithIdentity(downloadUnmatched))
+                .AddTrigger(trigger => trigger
+                    .ForJob(downloadUnmatched)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithIntervalInMinutes(1)
+                    .RepeatForever()));
         });
         services.AddQuartzHostedService(x => x.WaitForJobsToComplete = true);
 

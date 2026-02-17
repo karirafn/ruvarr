@@ -8,6 +8,16 @@ namespace Ruvarr.Sonarr;
 
 internal sealed class SonarrClient(HttpClient httpClient) : ISonarrClient
 {
+    public async Task<IReadOnlyList<Series>> GetSeriesAsync()
+    {
+        string path = "api/v3/series";
+
+        IReadOnlyList<Series>? response = await httpClient.GetFromJsonAsync<IReadOnlyList<Series>>(path)
+            .ConfigureAwait(false);
+
+        return response ?? [];
+    }
+
     public async Task<IReadOnlyCollection<MissingEpisode>> GetMissingEpisodesAsync(int pageSize = int.MaxValue)
     {
         NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);

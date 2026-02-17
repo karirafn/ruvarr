@@ -47,15 +47,14 @@ internal sealed class DownloadMissingEpisodesJob(
 
             MissingEpisode missingEpisode = missingEpisodes.First(x => x.TvdbId == episode.TvdbId);
 
-            string filename = $"{episode.Program.Series!.Name} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}.mp4";
-            string filepath = Path.Join(options.Value.DownloadsRootDirectory, options.Value.EpisodeDownloadDirectory, filename);
+            string filepath = Path.Join(options.Value.DownloadsRootDirectory, options.Value.EpisodeDownloadDirectory, episode.ToFilename());
             await ffmpeg.DownloadAsync(episode.Uri, filepath, episode.Title)
                 .ConfigureAwait(false);
 
             IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(options.Value.EpisodeDownloadDirectory)
                 .ConfigureAwait(false);
 
-            string importPath = Path.Join(options.Value.EpisodeDownloadDirectory, filename);
+            string importPath = Path.Join(options.Value.EpisodeDownloadDirectory, episode.ToFilename());
             ManualImportFile file = manualImportFiles.First(x => x.Path == importPath);
 
             ManualImportRequest request = new(

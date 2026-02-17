@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 
 using Ruvarr.Extensions;
 
@@ -47,6 +49,32 @@ internal sealed partial class RuvEpisode
             Description = description,
             FirstRun = firstRun,
         };
+    }
+
+    public string ToFilename()
+    {
+        StringBuilder builder = new();
+
+        if (!string.IsNullOrWhiteSpace(Program.Series?.Name))
+        {
+            builder.Append(Program.Series.Name);
+        }
+
+        builder.Append(' ');
+
+        if (SeasonNumber is not null && EpisodeNumber is not null)
+        {
+            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}E{1:D2} ", SeasonNumber, EpisodeNumber);
+        }
+        else
+        {
+            builder.Append("- ");
+        }
+
+        builder.Append(Title.RemovePunctiation());
+        builder.Append(".mp4");
+
+        return builder.ToString().Trim();
     }
 
     public void Match(int tvdbId, int season, int episode)

@@ -33,19 +33,19 @@ internal static partial class StringExtensions
     internal static bool EqualsSanitized(this string a, string b) => a.RemovePunctiation()
         .Equals(b.RemovePunctiation(), StringComparison.OrdinalIgnoreCase);
 
-    private static string RemovePunctiation(this string input) => input
+    internal static string RemovePunctiation(this string input) => input
         .RemoveNonAlphaNumericCharacters()
         .RemoveExtraWhitespaces()
         .RemoveSoftHyphens();
 
-    private static string RemoveNonAlphaNumericCharacters(this string input) => NonAlphaNumericCharactersRegex().Replace(input, string.Empty);
+    private static string RemoveNonAlphaNumericCharacters(this string input) => NonAlphaNumericCharactersRegex().Replace(input, " ");
 
     private static string RemoveExtraWhitespaces(this string input) => ExtraWhiteSpacesRegex().Replace(input, " ");
 
     // https://en.wikipedia.org/wiki/Soft_hyphen
     private static string RemoveSoftHyphens(this string input) => input.Replace("\u00AD", string.Empty, StringComparison.OrdinalIgnoreCase);
 
-    [GeneratedRegex(@"[^a-zA-Z0-9]")]
+    [GeneratedRegex(@"[^a-zA-Z0-9] ")]
     private static partial Regex NonAlphaNumericCharactersRegex();
 
     [GeneratedRegex(@" +")]
