@@ -90,6 +90,11 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             return null;
         }
 
+        searchText = searchText
+            .Replace(':', ' ')
+            .Replace('-', ' ')
+            .Replace('!', ' ');
+
         logger.LogDebug("Searching TVDB for series '{Name}'", searchText);
 
         SearchResponse response = await tvdb.SearchAsync(query: searchText)
