@@ -38,7 +38,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(ruvSeriesSync)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInHours(6)
+                    .WithSimpleSchedule(x => x.WithIntervalInHours(1)
                     .RepeatForever()));
 
             // Start this job 30 seconds after series sync job to ensure series exist on first run
@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(ruvEpisodeSync)
                     .StartAt(DateTimeOffset.UtcNow.AddSeconds(30))
-                    .WithSimpleSchedule(x => x.WithIntervalInHours(6)
+                    .WithSimpleSchedule(x => x.WithIntervalInHours(1)
                     .RepeatForever()));
 
             JobKey tmdbMovieLookup = new(nameof(TmdbMovieLookupJob));
