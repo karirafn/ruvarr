@@ -34,10 +34,10 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             return;
         }
 
-        Datum? match = await SearchTvdbAsync(program.ForeignName, checkTranslations: false).ConfigureAwait(false)
-            ?? await TryRemovingRomanNumeralEnding(program.ForeignName, checkTranslations: false).ConfigureAwait(false)
-            ?? await SearchTvdbAsync(program.Name, checkTranslations: true).ConfigureAwait(false)
-            ?? await TryRemovingRomanNumeralEnding(program.Name, checkTranslations: true).ConfigureAwait(false);
+        Datum? match = await SearchTvdbAsync(program.Name, checkTranslations: true).ConfigureAwait(false)
+            ?? await TryRemovingRomanNumeralEnding(program.Name, checkTranslations: true).ConfigureAwait(false)
+            ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false).ConfigureAwait(false)
+            ?? await TryRemovingRomanNumeralEnding(program.ForeignName, checkTranslations: false).ConfigureAwait(false);
 
         if (match is null)
         {
