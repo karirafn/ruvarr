@@ -51,12 +51,20 @@ internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvC
 
         List<int> existingRuvIds = [.. existingTvPrograms.Select(x => x.RuvId)];
         List<RuvProgram> removedPrograms = [.. existingTvPrograms.Where(x => !ruvIds.Contains(x.RuvId))];
-        logger.LogInformation("Removing {Count} RÚV programs from database", removedPrograms.Count);
+
+        if (removedPrograms.Count > 0)
+        {
+            logger.LogInformation("Removing {Count} RÚV programs from database", removedPrograms.Count);
+        }
 
         List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
             .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes))];
-        logger.LogInformation("Adding {Count} RÚV new programs to database", newPrograms.Count);
+
+        if (newPrograms.Count > 0)
+        {
+            logger.LogInformation("Adding {Count} RÚV new programs to database", newPrograms.Count);
+        }
 
         dbContext.Set<RuvProgram>()
             .RemoveRange(removedPrograms);
