@@ -20,11 +20,6 @@ internal sealed class TvdbSeriesConfiguration : IEntityTypeConfiguration<TvdbSer
             .IsUnicode(false)
             .IsFixedLength(false);
 
-        builder.Property(x => x.Type)
-            .HasMaxLength(16)
-            .IsUnicode(false)
-            .IsFixedLength(false);
-
         builder.Property(x => x.Name)
             .HasMaxLength(256)
             .IsUnicode(true)

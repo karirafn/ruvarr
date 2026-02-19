@@ -12,8 +12,6 @@ internal sealed class TvdbSeries
 
     public required string TvdbId { get; init; }
 
-    public required string Type { get; init; }
-
     public required string Name { get; init; }
 
     public IReadOnlyList<RuvProgram> Programs => [.. _programs];
@@ -27,7 +25,6 @@ internal sealed class TvdbSeries
         return new()
         {
             TvdbId = id,
-            Type = type,
             Name = name
         };
     }
