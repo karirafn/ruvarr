@@ -12,7 +12,7 @@ internal sealed class TmdbMovie
 
     public required int TmdbId { get; init; }
 
-    public required string TmdbName { get; init; }
+    public required string Name { get; init; }
 
     public IReadOnlyList<RuvProgram> Programs => [.. _programs];
 
@@ -24,7 +24,7 @@ internal sealed class TmdbMovie
         return new()
         {
             TmdbId = id,
-            TmdbName = name
+            Name = name
         };
     }
 }

@@ -20,7 +20,7 @@ internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovi
         builder.Property(x => x.TmdbId)
             .IsRequired();
 
-        builder.Property(x => x.TmdbName)
+        builder.Property(x => x.Name)
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false);
