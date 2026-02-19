@@ -128,7 +128,8 @@ internal sealed partial class RuvEpisode
 
         if (parts.Length > 1 && NumberPrefixRegex().IsMatch(parts[0]))
         {
-            title = string.Join(' ', parts[1..]);
+            int startIndex = parts[1].Equals("kafli:", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
+            title = string.Join(' ', parts[startIndex..]);
         }
 
         return title.EqualsSanitized(value);
