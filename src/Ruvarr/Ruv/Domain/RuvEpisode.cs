@@ -134,6 +134,6 @@ internal sealed partial class RuvEpisode
         return title.EqualsSanitized(value);
     }
 
-    [GeneratedRegex(@"^\d+\.$")]
+    [GeneratedRegex(@"^\d+(\.|,)$")]
     private static partial Regex NumberPrefixRegex();
 }
