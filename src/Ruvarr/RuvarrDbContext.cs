@@ -2,15 +2,13 @@
 
 namespace Ruvarr;
 
-internal sealed class RuvarrDbContext : DbContext
+public sealed class RuvarrDbContext(DbContextOptions<RuvarrDbContext> options)
+    : DbContext(options)
 {
-    public RuvarrDbContext(DbContextOptions<RuvarrDbContext> options)
-        : base(options)
-    {
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(RuvarrDbContext).Assembly);
     }
 }
