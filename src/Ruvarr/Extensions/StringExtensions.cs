@@ -6,7 +6,7 @@ internal static partial class StringExtensions
 {
     private static readonly List<string> RomanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
 
-    internal static string? WithoutRomanNumeralEnding(this string? input)
+    internal static string? WithoutNumeralEnding(this string? input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -20,7 +20,7 @@ internal static partial class StringExtensions
             return input;
         }
 
-        if (!RomanNumerals.Contains(parts[^1]))
+        if (!RomanNumerals.Contains(parts[^1]) && !int.TryParse(parts[^1], out _))
         {
             return input;
         }
