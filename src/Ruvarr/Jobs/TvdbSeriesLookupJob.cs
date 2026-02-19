@@ -35,9 +35,9 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
         }
 
         Datum? match = await SearchTvdbAsync(program.Name, checkTranslations: true).ConfigureAwait(false)
-            ?? await TryRemovingRomanNumeralEnding(program.Name, checkTranslations: true).ConfigureAwait(false)
+            ?? await TryRemovingNumeralEnding(program.Name, checkTranslations: true).ConfigureAwait(false)
             ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false).ConfigureAwait(false)
-            ?? await TryRemovingRomanNumeralEnding(program.ForeignName, checkTranslations: false).ConfigureAwait(false);
+            ?? await TryRemovingNumeralEnding(program.ForeignName, checkTranslations: false).ConfigureAwait(false);
 
         if (match is null)
         {
@@ -74,9 +74,9 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             .ConfigureAwait(false);
     }
 
-    private Task<Datum?> TryRemovingRomanNumeralEnding(string? searchText, bool checkTranslations)
+    private Task<Datum?> TryRemovingNumeralEnding(string? searchText, bool checkTranslations)
     {
-        string? trimmed = searchText.WithoutRomanNumeralEnding();
+        string? trimmed = searchText.WithoutNumeralEnding();
 
         return searchText == trimmed
             ? Task.FromResult(default(Datum?))
@@ -90,14 +90,16 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             return null;
         }
 
-        searchText = searchText
+        string sanitizedSearchText = searchText
+            .Normalize(System.Text.NormalizationForm.FormD)
             .Replace(':', ' ')
             .Replace('-', ' ')
-            .Replace('!', ' ');
+            .Replace('!', ' ')
+            .Replace('ð', 'd');
 
         logger.LogDebug("Searching TVDB for series '{Name}'", searchText);
 
-        SearchResponse response = await tvdb.SearchAsync(query: searchText, type: "series")
+        SearchResponse response = await tvdb.SearchAsync(query: sanitizedSearchText, type: "series")
             .ConfigureAwait(false);
 
         List<Datum> matches = [];
