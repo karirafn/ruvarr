@@ -9,10 +9,11 @@
     <File Path="nuget.config" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Ruvarr.Console/Ruvarr.Console.csproj" />
+    <Project Path="src/Ruvarr.Api/Ruvarr.Api.csproj" />
     <Project Path="src/Ruvarr/Ruvarr.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Ruvarr.IntegrationTests/Ruvarr.IntegrationTests.csproj" />
     <Project Path="tests/Ruvarr.UnitTests/Ruvarr.UnitTests.csproj" />
   </Folder>
 </Solution>
