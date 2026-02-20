@@ -94,8 +94,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             .Normalize(System.Text.NormalizationForm.FormD)
             .Replace(':', ' ')
             .Replace('-', ' ')
-            .Replace('!', ' ')
-            .Replace('ð', 'd');
+            .Replace('!', ' ');
 
         logger.LogDebug("Searching TVDB for series '{Name}'", searchText);
 
