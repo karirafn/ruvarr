@@ -51,6 +51,13 @@ internal class DownloadQueueProcessor(
             Directory.CreateDirectory(directory);
         }
 
+        if (File.Exists(filepath))
+        {
+            string extension = Path.GetExtension(filename);
+            string filenameWithoutExtension = Path.GetFileNameWithoutExtension(filename);
+            filename = $"{filenameWithoutExtension}.X{extension}";
+        }
+
         await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title)
             .ConfigureAwait(false);
 
