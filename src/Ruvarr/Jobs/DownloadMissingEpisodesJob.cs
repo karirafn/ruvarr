@@ -20,8 +20,7 @@ internal sealed class DownloadMissingEpisodesJob(
     {
         logger.LogDebug("Starting download missing episodes job");
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(pageSize: int.MaxValue)
-            .ConfigureAwait(false);
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(pageSize: int.MaxValue);
 
         List<int?> missingEpisodeIds = [.. missingEpisodes.Select(x => x.TvdbId)];
 
@@ -32,12 +31,10 @@ internal sealed class DownloadMissingEpisodesJob(
             .Where(x => x.DownloadQueueItem == null)
             .OrderBy(x => x.SeasonNumber)
             .ThenBy(x => x.EpisodeNumber)
-            .ToListAsync()
-            .ConfigureAwait(false);
+            .ToListAsync();
 
         episodes.ForEach(dbContext.EnqueueDownload);
 
-        await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        await dbContext.SaveChangesAsync();
     }
 }

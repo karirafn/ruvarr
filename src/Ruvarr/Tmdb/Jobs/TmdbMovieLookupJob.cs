@@ -28,8 +28,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
             .Where(x => x.Movie == null)
             .Where(x => x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)
             .OrderBy(x => x.NextLookup)
-            .FirstOrDefaultAsync()
-            .ConfigureAwait(false);
+            .FirstOrDefaultAsync();
 
         if (program is null)
         {
@@ -42,12 +41,11 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
             : program.ForeignName;
 
         logger.LogDebug("Searching TMDB for '{Name}'", searchText);
-        SearchContainer<SearchMovie>? result = await tmdb.SearchMovieAsync(searchText)
-            .ConfigureAwait(false);
+        SearchContainer<SearchMovie>? result = await tmdb.SearchMovieAsync(searchText);
 
         if (result is null || result.Results is null)
         {
-            await ScheduleLookupAsync(program).ConfigureAwait(false);
+            await ScheduleLookupAsync(program);
             return;
         }
 
@@ -58,8 +56,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
         if (matches is [] && result.Results.Count == 1)
         {
             logger.LogDebug("TMDB returned single match but title and original title did not match '{Name}'. Checking translations", searchText);
-            Movie? movie = await tmdb.GetMovieAsync(result.Results[0].Id, MovieMethods.Translations)
-                .ConfigureAwait(false);
+            Movie? movie = await tmdb.GetMovieAsync(result.Results[0].Id, MovieMethods.Translations);
 
             string? icelandicName = movie?.Translations?
                 .Translations?
@@ -76,7 +73,7 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
 
         if (matches.Count != 1)
         {
-            await ScheduleLookupAsync(program).ConfigureAwait(false);
+            await ScheduleLookupAsync(program);
             return;
         }
 
@@ -84,13 +81,11 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
         TmdbMovie entity = await dbContext.Set<TmdbMovie>()
             .Where(x => x.TmdbId == match.Id)
             .FirstOrDefaultAsync()
-            .ConfigureAwait(false)
             ?? TmdbMovie.Create(match.Id, match.Title ?? match.OriginalTitle ?? string.Empty);
 
         program.MatchTmdb(entity);
 
-        int added = await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        int added = await dbContext.SaveChangesAsync();
 
         if (added > 0)
         {
@@ -105,7 +100,6 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
             "TMDB returned no matches. Next lookup scheduled on {Timestamp}",
             program.NextLookup?.ToString("yyyy-MM-dd - hh:mm", CultureInfo.InvariantCulture));
 
-        await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        await dbContext.SaveChangesAsync();
     }
 }

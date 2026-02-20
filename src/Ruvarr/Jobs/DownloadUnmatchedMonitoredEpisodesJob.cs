@@ -22,16 +22,14 @@ internal sealed class DownloadUnmatchedMonitoredEpisodesJob(
     {
         logger.LogDebug("Starting download unmatched monitored episodes job");
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync()
-            .ConfigureAwait(false);
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
 
         List<int> monitoredSeriesTvdbIds = [.. missingEpisodes
             .Where(x => x.Monitored)
             .Select(x => x.SeriesId)
             .Distinct()];
 
-        IReadOnlyList<Series> series = await sonarr.GetSeriesAsync()
-            .ConfigureAwait(false);
+        IReadOnlyList<Series> series = await sonarr.GetSeriesAsync();
 
         // Get ids of series that are monitored and are missing non-special (season 0) episodes
         List<int> seriesIds = [.. series.Where(x => monitoredSeriesTvdbIds.Contains(x.Id))
@@ -45,8 +43,7 @@ internal sealed class DownloadUnmatchedMonitoredEpisodesJob(
             .Where(x => x.TvdbId == null)
             .Where(x => x.DownloadQueueItem == null)
             .Where(x => x.Title.StartsWith("Þáttur "))
-            .ToListAsync()
-            .ConfigureAwait(false);
+            .ToListAsync();
 
         List<RuvEpisode> episodes = [.. ruvEpisodes
             .Where(x => seriesIds.Contains(int.Parse(x.Program.Series!.TvdbId, CultureInfo.InvariantCulture)))];
@@ -56,7 +53,6 @@ internal sealed class DownloadUnmatchedMonitoredEpisodesJob(
             dbContext.EnqueueDownload(episode);
         }
 
-        await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        await dbContext.SaveChangesAsync();
     }
 }

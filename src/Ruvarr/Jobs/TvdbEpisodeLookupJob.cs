@@ -23,8 +23,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
             .Where(e => e.NextLookup == null || e.NextLookup <= DateTime.UtcNow)
             .OrderBy(e => e.NextLookup)
             .Select(e => e.Program)
-            .FirstOrDefaultAsync()
-            .ConfigureAwait(false);
+            .FirstOrDefaultAsync();
 
         if (program is null || program.Series is null || !int.TryParse(program.Series.TvdbId, out int seriesId) || seriesId < 1)
         {
@@ -33,12 +32,11 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
         }
 
         logger.LogDebug("Getting TVDB series data");
-        SeriesData? seriesData = await tvdb.GetSeriesAsync(seriesId)
-            .ConfigureAwait(false);
+        SeriesData? seriesData = await tvdb.GetSeriesAsync(seriesId);
 
         if (seriesData is null)
         {
-            await ScheduleLookupAsync(program).ConfigureAwait(false);
+            await ScheduleLookupAsync(program);
 
             return;
         }
@@ -59,8 +57,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
                 translatedEpisode.SeasonNumber,
                 translatedEpisode.Number,
                 translatedEpisode.Name);
-            EpisodeTranslation? translation = await tvdb.GetEpisodeTranslationAsync(translatedEpisode.Id)
-                .ConfigureAwait(false);
+            EpisodeTranslation? translation = await tvdb.GetEpisodeTranslationAsync(translatedEpisode.Id);
 
             if (translation is null)
             {
@@ -88,7 +85,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
             episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number);
         }
 
-        await ScheduleLookupAsync(program).ConfigureAwait(false);
+        await ScheduleLookupAsync(program);
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program)
@@ -98,7 +95,6 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
             episode.ScheduleLookup();
         }
 
-        await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        await dbContext.SaveChangesAsync();
     }
 }

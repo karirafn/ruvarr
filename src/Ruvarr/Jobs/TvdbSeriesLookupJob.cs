@@ -25,8 +25,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             .Where(x => x.Series == null)
             .Where(x => x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)
             .OrderBy(x => x.NextLookup)
-            .FirstOrDefaultAsync()
-            .ConfigureAwait(false);
+            .FirstOrDefaultAsync();
 
         if (program is null)
         {
@@ -34,14 +33,14 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             return;
         }
 
-        Datum? match = await SearchTvdbAsync(program.Name, checkTranslations: true).ConfigureAwait(false)
-            ?? await TryRemovingNumeralEnding(program.Name, checkTranslations: true).ConfigureAwait(false)
-            ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false).ConfigureAwait(false)
-            ?? await TryRemovingNumeralEnding(program.ForeignName, checkTranslations: false).ConfigureAwait(false);
+        Datum? match = await SearchTvdbAsync(program.Name, checkTranslations: true)
+            ?? await TryRemovingNumeralEnding(program.Name, checkTranslations: true)
+            ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false)
+            ?? await TryRemovingNumeralEnding(program.ForeignName, checkTranslations: false);
 
         if (match is null)
         {
-            await ScheduleLookupAsync(program).ConfigureAwait(false);
+            await ScheduleLookupAsync(program);
             return;
         }
 
@@ -49,13 +48,11 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             .Set<TvdbSeries>()
             .Where(x => x.TvdbId == match.TvdbId)
             .FirstOrDefaultAsync()
-            .ConfigureAwait(false)
             ?? TvdbSeries.Create(match.TvdbId, match.Type, match.Name);
 
         program.MatchTvdb(entity);
 
-        int added = await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        int added = await dbContext.SaveChangesAsync();
 
         if (added > 0)
         {
@@ -70,8 +67,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
             "TVDB returned no series matches. Next series lookup scheduled on {Timestamp}",
             program.NextLookup?.ToString("yyyy-MM-dd hh:mm:ss", CultureInfo.InvariantCulture));
 
-        _ = await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        _ = await dbContext.SaveChangesAsync();
     }
 
     private Task<Datum?> TryRemovingNumeralEnding(string? searchText, bool checkTranslations)
@@ -98,8 +94,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
 
         logger.LogDebug("Searching TVDB for series '{Name}'", searchText);
 
-        SearchResponse response = await tvdb.SearchAsync(query: sanitizedSearchText, type: "series")
-            .ConfigureAwait(false);
+        SearchResponse response = await tvdb.SearchAsync(query: sanitizedSearchText, type: "series");
 
         List<Datum> matches = [];
 

@@ -17,16 +17,14 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
 
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
-            .ToListAsync()
-            .ConfigureAwait(false);
+            .ToListAsync();
         logger.LogDebug("Found {Count} RÚV programs with multiple episodes in database", programs.Count);
 
         foreach (RuvProgram program in programs)
         {
             logger.LogDebug("Getting episodes for RÚV program '{Name}'", program.Name);
 
-            RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(program.RuvId)
-                .ConfigureAwait(false);
+            RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(program.RuvId);
 
             if (ruvProgram is null)
             {
@@ -45,8 +43,7 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
                 .ToList()
                 .ForEach(e => logger.LogInformation("Added RÚV episode '{EpisodeName}' to program '{Name}'", e.Title, program.Name));
 
-            _ = await dbContext.SaveChangesAsync()
-                .ConfigureAwait(false);
+            _ = await dbContext.SaveChangesAsync();
         }
     }
 }

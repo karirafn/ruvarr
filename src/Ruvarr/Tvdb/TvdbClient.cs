@@ -38,10 +38,9 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
             .WithLimit(limit)
             .Build();
 
-        await SetAuthorizationHeader(cancellationToken).ConfigureAwait(false);
+        await SetAuthorizationHeader(cancellationToken);
 
         SearchResponse response = await client.GetFromJsonAsync<SearchResponse>(path, cancellationToken)
-            .ConfigureAwait(false)
             ?? throw new InvalidOperationException("Failed to search the TVDB");
 
         return response;
@@ -49,20 +48,20 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
 
     public async Task<SeriesData?> GetSeriesAsync(int id, CancellationToken cancellationToken = default)
     {
-        await SetAuthorizationHeader(cancellationToken).ConfigureAwait(false);
+        await SetAuthorizationHeader(cancellationToken);
 
-        SeriesResponse? response = await client.GetFromJsonAsync<SeriesResponse>($"v4/series/{id}/episodes/default", cancellationToken)
-            .ConfigureAwait(false);
+        SeriesResponse? response = await client.GetFromJsonAsync<SeriesResponse>($"v4/series/{id}/episodes/default", cancellationToken);
 
         return response?.Data;
     }
 
     public async Task<EpisodeTranslation?> GetEpisodeTranslationAsync(int id, string language = "isl", CancellationToken cancellationToken = default)
     {
-        await SetAuthorizationHeader(cancellationToken).ConfigureAwait(false);
+        await SetAuthorizationHeader(cancellationToken);
 
-        EpisodeTranslationResponse? response = await client.GetFromJsonAsync<EpisodeTranslationResponse>($"v4/episodes/{id}/translations/{language}", cancellationToken)
-            .ConfigureAwait(false);
+        EpisodeTranslationResponse? response = await client.GetFromJsonAsync<EpisodeTranslationResponse>(
+            $"v4/episodes/{id}/translations/{language}",
+            cancellationToken);
 
         return response?.Data;
     }
@@ -71,7 +70,7 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
     {
         if (!memoryCache.TryGetValue(TvdbOptions.AccessTokenCacheKey, out string? accessToken))
         {
-            AuthenticationResponse? response = await LoginAsync(options.Value.ApiKey, null, cancellationToken).ConfigureAwait(false);
+            AuthenticationResponse? response = await LoginAsync(options.Value.ApiKey, null, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(response?.Data.Token))
             {
@@ -94,16 +93,14 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
     private async Task<AuthenticationResponse?> LoginAsync(string apiKey, string? pin = null, CancellationToken cancellationToken = default)
     {
         LoginRequest request = new(apiKey, pin);
-        HttpResponseMessage response = await client.PostAsJsonAsync("v4/login", request, cancellationToken)
-            .ConfigureAwait(false);
+        HttpResponseMessage response = await client.PostAsJsonAsync("v4/login", request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
             return null;
         }
 
-        AuthenticationResponse? content = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(cancellationToken)
-            .ConfigureAwait(false);
+        AuthenticationResponse? content = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(cancellationToken);
 
         return content;
     }

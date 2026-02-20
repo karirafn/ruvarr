@@ -36,7 +36,6 @@ internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegSe
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        await process.WaitForExitAsync()
-            .ConfigureAwait(false);
+        await process.WaitForExitAsync();
     }
 }

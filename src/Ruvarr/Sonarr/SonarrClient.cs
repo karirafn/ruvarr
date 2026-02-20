@@ -21,8 +21,7 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
 
         string path = $"api/v3/wanted/missing?{HttpUtility.UrlPathEncode(parameters.ToString())}";
 
-        MissingEpisodesResponse? response = await GetAsync<MissingEpisodesResponse>(path, cancellationToken)
-            .ConfigureAwait(false);
+        MissingEpisodesResponse? response = await GetAsync<MissingEpisodesResponse>(path, cancellationToken);
 
         return response?.Records ?? [];
     }

@@ -17,13 +17,11 @@ internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvC
     {
         logger.LogDebug("Starting RÚV programs sync job");
 
-        RuvFeaturedTv? kids = await ruv.GetKidsTvAsync()
-            .ConfigureAwait(false);
+        RuvFeaturedTv? kids = await ruv.GetKidsTvAsync();
         List<RuvTvProgram> kidsPograms = kids?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
         logger.LogDebug("Found {Count} Krakka RÚV programs", kidsPograms.Count);
 
-        RuvFeaturedTv? featured = await ruv.GetFeaturedTv()
-            .ConfigureAwait(false);
+        RuvFeaturedTv? featured = await ruv.GetFeaturedTv();
         List<RuvTvProgram> featuredPrograms = featured?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
         logger.LogDebug("Found {Count} featured RÚV programs", featuredPrograms.Count);
 
@@ -45,8 +43,7 @@ internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvC
 
         List<RuvProgram> existingTvPrograms = await dbContext.Set<RuvProgram>()
             .Where(x => ruvIds.Contains(x.RuvId))
-            .ToListAsync()
-            .ConfigureAwait(false);
+            .ToListAsync();
         logger.LogDebug("Found {Count} RÚV programs in database", existingTvPrograms.Count);
 
         List<int> existingRuvIds = [.. existingTvPrograms.Select(x => x.RuvId)];
@@ -72,7 +69,6 @@ internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvC
         dbContext.Set<RuvProgram>()
             .AddRange(newPrograms);
 
-        await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        await dbContext.SaveChangesAsync();
     }
 }

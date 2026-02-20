@@ -29,8 +29,7 @@ internal class DownloadQueueProcessor(
             .ThenInclude(x => x.Program)
             .Where(x => x.Downloaded == null)
             .OrderBy(x => x.Created)
-            .FirstOrDefaultAsync()
-            .ConfigureAwait(false);
+            .FirstOrDefaultAsync();
 
         if (item is null)
         {
@@ -59,13 +58,11 @@ internal class DownloadQueueProcessor(
             filepath = Path.Join(directory, filename);
         }
 
-        await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title)
-            .ConfigureAwait(false);
+        await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title);
 
         item.MarkDownloaded();
 
-        await dbContext.SaveChangesAsync()
-            .ConfigureAwait(false);
+        await dbContext.SaveChangesAsync();
 
         if (item.Episode.TvdbId == null)
         {
@@ -73,8 +70,7 @@ internal class DownloadQueueProcessor(
             return;
         }
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync()
-            .ConfigureAwait(false);
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
 
         MissingEpisode? missingEpisode = missingEpisodes.FirstOrDefault(x => x.TvdbId == item.Episode.TvdbId);
 
@@ -89,8 +85,7 @@ internal class DownloadQueueProcessor(
             return;
         }
 
-        IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(options.Value.EpisodeDownloadDirectory)
-            .ConfigureAwait(false);
+        IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(options.Value.EpisodeDownloadDirectory);
 
         ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
         ManualImportRequest request = new(
@@ -106,7 +101,6 @@ internal class DownloadQueueProcessor(
             item.Episode.SeasonNumber,
             item.Episode.EpisodeNumber,
             item.Episode.Title);
-        await sonarr.ManualImportFilesAsync([request])
-            .ConfigureAwait(false);
+        await sonarr.ManualImportFilesAsync([request]);
     }
 }
