@@ -80,13 +80,12 @@ internal sealed class TvdbSearchPathBuilder
 
     private void AddQuery(string key, object? value)
     {
-        if (value is null)
+        if (value?.ToString() is not string input)
         {
             return;
         }
 
-        string queries = value.ToString() ?? string.Empty;
-        string normalized = queries.Normalize(NormalizationForm.FormC);
+        string normalized = input.Normalize(NormalizationForm.FormC);
         string encoded = Uri.EscapeDataString(normalized);
 
         _queries.Add(key, encoded);
