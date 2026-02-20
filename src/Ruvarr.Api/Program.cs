@@ -1,4 +1,5 @@
 using Ruvarr;
+using Ruvarr.Api.Programs;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -15,5 +16,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.MapPogramEndpoints();
 
 await app.RunAsync();
