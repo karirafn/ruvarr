@@ -9,7 +9,7 @@ public sealed record class Datum(
     [property: JsonPropertyName("Id")] string Id,
     [property: JsonPropertyName("image_url")] Uri ImageUrl,
     [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("first_air_time")] DateOnly FirstAirDate,
+    [property: JsonPropertyName("first_air_time")] string FirstAirDate,
     [property: JsonPropertyName("overview")] string Overview,
     [property: JsonPropertyName("primary_language")] string PrimaryLanguage,
     [property: JsonPropertyName("primary_type")] string PrimaryType,
