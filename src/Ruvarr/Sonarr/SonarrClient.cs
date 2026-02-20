@@ -1,52 +1,42 @@
 ﻿using System.Collections.Specialized;
-using System.Net.Http.Json;
 using System.Web;
 
+using Microsoft.Extensions.Logging;
+
+using Ruvarr.Abstractions;
 using Ruvarr.Sonarr.Models;
 
 namespace Ruvarr.Sonarr;
 
-internal sealed class SonarrClient(HttpClient httpClient) : ISonarrClient
+internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient httpClient)
+    : ApiClient(logger, httpClient), ISonarrClient
 {
-    public async Task<IReadOnlyList<Series>> GetSeriesAsync()
-    {
-        string path = "api/v3/series";
+    public Task<IReadOnlyList<Series>> GetSeriesAsync(CancellationToken cancellationToken = default) =>
+        GetMany<Series>("api/v3/series", cancellationToken);
 
-        IReadOnlyList<Series>? response = await httpClient.GetFromJsonAsync<IReadOnlyList<Series>>(path)
-            .ConfigureAwait(false);
-
-        return response ?? [];
-    }
-
-    public async Task<IReadOnlyCollection<MissingEpisode>> GetMissingEpisodesAsync(int pageSize = int.MaxValue)
+    public async Task<IReadOnlyCollection<MissingEpisode>> GetMissingEpisodesAsync(int pageSize = int.MaxValue, CancellationToken cancellationToken = default)
     {
         NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);
         parameters.Add("pageSize", $"{pageSize}");
 
         string path = $"api/v3/wanted/missing?{HttpUtility.UrlPathEncode(parameters.ToString())}";
 
-        MissingEpisodesResponse? response = await httpClient.GetFromJsonAsync<MissingEpisodesResponse>(path)
+        MissingEpisodesResponse? response = await GetAsync<MissingEpisodesResponse>(path, cancellationToken)
             .ConfigureAwait(false);
 
         return response?.Records ?? [];
     }
 
-    public Task ManualImportFilesAsync(IEnumerable<ManualImportRequest> files)
-    {
-        ManualImportCommand command = new(files);
-        return httpClient.PostAsJsonAsync("api/v3/command", command);
-    }
+    public Task ManualImportFilesAsync(IEnumerable<ManualImportRequest> files, CancellationToken cancellationToken = default) =>
+        PostAsync("api/v3/command", new ManualImportCommand(files), cancellationToken);
 
-    public async Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder)
+    public Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder, CancellationToken cancellationToken = default)
     {
         NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);
         parameters.Add("folder", folder);
 
         string path = $"api/v3/manualimport?{HttpUtility.UrlPathEncode(parameters.ToString())}";
 
-        IReadOnlyList<ManualImportFile>? response = await httpClient.GetFromJsonAsync<IReadOnlyList<ManualImportFile>>(path)
-            .ConfigureAwait(false);
-
-        return response ?? [];
+        return GetMany<ManualImportFile>(path, cancellationToken: cancellationToken);
     }
 }
