@@ -76,13 +76,11 @@ internal sealed partial class RuvEpisode
             builder.Append(Title);
         }
 
-        builder.Append("-RUV");
-        builder.Append(" mp4");
+        string filename = builder.ToString()
+            .Sanitized()
+            .Replace(' ', '.');
 
-        return builder.ToString()
-            .RemovePunctiation()
-            .Replace(' ', '.')
-            .Trim();
+        return $"{filename}-RUV.mp4";
     }
 
     public void Match(int tvdbId, int season, int episode)

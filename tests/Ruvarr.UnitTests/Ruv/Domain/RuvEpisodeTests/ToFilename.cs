@@ -27,25 +27,27 @@ public sealed class ToFilename
         result.ShouldBe("Awesome.Show.Terrible.Title-RUV.mp4");
     }
 
-    [Fact]
-    public void ReturnsFilename_WithSeriesName_and_EpisodeTitle_WhenSeriesIsMatched_and_EpisodeIsNotMatched()
+    [Theory]
+    [InlineData("Awesome Show", "Terrible Title", "Awesome.Show.Terrible.Title-RUV.mp4")]
+    [InlineData("Gettu betur í 40 ár", "Þáttur 1 af 2", "Gettu.betur.í.40.ár.Þáttur.1.af.2-RUV.mp4")]
+    public void ReturnsFilename_WithSeriesName_and_EpisodeTitle_WhenSeriesIsMatched_and_EpisodeIsNotMatched(string seriesName, string episodeName, string expected)
     {
         // Arrange
         TvdbSeries series = new TvdbSeriesBuilder()
-            .WithName("Awesome Show")
+            .WithName(seriesName)
             .Build();
         RuvProgram program = new RuvProgramBuilder().Build();
         program.MatchTvdb(series);
         RuvEpisode sut = new RuvEpisodeBuilder()
             .WithProgram(program)
-            .WithTitle("Terrible Title")
+            .WithTitle(episodeName)
             .Build();
 
         // Act
         string result = sut.ToFilename();
 
         // Assert
-        result.ShouldBe("Awesome.Show.Terrible.Title-RUV.mp4");
+        result.ShouldBe(expected);
     }
 
     [Fact]

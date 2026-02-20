@@ -30,24 +30,25 @@ internal static partial class StringExtensions
         return output;
     }
 
-    internal static bool EqualsSanitized(this string a, string b) => a.RemovePunctiation()
-        .Equals(b.RemovePunctiation(), StringComparison.OrdinalIgnoreCase);
+    internal static bool EqualsSanitized(this string a, string b) => a.Sanitized()
+        .Equals(b.Sanitized(), StringComparison.OrdinalIgnoreCase);
 
-    internal static string RemovePunctiation(this string input) => input
-        .RemoveNonAlphaNumericCharacters()
-        .RemoveExtraWhitespaces()
+    internal static string Sanitized(this string input) => input
+        .Replace(".", string.Empty, StringComparison.OrdinalIgnoreCase)
         .RemoveSoftHyphens()
-        .Replace(".", string.Empty, StringComparison.OrdinalIgnoreCase);
+        .RemoveNonUnicodeCharacters()
+        .RemoveExtraWhitespaces()
+        .Trim();
 
-    private static string RemoveNonAlphaNumericCharacters(this string input) => NonAlphaNumericCharactersRegex().Replace(input, " ");
+    private static string RemoveNonUnicodeCharacters(this string input) => NonUnicodeCharactersRegex().Replace(input, " ");
 
     private static string RemoveExtraWhitespaces(this string input) => ExtraWhiteSpacesRegex().Replace(input, " ");
 
     // https://en.wikipedia.org/wiki/Soft_hyphen
     private static string RemoveSoftHyphens(this string input) => input.Replace("\u00AD", string.Empty, StringComparison.OrdinalIgnoreCase);
 
-    [GeneratedRegex(@"[^a-zA-Z0-9] ")]
-    private static partial Regex NonAlphaNumericCharactersRegex();
+    [GeneratedRegex(@"[^\p{L}\p{N}]")]
+    private static partial Regex NonUnicodeCharactersRegex();
 
     [GeneratedRegex(@" +")]
     private static partial Regex ExtraWhiteSpacesRegex();
