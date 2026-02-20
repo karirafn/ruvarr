@@ -1,11 +1,10 @@
-﻿using System.Collections.Specialized;
-using System.Web;
+﻿using System.Text;
 
 namespace Ruvarr.Tvdb;
 
 internal sealed class TvdbSearchPathBuilder
 {
-    private readonly NameValueCollection queries = HttpUtility.ParseQueryString(string.Empty);
+    private readonly Dictionary<string, string> _queries = [];
 
     public TvdbSearchPathBuilder WithQuery(string? query)
     {
@@ -73,7 +72,11 @@ internal sealed class TvdbSearchPathBuilder
         return this;
     }
 
-    public string Build() => $"v4/search?{HttpUtility.UrlPathEncode(queries.ToString())}";
+    public string Build()
+    {
+        string queries = string.Join('&', _queries.Select(x => $"{x.Key}={x.Value}"));
+        return $"v4/search?{queries}";
+    }
 
     private void AddQuery(string key, object? value)
     {
@@ -82,6 +85,10 @@ internal sealed class TvdbSearchPathBuilder
             return;
         }
 
-        queries.Add(key, value.ToString());
+        string queries = value.ToString() ?? string.Empty;
+        string normalized = queries.Normalize(NormalizationForm.FormC);
+        string encoded = Uri.EscapeDataString(normalized);
+
+        _queries.Add(key, encoded);
     }
 }
