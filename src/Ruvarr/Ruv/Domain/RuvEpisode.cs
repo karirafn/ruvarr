@@ -124,17 +124,17 @@ internal sealed partial class RuvEpisode
         }
 
         string title = Title;
-        string[] parts = title.Split(' ');
 
-        if (parts.Length > 1 && NumberPrefixRegex().IsMatch(parts[0]))
+        Match match = PrefixRegex().Match(title);
+
+        if (match.Success)
         {
-            int startIndex = parts[1].Equals("kafli:", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
-            title = string.Join(' ', parts[startIndex..]);
+            title = title[match.Value.Length..].Trim();
         }
 
         return title.EqualsSanitized(value);
     }
 
-    [GeneratedRegex(@"^\d+(\.|,)$")]
-    private static partial Regex NumberPrefixRegex();
+    [GeneratedRegex(@"^(\d+. (þ|Þ)áttur: )|((Þ|þ)áttur \d+: )|(\d+. (k|K)afli: )|(\d+. )")]
+    private static partial Regex PrefixRegex();
 }
