@@ -19,6 +19,7 @@ public sealed class IsMatch
     [InlineData("1. þáttur: Test Episode, Part 1")]
     [InlineData("1. Þáttur: Test Episode, Part 1")]
     [InlineData("Þáttur 1: Test Episode, Part 1")]
+    [InlineData("1.Test Episode, Part 1")]
     public void ReturnsTrueWhenTitleMatchesValue(string title)
     {
         string value = "Test Episode, Part 1";
