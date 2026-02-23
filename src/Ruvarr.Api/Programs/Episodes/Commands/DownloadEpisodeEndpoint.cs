@@ -4,7 +4,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Ruv;
 using Ruvarr.Ruv.Commands.DownloadEpisode;
 
-namespace Ruvarr.Api.Programs.Episodes;
+namespace Ruvarr.Api.Programs.Episodes.Commands;
 
 internal static class DownloadEpisodeEndpoint
 {

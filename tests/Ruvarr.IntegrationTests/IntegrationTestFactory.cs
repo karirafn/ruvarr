@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Ruvarr.IntegrationTests;
 
-internal sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.db");
 

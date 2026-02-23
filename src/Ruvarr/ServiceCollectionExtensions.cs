@@ -106,12 +106,6 @@ public static class ServiceCollectionExtensions
             options.UseSnakeCaseNamingConvention();
         });
 
-        using RuvarrDbContext dbContext = services.BuildServiceProvider()
-            .GetRequiredService<RuvarrDbContext>();
-
-        dbContext.Database.EnsureCreated();
-        dbContext.Database.Migrate();
-
         return services;
     }
 

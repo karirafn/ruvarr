@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using Ruvarr.Ruv.Commands.DownloadEpisode;
+using Ruvarr.Ruv.Queries;
 
 namespace Ruvarr.Ruv;
 
@@ -18,6 +19,7 @@ internal static class ServiceCollectionExtensions
             .GetRequiredService<IOptions<RuvOptions>>();
 
         services.AddTransient<DownloadEpisodeHandler>();
+        services.AddTransient<GetEpisodesHandler>();
 
         services.AddTransient<IRuvClient, RuvClient>();
         services.AddHttpClient<IRuvClient, RuvClient>(client => client.BaseAddress = options.Value.BaseAddress);

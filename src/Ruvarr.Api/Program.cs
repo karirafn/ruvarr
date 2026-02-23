@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 using Ruvarr;
 using Ruvarr.Api.Programs;
 
@@ -13,6 +15,12 @@ WebApplication app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
+
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+    await dbContext.Database.MigrateAsync();
 }
 
 app.UseHttpsRedirection();

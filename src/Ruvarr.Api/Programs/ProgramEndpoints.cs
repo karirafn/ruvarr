@@ -1,4 +1,5 @@
-﻿using Ruvarr.Api.Programs.Episodes;
+﻿using Ruvarr.Api.Programs.Episodes.Commands;
+using Ruvarr.Api.Programs.Episodes.Queries;
 
 namespace Ruvarr.Api.Programs;
 
@@ -10,6 +11,7 @@ internal static class ProgramEndpoints
             .WithTags("Programs");
 
         group.MapDownloadEpisodeEndpoint();
+        group.MapGetEpisodesEndpoint();
 
         return group;
     }
