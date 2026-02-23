@@ -9,4 +9,6 @@ internal sealed class RuvarrOptions
     public required string EpisodeDownloadDirectory { get; init; }
 
     public required string MovieDownloadDirectory { get; init; }
+
+    public required IReadOnlyList<string> IgnoredChannels { get; init; } = [];
 }

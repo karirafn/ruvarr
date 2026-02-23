@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Quartz;
 
@@ -9,10 +10,12 @@ using Ruvarr.Ruv.Models;
 
 namespace Ruvarr.Jobs;
 
-internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvClient ruv, RuvarrDbContext dbContext) : IJob
+internal sealed class RuvProgramSyncJob(
+    ILogger<RuvProgramSyncJob> logger,
+    IRuvClient ruv,
+    RuvarrDbContext dbContext,
+    IOptions<RuvarrOptions> options) : IJob
 {
-    private static readonly string[] ExcludedChannels = ["Fréttastofa sjónvarps", "Íþróttadeild", "Rás 1", "Rás 2"];
-
     public async Task Execute(IJobExecutionContext context)
     {
         logger.LogDebug("Starting RÚV programs sync job");
@@ -29,7 +32,7 @@ internal sealed class RuvProgramSyncJob(ILogger<RuvProgramSyncJob> logger, IRuvC
         logger.LogDebug("Found {Count} total RÚV programs", allPrograms.Count);
 
         List<RuvTvProgram> programs = [.. allPrograms
-            .Where(x => !ExcludedChannels.Contains(x.Channel))
+            .Where(x => !options.Value.IgnoredChannels.Contains(x.Channel))
             .Where(x => x.WebAvailableEpisodes > 0)
             .DistinctBy(x => x.Id)];
         logger.LogDebug("Found {Count} distinct RÚV programs", programs.Count);
