@@ -28,6 +28,9 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
 
             if (ruvProgram is null)
             {
+                logger.LogInformation("Deleting RÚV program {Name} and {Count} episodes", program.Name, program.Episodes.Count);
+                dbContext.Set<RuvProgram>().Remove(program);
+                await dbContext.SaveChangesAsync();
                 continue;
             }
 
@@ -43,7 +46,7 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
                 .ToList()
                 .ForEach(e => logger.LogInformation("Added RÚV episode '{EpisodeName}' to program '{Name}'", e.Title, program.Name));
 
-            _ = await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
         }
     }
 }
