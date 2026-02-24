@@ -37,7 +37,7 @@ internal class DownloadQueueProcessor(
             return;
         }
 
-        logger.LogInformation("Downloading {Program} {Title}", item.Episode.Program.Name, item.Episode.Title);
+        logger.LogInformation("Downloading {Program} - {Title}", item.Episode.Program.Name, item.Episode.Title);
         string filename = item.Episode.ToFilename();
         string directory = Path.Join(
             options.Value.DownloadsRootDirectory,
@@ -96,7 +96,7 @@ internal class DownloadQueueProcessor(
             Languages: file.Languages,
             ReleaseGroup: "RUV");
 
-        logger.LogDebug("Starting manual import of {Program} S{Season:D2}E{Episode:D2} {Title} into Sonarr",
+        logger.LogInformation("Starting manual import of {Program} S{Season:D2}E{Episode:D2} {Title} into Sonarr",
             item.Episode.Program.Name,
             item.Episode.SeasonNumber,
             item.Episode.EpisodeNumber,
