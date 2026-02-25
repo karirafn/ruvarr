@@ -133,6 +133,6 @@ internal sealed partial class RuvEpisode
         return title.EqualsSanitized(value);
     }
 
-    [GeneratedRegex(@"^(\d+. (þ|Þ)áttur: )|((Þ|þ)áttur \d+: )|(\d+. (k|K)afli: )|(\d+.)")]
+    [GeneratedRegex(@"^((\d+. (þ|Þ)áttur: )|((Þ|þ)áttur \d+: )|(\d+. (k|K)afli: )|(\d+.))")]
     private static partial Regex PrefixRegex();
 }
