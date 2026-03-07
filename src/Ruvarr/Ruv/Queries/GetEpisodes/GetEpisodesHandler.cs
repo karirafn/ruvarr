@@ -62,6 +62,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
                 x.Program.Series!.Name,
                 x.Title,
                 x.RuvId,
+                x.Description,
                 x.TvdbId,
                 x.SeasonNumber,
                 x.EpisodeNumber))
