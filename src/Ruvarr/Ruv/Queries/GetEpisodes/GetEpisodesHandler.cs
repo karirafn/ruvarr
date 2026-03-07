@@ -23,14 +23,19 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
         if (request.IsProgramMonitored is not null)
         {
             IReadOnlyList<Series> series = await sonarr.GetSeriesAsync(cancellationToken);
-            List<string> monitoredSeriesIds = [.. series
+            HashSet<string> monitoredSeriesIds = [.. series
                 .Where(x => x.Monitored)
                 .Select(x => x.TvdbId.ToString(CultureInfo.InvariantCulture))];
-#pragma warning disable CA1305 // Specify IFormatProvider
             query = query
                 .Where(x => x.Program.Series != null)
                 .Where(x => monitoredSeriesIds.Contains(x.Program.Series!.TvdbId));
-#pragma warning restore CA1305 // Specify IFormatProvider
+        }
+
+        if (request.IsEpisodeMissing is not null)
+        {
+            IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
+            HashSet<int?> missingEpisodeIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+            query = query.Where(x => missingEpisodeIds.Contains(x.TvdbId));
         }
 
         if (request.IsProgramMatched is not null)

@@ -17,13 +17,15 @@ internal static class GetEpisodesEndpoint
             [FromQuery] bool? isProgramMonitored,
             [FromQuery] bool? isProgramMatched,
             [FromQuery] bool? isEpisodeMatched,
+            [FromQuery] bool? isEpisodeMissing,
             CancellationToken cancellationToken) =>
         {
             GetEpisodesQuery query = new(
                 ProgramName: programName,
                 IsProgramMonitored: isProgramMonitored,
                 IsProgramMatched: isProgramMatched,
-                IsEpisodeMatched: isEpisodeMatched);
+                IsEpisodeMatched: isEpisodeMatched,
+                IsEpisodeMissing: isEpisodeMissing);
 
             List<EpisodeSummary> result = await handler.Handle(query, cancellationToken);
 

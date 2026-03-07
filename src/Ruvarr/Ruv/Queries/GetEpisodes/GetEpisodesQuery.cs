@@ -4,4 +4,5 @@ public sealed record class GetEpisodesQuery(
     string? ProgramName,
     bool? IsProgramMonitored,
     bool? IsProgramMatched,
-    bool? IsEpisodeMatched);
+    bool? IsEpisodeMatched,
+    bool? IsEpisodeMissing);
