@@ -6,13 +6,18 @@ namespace Ruvarr.Ruv.Queries.GetEpisodes;
 
 public sealed class GetEpisodesHandler(RuvarrDbContext dbContext)
 {
-    public Task<List<EpisodeSummary>> Handle(string? programName, CancellationToken cancellationToken = default)
+    public Task<List<EpisodeSummary>> Handle(string? programName, bool? isMatched = null, CancellationToken cancellationToken = default)
     {
         IQueryable<RuvEpisode> query = dbContext.Set<RuvEpisode>();
 
         if (!string.IsNullOrWhiteSpace(programName))
         {
             query = query.Where(x => x.Program.Name == programName);
+        }
+
+        if (isMatched is not null)
+        {
+            query = query.Where(x => (x.TvdbId == null) != isMatched);
         }
 
         return query

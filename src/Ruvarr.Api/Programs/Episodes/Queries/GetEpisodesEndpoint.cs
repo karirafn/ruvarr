@@ -13,9 +13,14 @@ internal static class GetEpisodesEndpoint
         group.MapGet("/episodes", static async (
             [FromServices] GetEpisodesHandler handler,
             [FromQuery] string? programName,
+            [FromQuery] bool? isMatched,
             CancellationToken cancellationToken) =>
         {
-            List<EpisodeSummary> result = await handler.Handle(programName, cancellationToken);
+            List<EpisodeSummary> result = await handler.Handle(
+                programName: programName,
+                isMatched: isMatched,
+                cancellationToken: cancellationToken);
+
             return TypedResults.Ok(result);
         })
         .WithName(Name)
