@@ -13,6 +13,7 @@ internal static class GetEpisodesEndpoint
     {
         group.MapGet("/episodes", static async (
             [FromServices] IRequestHandler<GetEpisodesQuery, List<EpisodeSummary>> handler,
+            [FromQuery] string? channel,
             [FromQuery] string? programName,
             [FromQuery] bool? isProgramMonitored,
             [FromQuery] bool? isProgramMatched,
@@ -21,6 +22,7 @@ internal static class GetEpisodesEndpoint
             CancellationToken cancellationToken) =>
         {
             GetEpisodesQuery query = new(
+                Channel: channel,
                 ProgramName: programName,
                 IsProgramMonitored: isProgramMonitored,
                 IsProgramMatched: isProgramMatched,

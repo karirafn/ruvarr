@@ -15,6 +15,11 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
     {
         IQueryable<RuvEpisode> query = dbContext.Set<RuvEpisode>();
 
+        if (!string.IsNullOrWhiteSpace(request.Channel))
+        {
+            query = query.Where(x => x.Program.Channel == request.Channel);
+        }
+
         if (!string.IsNullOrWhiteSpace(request.ProgramName))
         {
             query = query.Where(x => x.Program.Name == request.ProgramName);
