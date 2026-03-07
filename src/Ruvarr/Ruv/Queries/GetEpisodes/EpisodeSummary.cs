@@ -2,6 +2,7 @@
 
 public sealed record class EpisodeSummary(
     string ProgramName,
+    int ProgramRuvId,
     string? SeriesName,
     string EpisodeTitle,
     string EpisodeRuvId,
