@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using Ruvarr.Ruv.Commands.DownloadEpisode;
+using Ruvarr.Ruv.Commands.MatchEpisode;
 using Ruvarr.Ruv.Queries;
 
 namespace Ruvarr.Ruv;
@@ -18,6 +19,7 @@ internal static class ServiceCollectionExtensions
         IOptions<RuvOptions> options = services.BuildServiceProvider()
             .GetRequiredService<IOptions<RuvOptions>>();
 
+        services.AddTransient<MatchEpisodeHandler>();
         services.AddTransient<DownloadEpisodeHandler>();
         services.AddTransient<GetEpisodesHandler>();
 

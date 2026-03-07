@@ -10,6 +10,7 @@ internal static class ProgramEndpoints
         RouteGroupBuilder group = endpoints.MapGroup("/programs")
             .WithTags("Programs");
 
+        group.MapMatchEpisodeEndpoint();
         group.MapDownloadEpisodeEndpoint();
         group.MapGetEpisodesEndpoint();
 

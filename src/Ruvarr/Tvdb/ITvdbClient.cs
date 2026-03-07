@@ -7,6 +7,9 @@ public interface ITvdbClient
     Task<SeriesData?> GetSeriesAsync(
         int id,
         CancellationToken cancellationToken = default);
+    Task<Episode?> GetEpisodeAsync(
+        int id,
+        CancellationToken cancellationToken = default);
 
     Task<EpisodeTranslation?> GetEpisodeTranslationAsync(
         int id,
