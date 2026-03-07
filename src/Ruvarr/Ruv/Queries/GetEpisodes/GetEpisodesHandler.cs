@@ -1,9 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Ruv.Domain;
-using Ruvarr.Ruv.Queries.GetEpisodes;
 
-namespace Ruvarr.Ruv.Queries;
+namespace Ruvarr.Ruv.Queries.GetEpisodes;
 
 public sealed class GetEpisodesHandler(RuvarrDbContext dbContext)
 {

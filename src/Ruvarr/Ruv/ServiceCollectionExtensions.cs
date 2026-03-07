@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 using Ruvarr.Ruv.Commands.DownloadEpisode;
 using Ruvarr.Ruv.Commands.MatchEpisode;
-using Ruvarr.Ruv.Queries;
+using Ruvarr.Ruv.Queries.GetEpisodes;
 
 namespace Ruvarr.Ruv;
 

@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-using Ruvarr.Ruv.Queries;
 using Ruvarr.Ruv.Queries.GetEpisodes;
 
 namespace Ruvarr.Api.Programs.Episodes.Queries;
