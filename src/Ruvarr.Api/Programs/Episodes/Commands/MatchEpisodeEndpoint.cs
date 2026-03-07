@@ -17,7 +17,7 @@ internal static class MatchEpisodeEndpoint
         group.MapPost("/episodes/{ruvId}/match/{tvdbId:int}", static async (
             [FromRoute] string ruvId,
             [FromRoute] int tvdbId,
-            [FromServices] MatchEpisodeHandler handler,
+            [FromServices] IRequestHandler<MatchEpisodeCommand> handler,
             CancellationToken cancellationToken) =>
         {
             RuvarrResult result = await handler.Handle(new MatchEpisodeCommand(ruvId, tvdbId), cancellationToken);

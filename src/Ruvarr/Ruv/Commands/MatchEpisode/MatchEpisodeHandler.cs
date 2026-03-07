@@ -8,10 +8,10 @@ using Ruvarr.Tvdb.Models;
 
 namespace Ruvarr.Ruv.Commands.MatchEpisode;
 
-public sealed class MatchEpisodeHandler(
+internal sealed class MatchEpisodeHandler(
     ILogger<MatchEpisodeHandler> logger,
     RuvarrDbContext dbContext,
-    ITvdbClient tvdb)
+    ITvdbClient tvdb) : IRequestHandler<MatchEpisodeCommand>
 {
     public async Task<RuvarrResult> Handle(MatchEpisodeCommand command, CancellationToken cancellationToken)
     {
