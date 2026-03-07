@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Ruv.Queries.GetEpisodes;
 
 namespace Ruvarr.Api.Programs.Episodes.Queries;
@@ -11,17 +12,20 @@ internal static class GetEpisodesEndpoint
     internal static RouteGroupBuilder MapGetEpisodesEndpoint(this RouteGroupBuilder group)
     {
         group.MapGet("/episodes", static async (
-            [FromServices] GetEpisodesHandler handler,
+            [FromServices] IRequestHandler<GetEpisodesQuery, List<EpisodeSummary>> handler,
             [FromQuery] string? programName,
+            [FromQuery] bool? isProgramMonitored,
             [FromQuery] bool? isProgramMatched,
             [FromQuery] bool? isEpisodeMatched,
             CancellationToken cancellationToken) =>
         {
-            List<EpisodeSummary> result = await handler.Handle(
-                programName: programName,
-                isEpisodeMatched: isEpisodeMatched,
-                isProgramMatched: isProgramMatched,
-                cancellationToken: cancellationToken);
+            GetEpisodesQuery query = new(
+                ProgramName: programName,
+                IsProgramMonitored: isProgramMonitored,
+                IsProgramMatched: isProgramMatched,
+                IsEpisodeMatched: isEpisodeMatched);
+
+            List<EpisodeSummary> result = await handler.Handle(query, cancellationToken);
 
             return TypedResults.Ok(result);
         })

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Ruv.Commands.DownloadEpisode;
 using Ruvarr.Ruv.Commands.MatchEpisode;
 using Ruvarr.Ruv.Queries.GetEpisodes;
@@ -21,7 +22,7 @@ internal static class ServiceCollectionExtensions
 
         services.AddTransient<MatchEpisodeHandler>();
         services.AddTransient<DownloadEpisodeHandler>();
-        services.AddTransient<GetEpisodesHandler>();
+        services.AddTransient<IRequestHandler<GetEpisodesQuery, List<EpisodeSummary>>, GetEpisodesHandler>();
 
         services.AddTransient<IRuvClient, RuvClient>();
         services.AddHttpClient<IRuvClient, RuvClient>(client => client.BaseAddress = options.Value.BaseAddress);

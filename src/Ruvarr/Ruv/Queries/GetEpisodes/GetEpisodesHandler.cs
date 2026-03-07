@@ -1,35 +1,49 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Globalization;
 
+using Microsoft.EntityFrameworkCore;
+
+using Ruvarr.Abstractions;
 using Ruvarr.Ruv.Domain;
+using Ruvarr.Sonarr;
+using Ruvarr.Sonarr.Models;
 
 namespace Ruvarr.Ruv.Queries.GetEpisodes;
 
-public sealed class GetEpisodesHandler(RuvarrDbContext dbContext)
+internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClient sonarr) : IRequestHandler<GetEpisodesQuery, List<EpisodeSummary>>
 {
-    public Task<List<EpisodeSummary>> Handle(
-        string? programName,
-        bool? isProgramMatched,
-        bool? isEpisodeMatched,
-        CancellationToken cancellationToken)
+    public async Task<List<EpisodeSummary>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
     {
         IQueryable<RuvEpisode> query = dbContext.Set<RuvEpisode>();
 
-        if (!string.IsNullOrWhiteSpace(programName))
+        if (!string.IsNullOrWhiteSpace(request.ProgramName))
         {
-            query = query.Where(x => x.Program.Name == programName);
+            query = query.Where(x => x.Program.Name == request.ProgramName);
         }
 
-        if (isProgramMatched is not null)
+        if (request.IsProgramMonitored is not null)
         {
-            query = query.Where(x => (x.Program.Series == null) != isProgramMatched);
+            IReadOnlyList<Series> series = await sonarr.GetSeriesAsync(cancellationToken);
+            List<string> monitoredSeriesIds = [.. series
+                .Where(x => x.Monitored)
+                .Select(x => x.TvdbId.ToString(CultureInfo.InvariantCulture))];
+#pragma warning disable CA1305 // Specify IFormatProvider
+            query = query
+                .Where(x => x.Program.Series != null)
+                .Where(x => monitoredSeriesIds.Contains(x.Program.Series!.TvdbId));
+#pragma warning restore CA1305 // Specify IFormatProvider
         }
 
-        if (isEpisodeMatched is not null)
+        if (request.IsProgramMatched is not null)
         {
-            query = query.Where(x => (x.TvdbId == null) != isEpisodeMatched);
+            query = query.Where(x => (x.Program.Series == null) != request.IsProgramMatched);
         }
 
-        return query
+        if (request.IsEpisodeMatched is not null)
+        {
+            query = query.Where(x => (x.TvdbId == null) != request.IsEpisodeMatched);
+        }
+
+        return await query
             .OrderBy(x => x.Program.Name)
             .ThenBy(x => x.SeasonNumber)
             .ThenBy(x => x.EpisodeNumber)
