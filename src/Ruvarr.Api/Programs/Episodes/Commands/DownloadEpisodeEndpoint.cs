@@ -14,7 +14,7 @@ internal static class DownloadEpisodeEndpoint
     {
         group.MapPost("/episodes/{ruvId}/download", static async (
             [FromRoute] string ruvId,
-            [FromServices] DownloadEpisodeHandler handler,
+            [FromServices] IRequestHandler<DownloadEpisodeCommand> handler,
             CancellationToken cancellationToken) =>
         {
             RuvarrResult result = await handler.Handle(new DownloadEpisodeCommand(ruvId), cancellationToken);

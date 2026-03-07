@@ -21,7 +21,7 @@ internal static class ServiceCollectionExtensions
             .GetRequiredService<IOptions<RuvOptions>>();
 
         services.AddTransient<MatchEpisodeHandler>();
-        services.AddTransient<DownloadEpisodeHandler>();
+        services.AddTransient<IRequestHandler<DownloadEpisodeCommand>, DownloadEpisodeHandler>();
         services.AddTransient<IRequestHandler<GetEpisodesQuery, List<EpisodeSummary>>, GetEpisodesHandler>();
 
         services.AddTransient<IRuvClient, RuvClient>();
