@@ -11,6 +11,7 @@ internal static class ProgramEndpoints
             .WithTags("Programs");
 
         group.MapMatchEpisodeEndpoint();
+        group.MapMatchProgramEpisodesEndpoint();
         group.MapDownloadEpisodeEndpoint();
         group.MapGetEpisodesEndpoint();
 
