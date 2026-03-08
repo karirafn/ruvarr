@@ -33,13 +33,6 @@ internal sealed class MatchProgramEpisodesHandler(
             return RuvErrors.ProgramNotMatched;
         }
 
-        int season = 0;
-
-        if (RomanNumeral.TryParse(program.Name.Split(' ')[^1], out RomanNumeral? romanNumeral))
-        {
-            season = romanNumeral.Number;
-        }
-
         SeriesData? series = await tvdb.GetSeriesAsync(int.Parse(program.Series.TvdbId, CultureInfo.InvariantCulture), cancellationToken);
 
         if (series is null)
@@ -50,19 +43,16 @@ internal sealed class MatchProgramEpisodesHandler(
         IEnumerable<Episode> episodesEnumerable = series.Episodes
             .Where(x => x.SeasonNumber > 0);
 
-        if (season > 0)
-        {
-            episodesEnumerable = episodesEnumerable.Where(x => x.SeasonNumber == season);
-        }
+        int season = GetSeason(program, episodesEnumerable);
 
-        List<Episode> episodeList = [.. episodesEnumerable];
-
-        if (season == 0 && episodeList.Select(x => x.SeasonNumber).Distinct().Count() > 1)
+        if (season == 0)
         {
             return RuvErrors.SeasonUndetermined;
         }
 
-        Dictionary<int, Episode> episodes = episodeList.ToDictionary(x => x.Number);
+        Dictionary<int, Episode> episodes = episodesEnumerable
+            .Where(x => x.SeasonNumber == season)
+            .ToDictionary(x => x.Number);
 
         if (episodes.Count != program.Episodes.Count)
         {
@@ -93,5 +83,21 @@ internal sealed class MatchProgramEpisodesHandler(
         await dbcontext.SaveChangesAsync(cancellationToken);
 
         return RuvarrResult.Success;
+    }
+
+    private static int GetSeason(RuvProgram program, IEnumerable<Episode> episodes)
+    {
+        if (RomanNumeral.TryParse(program.Name.Split(' ')[^1], out RomanNumeral? romanNumeral))
+        {
+            return romanNumeral.Number;
+        }
+
+        Dictionary<int, int> episodesPerSeason = episodes
+            .GroupBy(x => x.SeasonNumber)
+            .Select(x => (Season: x.Key, Count: x.Count()))
+            .Where(x => x.Count == program.Episodes.Count)
+            .ToDictionary(x => x.Season, x => x.Count);
+
+        return episodesPerSeason.Count == 1 ? episodesPerSeason.Single().Key : 0;
     }
 }
