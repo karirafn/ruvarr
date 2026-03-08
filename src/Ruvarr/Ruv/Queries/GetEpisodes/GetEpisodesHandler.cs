@@ -58,6 +58,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
             .ThenBy(x => x.SeasonNumber)
             .ThenBy(x => x.EpisodeNumber)
             .Select(x => new EpisodeSummary(
+                x.Program.Channel,
                 x.Program.Name,
                 x.Program.RuvId,
                 x.Program.Series!.Name,
