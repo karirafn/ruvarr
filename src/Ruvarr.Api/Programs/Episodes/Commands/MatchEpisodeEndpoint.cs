@@ -31,10 +31,11 @@ internal static class MatchEpisodeEndpoint
                 });
         })
         .WithName(Name)
-        .WithSummary("Creates a new user.")
-        .WithDescription("Adds a new user to the database and returns its Id.")
-        .Produces<int>(StatusCodes.Status201Created)
+        .WithSummary("Matches a RÚV episode with a TVDB episode.")
+        .WithDescription("Matches a RÚV episode id with a TVDB episode id.")
+        .Produces<int>(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status500InternalServerError);
 
         return group;

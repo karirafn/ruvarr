@@ -27,10 +27,11 @@ internal static class DownloadEpisodeEndpoint
                 });
         })
         .WithName(Name)
-        .WithSummary("Creates a new user.")
-        .WithDescription("Adds a new user to the database and returns its Id.")
-        .Produces<int>(StatusCodes.Status201Created)
+        .WithSummary("Downloads a RÚV episode.")
+        .WithDescription("Adds a RÚV episode to the download queue.")
+        .Produces<int>(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status500InternalServerError);
 
         return group;
