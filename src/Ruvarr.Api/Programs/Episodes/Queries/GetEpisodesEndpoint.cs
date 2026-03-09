@@ -16,6 +16,7 @@ internal static class GetEpisodesEndpoint
             [FromQuery] string? channel,
             [FromQuery] string? programName,
             [FromQuery] bool? isProgramMonitored,
+            [FromQuery] bool? isProgramMissingEpisodes,
             [FromQuery] bool? isProgramMatched,
             [FromQuery] bool? isEpisodeMatched,
             [FromQuery] bool? isEpisodeMissing,
@@ -25,6 +26,7 @@ internal static class GetEpisodesEndpoint
                 Channel: channel,
                 ProgramName: programName,
                 IsProgramMonitored: isProgramMonitored,
+                IsProgramMissingEpisodes: isProgramMissingEpisodes,
                 IsProgramMatched: isProgramMatched,
                 IsEpisodeMatched: isEpisodeMatched,
                 IsEpisodeMissing: isEpisodeMissing);
