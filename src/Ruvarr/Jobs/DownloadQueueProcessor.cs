@@ -96,7 +96,7 @@ internal class DownloadQueueProcessor(
             Languages: file.Languages,
             ReleaseGroup: "RUV");
 
-        logger.LogInformation("Starting manual import of {Program} S{Season:D2}E{Episode:D2} {Title} into Sonarr",
+        logger.LogInformation("Importing {Program} S{Season:D2}E{Episode:D2} {Title} into Sonarr",
             item.Episode.Program.Name,
             item.Episode.SeasonNumber,
             item.Episode.EpisodeNumber,

@@ -6,9 +6,9 @@ using Ruvarr.Ruv.Domain;
 
 namespace Ruvarr.Ruv.Commands.DownloadEpisode;
 
-public sealed class DownloadEpisodeHandler(RuvarrDbContext dbContext)
+internal sealed class DownloadEpisodeHandler(RuvarrDbContext dbContext) : IRequestHandler<DownloadEpisodeCommand>
 {
-    public async Task<RuvarrResult> Handle(DownloadEpisodeCommand command, CancellationToken cancellationToken = default)
+    public async Task<RuvarrResult> Handle(DownloadEpisodeCommand command, CancellationToken cancellationToken)
     {
         RuvEpisode? episode = await dbContext.Set<RuvEpisode>()
             .Where(e => e.RuvId == command.ruvId)

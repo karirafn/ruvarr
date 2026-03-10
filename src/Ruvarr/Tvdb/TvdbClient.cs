@@ -55,11 +55,22 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
         return response?.Data;
     }
 
+    public async Task<Episode?> GetEpisodeAsync(int id, CancellationToken cancellationToken = default)
+    {
+        await SetAuthorizationHeader(cancellationToken);
+
+        TvdbResponse<Episode?>? response = await client.GetFromJsonAsync<TvdbResponse<Episode?>>(
+            $"v4/episodes/{id}",
+            cancellationToken);
+
+        return response?.Data;
+    }
+
     public async Task<EpisodeTranslation?> GetEpisodeTranslationAsync(int id, string language = "isl", CancellationToken cancellationToken = default)
     {
         await SetAuthorizationHeader(cancellationToken);
 
-        EpisodeTranslationResponse? response = await client.GetFromJsonAsync<EpisodeTranslationResponse>(
+        TvdbResponse<EpisodeTranslation?>? response = await client.GetFromJsonAsync<TvdbResponse<EpisodeTranslation?>>(
             $"v4/episodes/{id}/translations/{language}",
             cancellationToken);
 

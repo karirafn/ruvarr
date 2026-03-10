@@ -4,6 +4,10 @@ root = true
 [*]
 indent_style = space
 
+# JSON files
+[*.json]
+indent_size = 2
+
 # Xml files
 [*.{csproj,props,xml}]
 indent_size = 2

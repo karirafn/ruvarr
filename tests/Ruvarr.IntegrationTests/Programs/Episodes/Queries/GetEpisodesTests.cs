@@ -5,7 +5,7 @@ using Shouldly;
 
 namespace Ruvarr.IntegrationTests.Programs.Episodes.Queries;
 
-public sealed class GetEpisodes(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class GetEpisodesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
 {
     [Fact]
     public async Task ReturnsOk()

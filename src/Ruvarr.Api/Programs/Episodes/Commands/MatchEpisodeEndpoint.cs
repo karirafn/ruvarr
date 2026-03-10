@@ -2,33 +2,37 @@
 
 using Ruvarr.Abstractions;
 using Ruvarr.Ruv;
-using Ruvarr.Ruv.Commands.DownloadEpisode;
+using Ruvarr.Ruv.Commands.MatchEpisode;
+using Ruvarr.Tvdb;
 
 namespace Ruvarr.Api.Programs.Episodes.Commands;
 
-internal static class DownloadEpisodeEndpoint
+internal static class MatchEpisodeEndpoint
 {
-    internal const string Name = "DownloadEpisode";
+    internal const string Name = "MatchEpisode";
 
-    internal static RouteGroupBuilder MapDownloadEpisodeEndpoint(this RouteGroupBuilder group)
+    internal static RouteGroupBuilder MapMatchEpisodeEndpoint(this RouteGroupBuilder group)
     {
-        group.MapPost("/episodes/{ruvId}/download", static async (
+
+        group.MapPost("/episodes/{ruvId}/match/{tvdbId:int}", static async (
             [FromRoute] string ruvId,
-            [FromServices] IRequestHandler<DownloadEpisodeCommand> handler,
+            [FromRoute] int tvdbId,
+            [FromServices] IRequestHandler<MatchEpisodeCommand> handler,
             CancellationToken cancellationToken) =>
         {
-            RuvarrResult result = await handler.Handle(new DownloadEpisodeCommand(ruvId), cancellationToken);
+            RuvarrResult result = await handler.Handle(new MatchEpisodeCommand(ruvId, tvdbId), cancellationToken);
             return result.Match<IResult>(
                 success: TypedResults.NoContent,
                 failure: error => error.Code switch
                 {
                     RuvErrors.EpisodeNotFoundCode => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, detail: error.Description),
+                    TvdbErrors.EpisodeNotFoundCode => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, detail: error.Description),
                     _ => TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest, detail: error.Description)
                 });
         })
         .WithName(Name)
-        .WithSummary("Downloads a RÚV episode.")
-        .WithDescription("Adds a RÚV episode to the download queue.")
+        .WithSummary("Matches a RÚV episode with a TVDB episode.")
+        .WithDescription("Matches a RÚV episode id with a TVDB episode id.")
         .Produces<int>(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status404NotFound)

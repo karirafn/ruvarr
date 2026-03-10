@@ -46,6 +46,16 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
                 .ToList()
                 .ForEach(e => logger.LogInformation("Added RÚV episode '{EpisodeName}' to program '{Name}'", e.Title, program.Name));
 
+            logger.LogDebug("Removing episodes from RÚV program '{Name}'", program.Name);
+            IEnumerable<RuvEpisode> removed = program.Episodes
+                .Where(entity => !ruvProgram.Episodes.Select(episodeDto => episodeDto.Id).Contains(entity.RuvId));
+
+            foreach (RuvEpisode episode in removed)
+            {
+                logger.LogInformation("Removed RÚV episode '{EpisodeName}' from program '{Name}'", episode.Title, program.Name);
+                program.RemoveEpisode(episode);
+            }
+
             await dbContext.SaveChangesAsync();
         }
     }

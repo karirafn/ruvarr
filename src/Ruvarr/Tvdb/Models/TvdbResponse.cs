@@ -2,6 +2,6 @@
 
 namespace Ruvarr.Tvdb.Models;
 
-public sealed record class EpisodeTranslationResponse(
+public sealed record class TvdbResponse<T>(
     [property: JsonPropertyName("status")] string Status,
-    [property: JsonPropertyName("Data")] EpisodeTranslation Data);
+    [property: JsonPropertyName("Data")] T Data);

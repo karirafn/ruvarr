@@ -88,4 +88,9 @@ internal sealed class RuvProgram
 
         return true;
     }
+
+    public void RemoveEpisode(RuvEpisode episode)
+    {
+        _episodes.Remove(episode);
+    }
 }
