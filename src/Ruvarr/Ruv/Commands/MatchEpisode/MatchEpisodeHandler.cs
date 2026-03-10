@@ -40,12 +40,13 @@ internal sealed class MatchEpisodeHandler(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Matched RÚV episode {Program} - {Title} with TVDB id: {TvdbId} S{Season:D2}E{Number:D2}",
+            "Matched RÚV episode {Program} - {Title} with TVDB id: {TvdbId} S{Season:D2}E{Number:D2} - {Name}",
             episode.Program.Name,
             episode.Title,
             tvdbEpisode.Id,
             tvdbEpisode.SeasonNumber,
-            tvdbEpisode.Number);
+            tvdbEpisode.Number,
+            tvdbEpisode.Name);
 
         return RuvarrResult.Success;
     }
