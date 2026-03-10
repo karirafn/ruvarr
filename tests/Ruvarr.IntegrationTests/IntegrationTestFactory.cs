@@ -23,7 +23,8 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             }
 
             services.AddDbContext<RuvarrDbContext>(options =>
-                options.UseSqlite($"Data Source={_dbPath}"));
+                options.UseSqlite($"Data Source={_dbPath}")
+                       .UseSnakeCaseNamingConvention());
         });
     }
 
@@ -31,7 +32,8 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
     {
         using IServiceScope scope = Services.CreateScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-        await dbContext.Database.MigrateAsync();
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
     }
 
     public new async Task DisposeAsync()
