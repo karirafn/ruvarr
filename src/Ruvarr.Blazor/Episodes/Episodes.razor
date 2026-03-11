@@ -1,0 +1,108 @@
+@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject RuvApiClient ApiClient
+
+<h1>Episodes</h1>
+
+@if (_groups is null)
+{
+    <div class="spinner"></div>
+}
+else
+{
+    @foreach (IGrouping<string, EpisodeSummary> group in _groups)
+    {
+        <details>
+            <summary>@group.Key</summary>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Season</th>
+                        <th>Episode</th>
+                        <th>First Run</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (EpisodeSummary episode in group.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).ThenBy(e => e.FirstRun))
+                    {
+                        <tr>
+                            <td>@episode.SeasonNumber</td>
+                            <td>@episode.EpisodeNumber</td>
+                            <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                            <td>@episode.EpisodeTitle</td>
+                            <td>@episode.EpisodeDescription</td>
+                            <td>
+                                @if (_downloading.Contains(episode.EpisodeRuvId))
+                                {
+                                    <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queuing">
+                                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                    </svg>
+                                }
+                                else if (_queued.Contains(episode.EpisodeRuvId))
+                                {
+                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queued">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                }
+                                else if (_failed.Contains(episode.EpisodeRuvId))
+                                {
+                                    <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Retry">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                            <path d="M3 3v5h5" />
+                                        </svg>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Download">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                            <polyline points="7 10 12 15 17 10" />
+                                            <line x1="12" y1="15" x2="12" y2="3" />
+                                        </svg>
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </details>
+    }
+}
+
+@code {
+    private IEnumerable<IGrouping<string, EpisodeSummary>>? _groups;
+    private readonly HashSet<string> _downloading = [];
+    private readonly HashSet<string> _queued = [];
+    private readonly HashSet<string> _failed = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        List<EpisodeSummary>? episodes = await ApiClient.GetEpisodesAsync();
+        _groups = episodes?.GroupBy(e => e.ProgramName).OrderBy(g => g.Key);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task Download(string ruvId)
+    {
+        _downloading.Add(ruvId);
+
+        bool success = await ApiClient.DownloadEpisodeAsync(ruvId);
+
+        _downloading.Remove(ruvId);
+
+        if (success)
+        {
+            _queued.Add(ruvId);
+        }
+        else
+        {
+            _failed.Add(ruvId);
+        }
+    }
+}

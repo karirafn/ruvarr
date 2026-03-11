@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Ruvarr.Api/Ruvarr.Api.csproj" />
+    <Project Path="src/Ruvarr.Blazor/Ruvarr.Blazor.csproj" />
     <Project Path="src/Ruvarr/Ruvarr.csproj" />
   </Folder>
   <Folder Name="/tests/">
