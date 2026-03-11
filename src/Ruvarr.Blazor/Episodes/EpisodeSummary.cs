@@ -1,6 +1,6 @@
-﻿namespace Ruvarr.Ruv.Queries.GetEpisodes;
+namespace Ruvarr.Blazor.Episodes;
 
-public sealed record class EpisodeSummary(
+internal sealed record EpisodeSummary(
     string Channel,
     string ProgramName,
     int ProgramRuvId,

@@ -83,7 +83,8 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
                 x.Description,
                 x.TvdbId,
                 x.SeasonNumber,
-                x.EpisodeNumber))
+                x.EpisodeNumber,
+                x.FirstRun))
             .ToListAsync(cancellationToken);
     }
 }
