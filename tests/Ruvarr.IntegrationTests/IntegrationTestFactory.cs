@@ -33,7 +33,7 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         using IServiceScope scope = Services.CreateScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         await dbContext.Database.EnsureDeletedAsync();
-        await dbContext.Database.EnsureCreatedAsync();
+        await dbContext.Database.MigrateAsync();
     }
 
     public new async Task DisposeAsync()
