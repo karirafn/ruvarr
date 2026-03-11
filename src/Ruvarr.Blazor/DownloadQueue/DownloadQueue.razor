@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject RuvApiClient ApiClient
 @using Ruvarr.Blazor.DownloadQueue
+@implements IAsyncDisposable
 
 <h1>Download Queue</h1>
 
@@ -40,9 +41,26 @@ else
 
 @code {
     private List<DownloadQueueItemSummary>? _items;
+    private readonly CancellationTokenSource _cts = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
-        _items = await ApiClient.GetDownloadQueueAsync();
+        _ = WatchAsync();
+        return Task.CompletedTask;
+    }
+
+    private async Task WatchAsync()
+    {
+        await foreach (List<DownloadQueueItemSummary> items in ApiClient.WatchDownloadQueueAsync(_cts.Token))
+        {
+            _items = items;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _cts.Dispose();
     }
 }
