@@ -1,4 +1,4 @@
-namespace Ruvarr.Blazor.Episodes;
+namespace Ruvarr.Blazor.Programs;
 
 internal sealed record EpisodeSummary(
     string Channel,

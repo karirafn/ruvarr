@@ -1,4 +1,4 @@
-using Ruvarr.Blazor.Episodes;
+using Ruvarr.Blazor.Programs;
 
 namespace Ruvarr.Blazor;
 
