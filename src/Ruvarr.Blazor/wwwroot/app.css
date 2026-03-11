@@ -55,6 +55,12 @@ summary {
     user-select: none;
 }
 
+.program-series-name {
+    font-weight: 400;
+    opacity: 0.6;
+    font-size: 0.95em;
+}
+
 summary::-webkit-details-marker {
     display: none;
 }
@@ -79,13 +85,13 @@ table {
     border-collapse: collapse;
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
-    table-layout: fixed;
+    table-layout: auto;
 }
 
 th:nth-child(1), td:nth-child(1) { width: 7%; }
 th:nth-child(2), td:nth-child(2) { width: 7%; }
-th:nth-child(3), td:nth-child(3) { width: 25%; }
-th:nth-child(4), td:nth-child(4) { width: auto; }
+th:nth-child(3), td:nth-child(3) { white-space: nowrap; width: 8rem; }
+th:nth-child(4), td:nth-child(4) { width: 20rem; }
 
 thead {
     background-color: rgba(255, 255, 255, 0.08);
