@@ -208,3 +208,19 @@ tbody tr:hover {
     color: #ff6b6b;
     background-color: rgba(253, 70, 70, 0.15);
 }
+
+.queue-table th:nth-child(1), .queue-table td:nth-child(1) { width: 25%; }
+.queue-table th:nth-child(2), .queue-table td:nth-child(2) { width: auto; }
+.queue-table th:nth-child(3), .queue-table td:nth-child(3) { white-space: nowrap; width: 8rem; }
+.queue-table th:nth-child(4), .queue-table td:nth-child(4) { white-space: nowrap; width: 7rem; }
+
+.queue-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.queue-status--pending { color: rgba(255, 255, 255, 0.4); }
+.queue-status--downloading { color: #60a5fa; }
+.queue-status--complete { color: #4ade80; }

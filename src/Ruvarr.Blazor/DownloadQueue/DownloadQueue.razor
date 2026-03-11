@@ -15,12 +15,13 @@ else if (_items.Count == 0)
 }
 else
 {
-    <table>
+    <table class="queue-table">
         <thead>
             <tr>
                 <th>Program</th>
                 <th>Episode</th>
                 <th>Queued</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody>
@@ -30,6 +31,7 @@ else
                     <td>@item.ProgramName</td>
                     <td>@item.EpisodeTitle</td>
                     <td>@item.Created.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="queue-status queue-status--@item.Status.ToString().ToLowerInvariant()">@item.Status</td>
                 </tr>
             }
         </tbody>

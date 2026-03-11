@@ -5,4 +5,5 @@ internal sealed record DownloadQueueItemSummary(
     string EpisodeTitle,
     string ProgramName,
     DateTime Created,
-    DateTime? Downloaded);
+    DateTime? Downloaded,
+    DownloadQueueStatus Status);
