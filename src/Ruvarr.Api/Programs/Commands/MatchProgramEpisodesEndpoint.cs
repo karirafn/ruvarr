@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Ruv;
 using Ruvarr.Ruv.Commands.MatchProgramEpisodes;
 using Ruvarr.Tvdb;
 
-namespace Ruvarr.Api.Programs.Episodes.Commands;
+namespace Ruvarr.Api.Programs.Commands;
 
 internal static class MatchProgramEpisodesEndpoint
 {
@@ -13,7 +13,6 @@ internal static class MatchProgramEpisodesEndpoint
 
     internal static RouteGroupBuilder MapMatchProgramEpisodesEndpoint(this RouteGroupBuilder group)
     {
-
         group.MapPost("/{ruvId:int}/episodes/match", static async (
             [FromRoute] int ruvId,
             [FromServices] IRequestHandler<MatchProgramEpisodesCommand> handler,
