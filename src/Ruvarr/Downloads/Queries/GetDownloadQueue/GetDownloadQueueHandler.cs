@@ -14,7 +14,7 @@ internal sealed class GetDownloadQueueHandler(RuvarrDbContext dbContext)
 
         if (!request.IncludeDownloaded)
         {
-            query = query.Where(x => x.Downloaded == null);
+            query = query.Where(x => x.Status != DownloadQueueStatus.Complete);
         }
 
         return await query
@@ -25,7 +25,8 @@ internal sealed class GetDownloadQueueHandler(RuvarrDbContext dbContext)
                 x.Episode.Title,
                 x.Episode.Program.Name,
                 x.Created,
-                x.Downloaded))
+                x.Downloaded,
+                x.Status))
             .ToListAsync(cancellationToken);
     }
 }

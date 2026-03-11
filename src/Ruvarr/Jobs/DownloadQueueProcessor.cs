@@ -27,7 +27,7 @@ internal class DownloadQueueProcessor(
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
             .Include(x => x.Episode)
             .ThenInclude(x => x.Program)
-            .Where(x => x.Downloaded == null)
+            .Where(x => x.Status == Downloads.Domain.DownloadQueueStatus.Pending)
             .OrderBy(x => x.Created)
             .FirstOrDefaultAsync();
 
@@ -36,6 +36,9 @@ internal class DownloadQueueProcessor(
             logger.LogDebug("No pending items in download queue");
             return;
         }
+
+        item.MarkDownloading();
+        await dbContext.SaveChangesAsync();
 
         logger.LogInformation("Downloading {Program} - {Title}", item.Episode.Program.Name, item.Episode.Title);
         string filename = item.Episode.ToFilename();

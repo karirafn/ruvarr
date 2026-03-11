@@ -14,11 +14,19 @@ internal sealed class DownloadQueueItem
 
     public DateTime? Downloaded { get; private set; }
 
+    public DownloadQueueStatus Status { get; private set; } = DownloadQueueStatus.Pending;
+
     public static DownloadQueueItem Create(RuvEpisode episode) => new()
     {
         Episode = episode,
         Created = DateTime.UtcNow,
     };
 
-    public void MarkDownloaded() => Downloaded = DateTime.UtcNow;
+    public void MarkDownloading() => Status = DownloadQueueStatus.Downloading;
+
+    public void MarkDownloaded()
+    {
+        Downloaded = DateTime.UtcNow;
+        Status = DownloadQueueStatus.Complete;
+    }
 }
