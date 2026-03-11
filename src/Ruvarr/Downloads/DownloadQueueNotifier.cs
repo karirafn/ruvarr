@@ -12,11 +12,17 @@ public sealed class DownloadQueueNotifier
     {
         Channel<byte> channel = Channel.CreateUnbounded<byte>();
         lock (_lock) _subscribers.Add(channel);
+        await using CancellationTokenRegistration registration = cancellationToken.Register(
+            () => channel.Writer.TryComplete());
+
         try
         {
-            await foreach (byte item in channel.Reader.ReadAllAsync(cancellationToken))
+            while (await channel.Reader.WaitToReadAsync(CancellationToken.None))
             {
-                yield return item;
+                while (channel.Reader.TryRead(out byte item))
+                {
+                    yield return item;
+                }
             }
         }
         finally
