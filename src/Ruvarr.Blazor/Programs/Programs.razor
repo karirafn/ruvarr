@@ -1,8 +1,9 @@
 @page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject RuvApiClient ApiClient
+@using Ruvarr.Blazor.Programs
 
-<h1>Episodes</h1>
+<h1>Programs</h1>
 
 @if (_groups is null)
 {
