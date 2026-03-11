@@ -14,5 +14,9 @@ internal sealed class DownloadQueueItemConfiguration : IEntityTypeConfiguration<
 
         builder.Property(x => x.Created)
             .IsRequired();
+
+        builder.Property(x => x.Status)
+            .HasConversion<string>()
+            .IsRequired();
     }
 }
