@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Ruv;
 using Ruvarr.Ruv.Commands.DownloadEpisode;
 
-namespace Ruvarr.Api.Programs.Episodes.Commands;
+namespace Ruvarr.Api.Programs.Commands;
 
 internal static class DownloadEpisodeEndpoint
 {

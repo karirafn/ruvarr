@@ -1,18 +1,18 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Ruv.Queries.GetEpisodes;
 
-namespace Ruvarr.Api.Programs.Episodes.Queries;
+namespace Ruvarr.Api.Programs.Queries;
 
-internal static class GetEpisodesEndpoint
+internal static class GetProgramsEndpoint
 {
-    internal const string Name = "GetEpisodes";
+    internal const string Name = "GetPrograms";
 
-    internal static RouteGroupBuilder MapGetEpisodesEndpoint(this RouteGroupBuilder group)
+    internal static RouteGroupBuilder MapGetProgramsEndpoint(this RouteGroupBuilder group)
     {
         group.MapGet("/episodes", static async (
-            [FromServices] IRequestHandler<GetEpisodesQuery, List<EpisodeSummary>> handler,
+            [FromServices] IRequestHandler<GetEpisodesQuery, List<ProgramSummary>> handler,
             [FromQuery] string? channel,
             [FromQuery] string? programName,
             [FromQuery] bool? isProgramMonitored,
@@ -31,13 +31,13 @@ internal static class GetEpisodesEndpoint
                 IsEpisodeMatched: isEpisodeMatched,
                 IsEpisodeMissing: isEpisodeMissing);
 
-            List<EpisodeSummary> result = await handler.Handle(query, cancellationToken);
+            List<ProgramSummary> result = await handler.Handle(query, cancellationToken);
 
             return TypedResults.Ok(result);
         })
         .WithName(Name)
-        .WithSummary("Gets episodes.")
-        .WithDescription("Gets episodes.")
+        .WithSummary("Gets programs.")
+        .WithDescription("Gets programs.")
         .Produces(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status500InternalServerError);
 

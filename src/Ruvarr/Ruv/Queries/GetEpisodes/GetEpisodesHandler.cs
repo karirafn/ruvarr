@@ -9,9 +9,9 @@ using Ruvarr.Sonarr.Models;
 
 namespace Ruvarr.Ruv.Queries.GetEpisodes;
 
-internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClient sonarr) : IRequestHandler<GetEpisodesQuery, List<EpisodeSummary>>
+internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClient sonarr) : IRequestHandler<GetEpisodesQuery, List<ProgramSummary>>
 {
-    public async Task<List<EpisodeSummary>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
+    public async Task<List<ProgramSummary>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
     {
         IReadOnlyList<Series> series = request.IsProgramMonitored is not null || request.IsProgramMissingEpisodes is not null
             ? await sonarr.GetSeriesAsync(cancellationToken)
@@ -69,22 +69,41 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
             query = query.Where(x => (x.TvdbId == null) != request.IsEpisodeMatched);
         }
 
-        return await query
+        var flat = await query
             .OrderBy(x => x.Program.Name)
             .ThenBy(x => x.SeasonNumber)
             .ThenBy(x => x.EpisodeNumber)
-            .Select(x => new EpisodeSummary(
+            .Select(x => new
+            {
                 x.Program.Channel,
-                x.Program.Name,
-                x.Program.RuvId,
-                x.Program.Series!.Name,
-                x.Title,
-                x.RuvId,
-                x.Description,
+                ProgramName = x.Program.Name,
+                ProgramRuvId = x.Program.RuvId,
+                SeriesName = x.Program.Series!.Name,
+                EpisodeTitle = x.Title,
+                EpisodeRuvId = x.RuvId,
+                EpisodeDescription = x.Description,
                 x.TvdbId,
                 x.SeasonNumber,
                 x.EpisodeNumber,
-                x.FirstRun))
+                x.FirstRun,
+            })
             .ToListAsync(cancellationToken);
+
+        return [.. flat
+            .GroupBy(x => x.ProgramRuvId)
+            .Select(g => new ProgramSummary(
+                g.First().Channel,
+                g.First().ProgramName,
+                g.Key,
+                g.First().SeriesName,
+                [.. g.Select(e => new EpisodeSummary(
+                    e.EpisodeTitle,
+                    e.EpisodeRuvId,
+                    e.EpisodeDescription,
+                    e.TvdbId,
+                    e.SeasonNumber,
+                    e.EpisodeNumber,
+                    e.FirstRun))]))
+            .OrderBy(p => p.ProgramName)];
     }
 }

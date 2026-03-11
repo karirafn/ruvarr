@@ -5,16 +5,16 @@
 
 <h1>Programs</h1>
 
-@if (_groups is null)
+@if (_programs is null)
 {
     <div class="spinner"></div>
 }
 else
 {
-    @foreach (IGrouping<string, EpisodeSummary> group in _groups)
+    @foreach (ProgramSummary program in _programs)
     {
         <details>
-            <summary>@group.Key</summary>
+            <summary>@program.ProgramName</summary>
             <table>
                 <thead>
                     <tr>
@@ -27,7 +27,7 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (EpisodeSummary episode in group.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).ThenBy(e => e.FirstRun))
+                    @foreach (EpisodeSummary episode in program.Episodes)
                     {
                         <tr>
                             <td>@episode.SeasonNumber</td>
@@ -77,15 +77,14 @@ else
 }
 
 @code {
-    private IEnumerable<IGrouping<string, EpisodeSummary>>? _groups;
+    private List<ProgramSummary>? _programs;
     private readonly HashSet<string> _downloading = [];
     private readonly HashSet<string> _queued = [];
     private readonly HashSet<string> _failed = [];
 
     protected override async Task OnInitializedAsync()
     {
-        List<EpisodeSummary>? episodes = await ApiClient.GetEpisodesAsync();
-        _groups = episodes?.GroupBy(e => e.ProgramName).OrderBy(g => g.Key);
+        _programs = await ApiClient.GetEpisodesAsync();
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
