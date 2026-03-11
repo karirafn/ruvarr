@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 
 using Quartz;
 
+using Ruvarr.Downloads;
 using Ruvarr.FFmpeg;
 using Ruvarr.Jobs;
 using Ruvarr.Ruv;
@@ -30,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddTvdb();
         services.AddSonarr();
         services.AddRuv();
+        services.AddDownloads();
 
         services.AddQuartz(options =>
         {

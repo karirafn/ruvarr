@@ -1,0 +1,46 @@
+@page "/download-queue"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject RuvApiClient ApiClient
+@using Ruvarr.Blazor.DownloadQueue
+
+<h1>Download Queue</h1>
+
+@if (_items is null)
+{
+    <div class="spinner"></div>
+}
+else if (_items.Count == 0)
+{
+    <p>No pending downloads.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Program</th>
+                <th>Episode</th>
+                <th>Queued</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (DownloadQueueItemSummary item in _items)
+            {
+                <tr>
+                    <td>@item.ProgramName</td>
+                    <td>@item.EpisodeTitle</td>
+                    <td>@item.Created.ToString("yyyy-MM-dd HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<DownloadQueueItemSummary>? _items;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _items = await ApiClient.GetDownloadQueueAsync();
+    }
+}
