@@ -14,7 +14,7 @@ else
     @foreach (ProgramSummary program in _programs)
     {
         <details>
-            <summary>@program.ProgramName</summary>
+            <summary>@program.ProgramName@if (program.SeriesName is not null) { <span class="program-series-name"> (@program.SeriesName)</span> }</summary>
             <table>
                 <thead>
                     <tr>
