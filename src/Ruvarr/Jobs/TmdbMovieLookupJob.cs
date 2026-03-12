@@ -13,7 +13,7 @@ using TMDbLib.Objects.General;
 using TMDbLib.Objects.Movies;
 using TMDbLib.Objects.Search;
 
-namespace Ruvarr.Tmdb.Jobs;
+namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
 internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TMDbClient tmdb) : IJob
