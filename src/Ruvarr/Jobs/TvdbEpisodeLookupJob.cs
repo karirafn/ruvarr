@@ -1,33 +1,42 @@
-﻿
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Programs.Domain;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
+using Ruvarr.Programs;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob
+internal sealed class TvdbEpisodeLookupJob(
+    ILogger<TvdbEpisodeLookupJob> logger,
+    RuvarrDbContext dbContext,
+    ITvdbClient tvdb,
+    TvdbEpisodeLookupNotifier lookupQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
         logger.LogDebug("Starting TVDB episode lookup job");
 
-        RuvProgram? program = await dbContext.Set<RuvEpisode>()
-            .Where(x => x.Program.Series!.TvdbId != null)
-            .Where(x => x.TvdbId == null)
-            .Where(e => e.NextLookup == null || e.NextLookup <= DateTime.UtcNow)
-            .OrderBy(e => e.NextLookup)
-            .Select(e => e.Program)
+        if (!lookupQueue.TryDequeue(out int ruvId))
+        {
+            logger.LogDebug("No RÚV program pending TVDB episode lookup");
+            return;
+        }
+
+        lookupQueue.MarkProcessing(ruvId);
+
+        RuvProgram? program = await dbContext.Set<RuvProgram>()
+            .Where(x => x.RuvId == ruvId)
             .FirstOrDefaultAsync();
 
         if (program is null || program.Series is null || !int.TryParse(program.Series.TvdbId, out int seriesId) || seriesId < 1)
         {
             logger.LogDebug("No RÚV program pending TVDB episode lookup");
+            lookupQueue.MarkComplete(ruvId);
             return;
         }
 
@@ -37,7 +46,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
         if (seriesData is null)
         {
             await ScheduleLookupAsync(program);
-
+            lookupQueue.MarkComplete(ruvId);
             return;
         }
 
@@ -86,6 +95,7 @@ internal sealed class TvdbEpisodeLookupJob(ILogger<TvdbEpisodeLookupJob> logger,
         }
 
         await ScheduleLookupAsync(program);
+        lookupQueue.MarkComplete(ruvId);
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program)
