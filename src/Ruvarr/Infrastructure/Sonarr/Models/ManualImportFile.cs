@@ -4,7 +4,7 @@ internal sealed record class ManualImportFile(
     string Path,
     string RelativePath,
     string Name,
-    int Size,
+    long Size,
     Series Series,
     int SeasonNumber,
     IReadOnlyList<ManualImportEpisode> Episodes,

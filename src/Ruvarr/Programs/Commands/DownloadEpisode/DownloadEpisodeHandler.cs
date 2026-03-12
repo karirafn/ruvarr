@@ -11,6 +11,7 @@ internal sealed class DownloadEpisodeHandler(RuvarrDbContext dbContext) : IReque
     public async Task<RuvarrResult> Handle(DownloadEpisodeCommand command, CancellationToken cancellationToken)
     {
         RuvEpisode? episode = await dbContext.Set<RuvEpisode>()
+            .Include(e => e.DownloadQueueItem)
             .Where(e => e.RuvId == command.ruvId)
             .FirstOrDefaultAsync(cancellationToken);
 

@@ -11,7 +11,8 @@ internal sealed class GetDownloadQueueHandler(RuvarrDbContext dbContext)
 {
     public async Task<List<DownloadQueueItemSummary>> Handle(GetDownloadQueueQuery request, CancellationToken cancellationToken)
     {
-        IQueryable<DownloadQueueItem> query = dbContext.Set<DownloadQueueItem>();
+        IQueryable<DownloadQueueItem> query = dbContext.Set<DownloadQueueItem>()
+            .Where(x => x.Episode != null);
 
         if (!request.IncludeDownloaded)
         {
