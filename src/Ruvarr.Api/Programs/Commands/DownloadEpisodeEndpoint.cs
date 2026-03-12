@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Ruv;
-using Ruvarr.Ruv.Commands.DownloadEpisode;
+using Ruvarr.Programs.Commands.DownloadEpisode;
+using Ruvarr.Programs;
 
 namespace Ruvarr.Api.Programs.Commands;
 
@@ -22,7 +22,7 @@ internal static class DownloadEpisodeEndpoint
                 success: TypedResults.NoContent,
                 failure: error => error.Code switch
                 {
-                    RuvErrors.EpisodeNotFoundCode => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, detail: error.Description),
+                    ProgramErrors.EpisodeNotFoundCode => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, detail: error.Description),
                     _ => TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest, detail: error.Description)
                 });
         })

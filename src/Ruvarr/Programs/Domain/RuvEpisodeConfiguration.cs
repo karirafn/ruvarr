@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 using Ruvarr.Downloads.Domain;
 
-namespace Ruvarr.Ruv.Domain;
+namespace Ruvarr.Programs.Domain;
 
 internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpisode>
 {

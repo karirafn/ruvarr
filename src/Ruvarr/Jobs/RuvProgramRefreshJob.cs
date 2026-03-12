@@ -4,21 +4,23 @@ using Microsoft.Extensions.Options;
 
 using Quartz;
 
+using Ruvarr.Programs;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Ruv;
-using Ruvarr.Ruv.Domain;
 using Ruvarr.Ruv.Models;
 
 namespace Ruvarr.Jobs;
 
-internal sealed class RuvProgramSyncJob(
-    ILogger<RuvProgramSyncJob> logger,
+internal sealed class RuvProgramRefreshJob(
+    ILogger<RuvProgramRefreshJob> logger,
     IRuvClient ruv,
     RuvarrDbContext dbContext,
-    IOptions<RuvarrOptions> options) : IJob
+    IOptions<RuvarrOptions> options,
+    ProgramRefreshNotifier syncQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        logger.LogDebug("Starting RÚV programs sync job");
+        logger.LogDebug("Starting RÚV programs refresh job");
 
         RuvFeaturedTv? kids = await ruv.GetKidsTvAsync();
         List<RuvTvProgram> kidsPograms = kids?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
@@ -73,5 +75,10 @@ internal sealed class RuvProgramSyncJob(
             .AddRange(newPrograms);
 
         await dbContext.SaveChangesAsync();
+
+        foreach (RuvTvProgram program in programs.Where(x => x.MultipleEpisodes))
+        {
+            syncQueue.Enqueue(program.Id, program.Title);
+        }
     }
 }

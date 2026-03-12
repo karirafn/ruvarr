@@ -1,8 +1,8 @@
 ﻿using Ruvarr.Abstractions;
 
-namespace Ruvarr.Ruv;
+namespace Ruvarr.Programs;
 
-public static class RuvErrors
+public static class ProgramErrors
 {
     public const string ProgramNotFoundCode = "Programs.NotFound";
     public const string EpisodeNotFoundCode = "Episodes.NotFound";

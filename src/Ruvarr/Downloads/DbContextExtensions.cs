@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Downloads.Domain;
-using Ruvarr.Ruv.Domain;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Downloads;
 

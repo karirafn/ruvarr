@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Ruv;
-using Ruvarr.Ruv.Commands.MatchProgramEpisodes;
+using Ruvarr.Programs.Commands.MatchProgramEpisodes;
 using Ruvarr.Tvdb;
+using Ruvarr.Programs;
 
 namespace Ruvarr.Api.Programs.Commands;
 
@@ -23,7 +23,7 @@ internal static class MatchProgramEpisodesEndpoint
                 success: TypedResults.NoContent,
                 failure: error => error.Code switch
                 {
-                    RuvErrors.ProgramNotFoundCode => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, detail: error.Description),
+                    ProgramErrors.ProgramNotFoundCode => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, detail: error.Description),
                     TvdbErrors.SeriesNotFoundCode => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, detail: error.Description),
                     _ => TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest, detail: error.Description)
                 });

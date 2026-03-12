@@ -2,9 +2,9 @@
 
 using Ruvarr.Abstractions;
 using Ruvarr.Downloads;
-using Ruvarr.Ruv.Domain;
+using Ruvarr.Programs.Domain;
 
-namespace Ruvarr.Ruv.Commands.DownloadEpisode;
+namespace Ruvarr.Programs.Commands.DownloadEpisode;
 
 internal sealed class DownloadEpisodeHandler(RuvarrDbContext dbContext) : IRequestHandler<DownloadEpisodeCommand>
 {
@@ -16,7 +16,7 @@ internal sealed class DownloadEpisodeHandler(RuvarrDbContext dbContext) : IReque
 
         if (episode is null)
         {
-            return RuvErrors.EpisodeNotFound;
+            return ProgramErrors.EpisodeNotFound;
         }
 
         dbContext.EnqueueDownload(episode);

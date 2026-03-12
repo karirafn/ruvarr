@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Ruv.Domain;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Models;
 

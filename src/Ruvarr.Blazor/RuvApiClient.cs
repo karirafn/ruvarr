@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using Ruvarr.Blazor.DownloadQueue;
 using Ruvarr.Blazor.Programs;
+using Ruvarr.Blazor.ProgramRefreshQueue;
 
 namespace Ruvarr.Blazor;
 
@@ -48,5 +49,24 @@ internal sealed class RuvApiClient(HttpClient httpClient)
         HttpResponseMessage response = await httpClient.PostAsync(
             $"/programs/episodes/{ruvId}/match/{tvdbId}", content: null, cancellationToken);
         return response.IsSuccessStatusCode;
+    }
+
+    public async IAsyncEnumerable<List<ProgramRefreshQueueItemSummary>> WatchProgramRefreshQueueAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await httpClient.GetAsync(
+            "/programs/program-refresh-queue/stream",
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+        SseParser<List<ProgramRefreshQueueItemSummary>> parser = SseParser.Create(
+            stream,
+            (_, data) => JsonSerializer.Deserialize<List<ProgramRefreshQueueItemSummary>>(data, JsonOptions)!);
+
+        await foreach (SseItem<List<ProgramRefreshQueueItemSummary>> item in parser.EnumerateAsync(cancellationToken))
+        {
+            yield return item.Data;
+        }
     }
 }

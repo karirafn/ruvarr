@@ -1,7 +1,7 @@
 ﻿using Ruvarr.Tmdb.Domain;
 using Ruvarr.Tvdb.Domain;
 
-namespace Ruvarr.Ruv.Domain;
+namespace Ruvarr.Programs.Domain;
 
 internal sealed class RuvProgram
 {

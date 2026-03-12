@@ -8,6 +8,7 @@ using Quartz;
 using Ruvarr.Downloads;
 using Ruvarr.FFmpeg;
 using Ruvarr.Jobs;
+using Ruvarr.Programs;
 using Ruvarr.Ruv;
 using Ruvarr.Sonarr;
 using Ruvarr.Tmdb.Jobs;
@@ -25,31 +26,32 @@ public static class ServiceCollectionExtensions
             .Configure<IConfiguration>((options, configuration)
                 => configuration.GetRequiredSection(RuvarrOptions.SectionName).Bind(options));
 
+        services.AddSingleton<ProgramRefreshNotifier>();
         services.AddMemoryCache();
         services.AddFfmpeg();
         services.AddTmdb();
         services.AddTvdb();
         services.AddSonarr();
         services.AddRuv();
+        services.AddPrograms();
         services.AddDownloads();
 
         services.AddQuartz(options =>
         {
-            JobKey ruvSeriesSync = new(nameof(RuvProgramSyncJob));
-            options.AddJob<RuvProgramSyncJob>(x => x.WithIdentity(ruvSeriesSync))
+            JobKey ruvSeriesSync = new(nameof(RuvProgramRefreshJob));
+            options.AddJob<RuvProgramRefreshJob>(x => x.WithIdentity(ruvSeriesSync))
                 .AddTrigger(trigger => trigger
                     .ForJob(ruvSeriesSync)
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithIntervalInHours(1)
                     .RepeatForever()));
 
-            // Start this job 30 seconds after series sync job to ensure series exist on first run
             JobKey ruvEpisodeSync = new(nameof(RuvEpisodesSyncJob));
             options.AddJob<RuvEpisodesSyncJob>(x => x.WithIdentity(ruvEpisodeSync))
                 .AddTrigger(trigger => trigger
                     .ForJob(ruvEpisodeSync)
-                    .StartAt(DateTimeOffset.UtcNow.AddSeconds(30))
-                    .WithSimpleSchedule(x => x.WithIntervalInHours(1)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
 
             JobKey tmdbMovieLookup = new(nameof(TmdbMovieLookupJob));

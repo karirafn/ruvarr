@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Extensions;
 
-namespace Ruvarr.Ruv.Domain;
+namespace Ruvarr.Programs.Domain;
 
 internal sealed partial class RuvEpisode
 {
