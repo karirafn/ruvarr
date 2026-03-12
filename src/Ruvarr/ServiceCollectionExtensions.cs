@@ -6,13 +6,13 @@ using Microsoft.Extensions.Options;
 using Quartz;
 
 using Ruvarr.Downloads;
-using Ruvarr.FFmpeg;
+using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Jobs;
 using Ruvarr.Programs;
-using Ruvarr.Ruv;
-using Ruvarr.Sonarr;
+using Ruvarr.Infrastructure.Ruv;
+using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Tmdb.Jobs;
-using Ruvarr.Tvdb;
+using Ruvarr.Infrastructure.Tvdb;
 
 using TMDbLib.Client;
 

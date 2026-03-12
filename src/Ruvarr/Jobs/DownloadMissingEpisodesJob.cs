@@ -5,8 +5,8 @@ using Quartz;
 
 using Ruvarr.Downloads;
 using Ruvarr.Programs.Domain;
-using Ruvarr.Sonarr;
-using Ruvarr.Sonarr.Models;
+using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
 
 namespace Ruvarr.Jobs;
 

@@ -6,8 +6,8 @@ using Quartz;
 
 using Ruvarr.Programs;
 using Ruvarr.Programs.Domain;
-using Ruvarr.Ruv;
-using Ruvarr.Ruv.Models;
+using Ruvarr.Infrastructure.Ruv;
+using Ruvarr.Infrastructure.Ruv.Models;
 
 namespace Ruvarr.Jobs;
 

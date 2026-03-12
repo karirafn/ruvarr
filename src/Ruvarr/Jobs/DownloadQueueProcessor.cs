@@ -8,9 +8,9 @@ using Quartz;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
-using Ruvarr.FFmpeg;
-using Ruvarr.Sonarr;
-using Ruvarr.Sonarr.Models;
+using Ruvarr.Infrastructure.FFmpeg;
+using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
 
 namespace Ruvarr.Jobs;
 

@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
-using Ruvarr.Sonarr;
-using Ruvarr.Sonarr.Models;
+using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
 
 namespace Ruvarr.Programs.Queries.GetEpisodes;
 

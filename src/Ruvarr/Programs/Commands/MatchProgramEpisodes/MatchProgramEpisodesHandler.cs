@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging;
 using Ruvarr.Abstractions;
 using Ruvarr.Programs.Domain;
 using Ruvarr.RomanNumerals;
-using Ruvarr.Tvdb;
-using Ruvarr.Tvdb.Models;
+using Ruvarr.Infrastructure.Tvdb;
+using Ruvarr.Infrastructure.Tvdb.Models;
 
 namespace Ruvarr.Programs.Commands.MatchProgramEpisodes;
 
