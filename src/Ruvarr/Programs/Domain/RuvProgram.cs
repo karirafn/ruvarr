@@ -1,4 +1,4 @@
-﻿using Ruvarr.Tmdb.Domain;
+﻿using Ruvarr.Movies.Domain;
 using Ruvarr.Tvdb.Domain;
 
 namespace Ruvarr.Programs.Domain;
