@@ -4,17 +4,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Programs.Domain;
-using Ruvarr.RomanNumerals;
+using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
+using Ruvarr.Programs.Domain;
+using Ruvarr.RomanNumerals;
 
 namespace Ruvarr.Programs.Commands.MatchProgramEpisodes;
 
 internal sealed class MatchProgramEpisodesHandler(
     ILogger<MatchProgramEpisodesHandler> logger,
     RuvarrDbContext dbcontext,
-    ITvdbClient tvdb)
+    ITvdbClient tvdb,
+    ISonarrClient sonarr)
     : IRequestHandler<MatchProgramEpisodesCommand>
 {
     public async Task<RuvarrResult> Handle(MatchProgramEpisodesCommand request, CancellationToken cancellationToken)
@@ -59,6 +62,9 @@ internal sealed class MatchProgramEpisodesHandler(
             return ProgramErrors.ProgramEpisodeCountMismatch;
         }
 
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
+        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+
         foreach (RuvEpisode episode in program.Episodes)
         {
             string[] parts = episode.Title.Split(' ');
@@ -77,7 +83,7 @@ internal sealed class MatchProgramEpisodesHandler(
                 tvdbEpisode.SeasonNumber,
                 tvdbEpisode.Number,
                 tvdbEpisode.Name);
-            episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number);
+            episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id));
         }
 
         await dbcontext.SaveChangesAsync(cancellationToken);

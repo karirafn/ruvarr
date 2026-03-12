@@ -37,6 +37,8 @@ internal sealed partial class RuvEpisode
 
     public DateTime? NextLookup { get; private set; }
 
+    public bool IsMissing { get; private set; }
+
     public DownloadQueueItem? DownloadQueueItem { get; private set; }
 
     public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, string description, DateTime firstRun)
@@ -83,14 +85,17 @@ internal sealed partial class RuvEpisode
         return $"{filename}-RUV.mp4";
     }
 
-    public void Match(int tvdbId, int season, int episode)
+    public void Match(int tvdbId, int season, int episode, bool isMissing)
     {
         Matched = DateTime.UtcNow;
         NextLookup = null;
         TvdbId = tvdbId;
         SeasonNumber = season;
         EpisodeNumber = episode;
+        IsMissing = isMissing;
     }
+
+    public void SetMissing(bool isMissing) => IsMissing = isMissing;
 
     public void Download() => DownloadQueueItem = DownloadQueueItem.Create(this);
 

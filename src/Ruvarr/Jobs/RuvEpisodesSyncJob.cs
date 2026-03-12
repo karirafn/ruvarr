@@ -5,10 +5,12 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Programs;
-using Ruvarr.Programs.Domain;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
+using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
+using Ruvarr.Programs;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Jobs;
 
@@ -17,6 +19,7 @@ internal sealed class RuvEpisodesSyncJob(
     ILogger<RuvEpisodesSyncJob> logger,
     IRuvClient ruv,
     RuvarrDbContext dbContext,
+    ISonarrClient sonarr,
     ProgramRefreshNotifier syncQueue,
     TvdbEpisodeLookupNotifier tvdbEpisodeLookupQueue) : IJob
 {
@@ -36,6 +39,9 @@ internal sealed class RuvEpisodesSyncJob(
             .Where(x => ruvIds.Contains(x.RuvId))
             .Where(x => x.HasMultipleEpisodes)
             .ToListAsync();
+
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
 #pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
         programs.Sort((a, b) => string.Compare(a.Name, b.Name, new CultureInfo("is-IS"), CompareOptions.None));
 #pragma warning restore CA1309
@@ -80,6 +86,11 @@ internal sealed class RuvEpisodesSyncJob(
             {
                 logger.LogInformation("Removed RÚV episode '{EpisodeName}' from program '{Name}'", episode.Title, program.Name);
                 program.RemoveEpisode(episode);
+            }
+
+            foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbId is not null))
+            {
+                episode.SetMissing(missingTvdbIds.Contains(episode.TvdbId!.Value));
             }
 
             await dbContext.SaveChangesAsync();

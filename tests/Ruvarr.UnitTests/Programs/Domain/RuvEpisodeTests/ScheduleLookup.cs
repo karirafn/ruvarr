@@ -50,7 +50,7 @@ public sealed class ScheduleLookup
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
 
         // Act
         sut.ScheduleLookup();

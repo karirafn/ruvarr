@@ -61,7 +61,7 @@ public sealed class ToFilename
         RuvEpisode sut = new RuvEpisodeBuilder()
             .WithProgram(program)
             .Build();
-        sut.Match(1234, 2, 3);
+        sut.Match(1234, 2, 3, isMissing: false);
 
         // Act
         string result = sut.ToFilename();
