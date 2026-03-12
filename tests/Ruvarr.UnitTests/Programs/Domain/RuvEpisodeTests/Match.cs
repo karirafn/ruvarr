@@ -14,7 +14,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 42, season: 1, episode: 1);
+        sut.Match(tvdbId: 42, season: 1, episode: 1, isMissing: false);
 
         // Assert
         sut.TvdbId.ShouldBe(42);
@@ -27,7 +27,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 3, episode: 1);
+        sut.Match(tvdbId: 1, season: 3, episode: 1, isMissing: false);
 
         // Assert
         sut.SeasonNumber.ShouldBe(3);
@@ -40,7 +40,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 7);
+        sut.Match(tvdbId: 1, season: 1, episode: 7, isMissing: false);
 
         // Assert
         sut.EpisodeNumber.ShouldBe(7);
@@ -54,7 +54,7 @@ public sealed class Match
         DateTime before = DateTime.UtcNow;
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
 
         // Assert
         sut.Matched.ShouldNotBeNull();
@@ -70,9 +70,35 @@ public sealed class Match
         sut.NextLookup.ShouldNotBeNull();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
 
         // Assert
         sut.NextLookup.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SetsIsMissingTrue()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
+
+        // Assert
+        sut.IsMissing.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void SetsIsMissingFalse()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+
+        // Assert
+        sut.IsMissing.ShouldBeFalse();
     }
 }

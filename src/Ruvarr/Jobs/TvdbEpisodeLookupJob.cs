@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
+using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs;
@@ -15,6 +17,7 @@ internal sealed class TvdbEpisodeLookupJob(
     ILogger<TvdbEpisodeLookupJob> logger,
     RuvarrDbContext dbContext,
     ITvdbClient tvdb,
+    ISonarrClient sonarr,
     TvdbEpisodeLookupNotifier lookupQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
@@ -58,6 +61,9 @@ internal sealed class TvdbEpisodeLookupJob(
             .Where(x => x.NameTranslations.Contains("isl"))];
         logger.LogDebug("Found {Count} episodes with Icelandic titles", translatedEpisodes.Count);
 
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+
         foreach (Episode translatedEpisode in translatedEpisodes)
         {
             logger.LogDebug(
@@ -91,7 +97,7 @@ internal sealed class TvdbEpisodeLookupJob(
                 translatedEpisode.SeasonNumber,
                 translatedEpisode.Number,
                 translatedEpisode.Name);
-            episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number);
+            episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number, missingTvdbIds.Contains(translatedEpisode.Id));
         }
 
         await ScheduleLookupAsync(program);

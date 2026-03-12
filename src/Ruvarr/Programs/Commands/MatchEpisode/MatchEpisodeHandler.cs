@@ -2,16 +2,19 @@
 using Microsoft.Extensions.Logging;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Programs.Domain;
+using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Programs.Commands.MatchEpisode;
 
 internal sealed class MatchEpisodeHandler(
     ILogger<MatchEpisodeHandler> logger,
     RuvarrDbContext dbContext,
-    ITvdbClient tvdb) : IRequestHandler<MatchEpisodeCommand>
+    ITvdbClient tvdb,
+    ISonarrClient sonarr) : IRequestHandler<MatchEpisodeCommand>
 {
     public async Task<RuvarrResult> Handle(MatchEpisodeCommand command, CancellationToken cancellationToken)
     {
@@ -36,7 +39,10 @@ internal sealed class MatchEpisodeHandler(
             return TvdbErrors.EpisodeNotFound;
         }
 
-        episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number);
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
+        bool isMissing = missingEpisodes.Any(x => x.TvdbId == tvdbEpisode.Id);
+
+        episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, isMissing);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
