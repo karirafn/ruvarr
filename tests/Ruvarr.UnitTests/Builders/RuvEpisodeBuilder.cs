@@ -1,5 +1,4 @@
 ﻿using Ruvarr.Programs.Domain;
-using Ruvarr.Ruv.Domain;
 
 namespace Ruvarr.UnitTests.Builders;
 

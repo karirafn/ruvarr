@@ -1,5 +1,4 @@
 ﻿using Ruvarr.Programs.Domain;
-using Ruvarr.Ruv.Domain;
 using Ruvarr.Tvdb.Domain;
 using Ruvarr.UnitTests.Builders;
 
