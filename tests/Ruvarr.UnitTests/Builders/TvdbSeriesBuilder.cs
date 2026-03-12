@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Security.Cryptography;
 
-using Ruvarr.Tvdb.Domain;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.UnitTests.Builders;
 

@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Ruvarr.Tvdb.Domain;
+namespace Ruvarr.Programs.Domain;
 
 internal sealed class TvdbSeriesConfiguration : IEntityTypeConfiguration<TvdbSeries>
 {

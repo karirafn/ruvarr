@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 
 using Quartz;
 
-using Ruvarr.Movies.Domain;
 using Ruvarr.Programs.Domain;
 
 using TMDbLib.Client;

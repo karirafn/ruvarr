@@ -1,6 +1,4 @@
-﻿using Ruvarr.Programs.Domain;
-
-namespace Ruvarr.Tvdb.Domain;
+﻿namespace Ruvarr.Programs.Domain;
 
 internal sealed class TvdbSeries
 {
