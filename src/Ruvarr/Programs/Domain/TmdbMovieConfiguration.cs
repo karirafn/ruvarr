@@ -1,9 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-using Ruvarr.Tvdb.Domain;
-
-namespace Ruvarr.Movies.Domain;
+namespace Ruvarr.Programs.Domain;
 
 internal sealed class TmdbMovieConfiguration : IEntityTypeConfiguration<TmdbMovie>
 {
