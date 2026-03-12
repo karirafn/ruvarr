@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Programs.Commands.MatchEpisode;
-using Ruvarr.Tvdb;
+using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Programs;
 
 namespace Ruvarr.Api.Programs.Commands;

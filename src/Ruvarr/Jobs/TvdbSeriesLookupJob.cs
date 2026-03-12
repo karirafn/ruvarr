@@ -7,8 +7,8 @@ using Quartz;
 
 using Ruvarr.Extensions;
 using Ruvarr.Programs.Domain;
-using Ruvarr.Tvdb;
-using Ruvarr.Tvdb.Models;
+using Ruvarr.Infrastructure.Tvdb;
+using Ruvarr.Infrastructure.Tvdb.Models;
 
 namespace Ruvarr.Jobs;
 
