@@ -11,7 +11,6 @@ using Ruvarr.Jobs;
 using Ruvarr.Programs;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
-using Ruvarr.Tmdb.Jobs;
 using Ruvarr.Infrastructure.Tvdb;
 
 using TMDbLib.Client;
