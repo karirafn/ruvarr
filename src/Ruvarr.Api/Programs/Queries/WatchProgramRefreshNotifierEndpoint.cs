@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
+using Ruvarr.Contracts;
 using Ruvarr.Programs;
 
 namespace Ruvarr.Api.Programs.Queries;

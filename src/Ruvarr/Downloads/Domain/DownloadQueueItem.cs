@@ -1,4 +1,5 @@
-﻿using Ruvarr.Programs.Domain;
+﻿using Ruvarr.Contracts;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Downloads.Domain;
 

@@ -4,4 +4,8 @@
     <UserSecretsId>ruvarr-blazor</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Ruvarr.Contracts\Ruvarr.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

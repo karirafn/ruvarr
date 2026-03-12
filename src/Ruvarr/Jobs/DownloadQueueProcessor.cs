@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 
 using Quartz;
 
+using Ruvarr.Contracts;
 using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.FFmpeg;
@@ -29,7 +30,7 @@ internal class DownloadQueueProcessor(
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
             .Include(x => x.Episode)
             .ThenInclude(x => x.Program)
-            .Where(x => x.Status == Downloads.Domain.DownloadQueueStatus.Pending)
+            .Where(x => x.Status == DownloadQueueStatus.Pending)
             .OrderBy(x => x.Created)
             .FirstOrDefaultAsync();
 

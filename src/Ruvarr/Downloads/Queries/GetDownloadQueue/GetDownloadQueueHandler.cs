@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 
 namespace Ruvarr.Downloads.Queries.GetDownloadQueue;

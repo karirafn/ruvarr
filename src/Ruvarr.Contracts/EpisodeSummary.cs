@@ -1,6 +1,6 @@
-﻿namespace Ruvarr.Programs.Queries.GetEpisodes;
+namespace Ruvarr.Contracts;
 
-public sealed record class EpisodeSummary(
+public sealed record EpisodeSummary(
     string EpisodeTitle,
     string EpisodeRuvId,
     string EpisodeDescription,
