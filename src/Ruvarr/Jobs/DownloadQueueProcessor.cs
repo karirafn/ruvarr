@@ -40,6 +40,15 @@ internal class DownloadQueueProcessor(
             return;
         }
 
+        if (item.Episode is null)
+        {
+            logger.LogWarning("Download queue item has no associated episode, removing orphaned item");
+            await dbContext.Set<DownloadQueueItem>()
+                .Where(x => x.Episode == null)
+                .ExecuteDeleteAsync();
+            return;
+        }
+
         item.MarkDownloading();
         await dbContext.SaveChangesAsync();
         notifier.Notify();
