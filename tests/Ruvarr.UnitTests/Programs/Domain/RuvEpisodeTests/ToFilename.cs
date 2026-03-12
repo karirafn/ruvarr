@@ -3,7 +3,7 @@ using Ruvarr.UnitTests.Builders;
 
 using Shouldly;
 
-namespace Ruvarr.UnitTests.Ruv.Domain.RuvEpisodeTests;
+namespace Ruvarr.UnitTests.Programs.Domain.RuvEpisodeTests;
 
 public sealed class ToFilename
 {
