@@ -10,5 +10,9 @@
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        window.showDialog = (el) => el.showModal();
+        window.closeDialog = (el) => el.close();
+    </script>
 </body>
 </html>

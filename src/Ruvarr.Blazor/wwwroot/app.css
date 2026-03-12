@@ -138,8 +138,15 @@ thead {
 
 th:last-child,
 td:last-child {
-    width: 3%;
+    width: 1%;
+    white-space: nowrap;
     text-align: right;
+}
+
+.row-actions {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: flex-end;
 }
 
 th {
@@ -228,3 +235,80 @@ tbody tr:hover {
 .queue-status--pending { color: rgba(255, 255, 255, 0.4); }
 .queue-status--downloading { color: #60a5fa; }
 .queue-status--complete { color: #4ade80; }
+
+dialog {
+    background-color: #2a2a2a;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 1.5rem;
+    min-width: 20rem;
+}
+
+dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+dialog h2 {
+    margin: 0 0 1.25rem;
+    font-size: 1.1rem;
+    border: none;
+    padding: 0;
+}
+
+dialog label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+dialog input[type="number"] {
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.95rem;
+    width: 100%;
+}
+
+dialog input[type="number"]:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.dialog-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+}
+
+.dialog-button {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.dialog-button:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.dialog-button--primary {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.dialog-button--primary:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}

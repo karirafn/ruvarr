@@ -1,6 +1,7 @@
 @page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject RuvApiClient ApiClient
+@inject IJSRuntime Js
 @using Ruvarr.Blazor.Programs
 
 <h1>Programs</h1>
@@ -36,37 +37,48 @@ else
                             <td>@episode.EpisodeTitle</td>
                             <td>@episode.EpisodeDescription</td>
                             <td>
-                                @if (_downloading.Contains(episode.EpisodeRuvId))
-                                {
-                                    <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queuing">
-                                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                    </svg>
-                                }
-                                else if (_queued.Contains(episode.EpisodeRuvId))
-                                {
-                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queued">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                }
-                                else if (_failed.Contains(episode.EpisodeRuvId))
-                                {
-                                    <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Retry">
-                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                            <path d="M3 3v5h5" />
+                                <div class="row-actions">
+                                    @if (program.SeriesName is not null && episode.TvdbId is null)
+                                    {
+                                        <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId)" title="Match to TVDB">
+                                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Match to TVDB">
+                                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                            </svg>
+                                        </button>
+                                    }
+                                    @if (_downloading.Contains(episode.EpisodeRuvId))
+                                    {
+                                        <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queuing">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                                         </svg>
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Download">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                            <polyline points="7 10 12 15 17 10" />
-                                            <line x1="12" y1="15" x2="12" y2="3" />
+                                    }
+                                    else if (_queued.Contains(episode.EpisodeRuvId))
+                                    {
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queued">
+                                            <polyline points="20 6 9 17 4 12" />
                                         </svg>
-                                    </button>
-                                }
+                                    }
+                                    else if (_failed.Contains(episode.EpisodeRuvId))
+                                    {
+                                        <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
+                                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Retry">
+                                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                                <path d="M3 3v5h5" />
+                                            </svg>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
+                                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Download">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                <polyline points="7 10 12 15 17 10" />
+                                                <line x1="12" y1="15" x2="12" y2="3" />
+                                            </svg>
+                                        </button>
+                                    }
+                                </div>
                             </td>
                         </tr>
                     }
@@ -76,11 +88,27 @@ else
     }
 }
 
+<dialog @ref="_matchDialog" @onclose="OnMatchDialogClose">
+    <h2>Match to TVDB</h2>
+    <label>
+        TVDB Episode ID
+        <input type="number" @bind="_tvdbIdInput" @bind:event="oninput" />
+    </label>
+    <div class="dialog-actions">
+        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch">Match</button>
+        <button class="dialog-button" @onclick="CloseMatchDialog">Cancel</button>
+    </div>
+</dialog>
+
 @code {
     private List<ProgramSummary>? _programs;
     private readonly HashSet<string> _downloading = [];
     private readonly HashSet<string> _queued = [];
     private readonly HashSet<string> _failed = [];
+
+    private ElementReference _matchDialog;
+    private string? _matchEpisodeRuvId;
+    private string _tvdbIdInput = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,5 +132,37 @@ else
         {
             _failed.Add(ruvId);
         }
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task OpenMatchDialog(string ruvId)
+    {
+        _matchEpisodeRuvId = ruvId;
+        _tvdbIdInput = string.Empty;
+        await Js.InvokeVoidAsync("showDialog", _matchDialog);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task CloseMatchDialog()
+    {
+        await Js.InvokeVoidAsync("closeDialog", _matchDialog);
+    }
+
+    private void OnMatchDialogClose()
+    {
+        _matchEpisodeRuvId = null;
+        _tvdbIdInput = string.Empty;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task SubmitMatch()
+    {
+        if (_matchEpisodeRuvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId))
+        {
+            return;
+        }
+
+        await ApiClient.MatchEpisodeAsync(_matchEpisodeRuvId, tvdbId);
+        await CloseMatchDialog();
     }
 }
