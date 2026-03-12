@@ -1,4 +1,4 @@
-namespace Ruvarr.Downloads.Domain;
+namespace Ruvarr.Contracts;
 
 public enum DownloadQueueStatus
 {

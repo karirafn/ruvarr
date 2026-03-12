@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
 
 namespace Ruvarr.Api.Programs.Queries;

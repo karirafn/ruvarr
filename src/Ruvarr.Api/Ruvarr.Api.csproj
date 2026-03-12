@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Ruvarr.Contracts\Ruvarr.Contracts.csproj" />
     <ProjectReference Include="..\Ruvarr\Ruvarr.csproj" />
   </ItemGroup>
 

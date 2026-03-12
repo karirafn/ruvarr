@@ -1,6 +1,6 @@
-namespace Ruvarr.Blazor.DownloadQueue;
+namespace Ruvarr.Contracts;
 
-internal sealed record DownloadQueueItemSummary(
+public sealed record DownloadQueueItemSummary(
     string EpisodeRuvId,
     string EpisodeTitle,
     string ProgramName,

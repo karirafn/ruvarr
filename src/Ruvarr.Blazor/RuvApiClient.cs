@@ -2,9 +2,7 @@ using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-using Ruvarr.Blazor.DownloadQueue;
-using Ruvarr.Blazor.Programs;
-using Ruvarr.Blazor.ProgramRefreshQueue;
+using Ruvarr.Contracts;
 
 namespace Ruvarr.Blazor;
 

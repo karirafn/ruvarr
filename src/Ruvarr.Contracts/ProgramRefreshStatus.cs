@@ -1,4 +1,4 @@
-namespace Ruvarr.Programs;
+namespace Ruvarr.Contracts;
 
 public enum ProgramRefreshStatus
 {

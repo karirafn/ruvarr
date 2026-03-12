@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
+using Ruvarr.Contracts;
+
 namespace Ruvarr.Programs;
 
 public sealed class ProgramRefreshNotifier

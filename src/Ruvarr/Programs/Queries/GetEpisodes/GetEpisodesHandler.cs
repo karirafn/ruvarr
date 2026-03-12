@@ -3,6 +3,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Sonarr;
 using Ruvarr.Sonarr.Models;

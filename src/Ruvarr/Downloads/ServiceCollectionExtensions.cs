@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
 
 namespace Ruvarr.Downloads;

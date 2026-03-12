@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Programs.Commands.DownloadEpisode;
 using Ruvarr.Programs.Commands.MatchEpisode;
 using Ruvarr.Programs.Commands.MatchProgramEpisodes;
