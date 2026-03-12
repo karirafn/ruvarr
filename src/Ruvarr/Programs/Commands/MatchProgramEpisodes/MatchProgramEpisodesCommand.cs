@@ -1,3 +1,3 @@
-﻿namespace Ruvarr.Ruv.Commands.MatchProgramEpisodes;
+﻿namespace Ruvarr.Programs.Commands.MatchProgramEpisodes;
 
 public sealed record class MatchProgramEpisodesCommand(int RuvId);

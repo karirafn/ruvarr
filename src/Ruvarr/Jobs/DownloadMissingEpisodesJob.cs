@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Quartz;
 
 using Ruvarr.Downloads;
-using Ruvarr.Ruv.Domain;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Sonarr;
 using Ruvarr.Sonarr.Models;
 

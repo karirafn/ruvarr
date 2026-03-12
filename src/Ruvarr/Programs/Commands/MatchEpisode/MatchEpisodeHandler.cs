@@ -2,11 +2,11 @@
 using Microsoft.Extensions.Logging;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Ruv.Domain;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Models;
 
-namespace Ruvarr.Ruv.Commands.MatchEpisode;
+namespace Ruvarr.Programs.Commands.MatchEpisode;
 
 internal sealed class MatchEpisodeHandler(
     ILogger<MatchEpisodeHandler> logger,
@@ -26,7 +26,7 @@ internal sealed class MatchEpisodeHandler(
         if (episode is null)
         {
             logger.LogWarning("RÚV episode with Ruv ID {RuvId} not found", command.RuvId);
-            return RuvErrors.EpisodeNotFound;
+            return ProgramErrors.EpisodeNotFound;
         }
 
         Episode? tvdbEpisode = await tvdb.GetEpisodeAsync(command.TvdbId, cancellationToken);

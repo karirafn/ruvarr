@@ -4,12 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Programs.Domain;
 using Ruvarr.RomanNumerals;
-using Ruvarr.Ruv.Domain;
 using Ruvarr.Tvdb;
 using Ruvarr.Tvdb.Models;
 
-namespace Ruvarr.Ruv.Commands.MatchProgramEpisodes;
+namespace Ruvarr.Programs.Commands.MatchProgramEpisodes;
 
 internal sealed class MatchProgramEpisodesHandler(
     ILogger<MatchProgramEpisodesHandler> logger,
@@ -25,12 +25,12 @@ internal sealed class MatchProgramEpisodesHandler(
 
         if (program is null)
         {
-            return RuvErrors.ProgramNotFound;
+            return ProgramErrors.ProgramNotFound;
         }
 
         if (program.Series is null)
         {
-            return RuvErrors.ProgramNotMatched;
+            return ProgramErrors.ProgramNotMatched;
         }
 
         SeriesData? series = await tvdb.GetSeriesAsync(int.Parse(program.Series.TvdbId, CultureInfo.InvariantCulture), cancellationToken);
@@ -47,7 +47,7 @@ internal sealed class MatchProgramEpisodesHandler(
 
         if (season == 0)
         {
-            return RuvErrors.SeasonUndetermined;
+            return ProgramErrors.SeasonUndetermined;
         }
 
         Dictionary<int, Episode> episodes = episodesEnumerable
@@ -56,7 +56,7 @@ internal sealed class MatchProgramEpisodesHandler(
 
         if (episodes.Count != program.Episodes.Count)
         {
-            return RuvErrors.ProgramEpisodeCountMismatch;
+            return ProgramErrors.ProgramEpisodeCountMismatch;
         }
 
         foreach (RuvEpisode episode in program.Episodes)
@@ -64,7 +64,7 @@ internal sealed class MatchProgramEpisodesHandler(
             string[] parts = episode.Title.Split(' ');
             if (!parts[0].Equals("þáttur", StringComparison.OrdinalIgnoreCase) || !int.TryParse(parts[1], out int number))
             {
-                return RuvErrors.UnparsableEpisodeTitle;
+                return ProgramErrors.UnparsableEpisodeTitle;
             }
 
             Episode tvdbEpisode = episodes[number];

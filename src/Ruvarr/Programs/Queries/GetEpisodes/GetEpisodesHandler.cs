@@ -3,11 +3,11 @@
 using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Ruv.Domain;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Sonarr;
 using Ruvarr.Sonarr.Models;
 
-namespace Ruvarr.Ruv.Queries.GetEpisodes;
+namespace Ruvarr.Programs.Queries.GetEpisodes;
 
 internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClient sonarr) : IRequestHandler<GetEpisodesQuery, List<ProgramSummary>>
 {

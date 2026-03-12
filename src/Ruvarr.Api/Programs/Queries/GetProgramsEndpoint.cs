@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Ruv.Queries.GetEpisodes;
+using Ruvarr.Programs.Queries.GetEpisodes;
 
 namespace Ruvarr.Api.Programs.Queries;
 

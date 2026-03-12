@@ -1,27 +1,51 @@
-﻿using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Quartz;
 
+using Ruvarr.Programs;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Ruv;
-using Ruvarr.Ruv.Domain;
 using Ruvarr.Ruv.Models;
 
 namespace Ruvarr.Jobs;
 
-internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRuvClient ruv, RuvarrDbContext dbContext) : IJob
+[DisallowConcurrentExecution]
+internal sealed class RuvEpisodesSyncJob(
+    ILogger<RuvEpisodesSyncJob> logger,
+    IRuvClient ruv,
+    RuvarrDbContext dbContext,
+    ProgramRefreshNotifier syncQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
         logger.LogDebug("Starting RÚV episode sync job");
 
+        List<int> ruvIds = [.. syncQueue.DequeueAll()];
+
+        if (ruvIds is [])
+        {
+            logger.LogDebug("No programs in refresh queue");
+            return;
+        }
+
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
+            .Where(x => ruvIds.Contains(x.RuvId))
             .Where(x => x.HasMultipleEpisodes)
             .ToListAsync();
-        logger.LogDebug("Found {Count} RÚV programs with multiple episodes in database", programs.Count);
+#pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
+        programs.Sort((a, b) => string.Compare(a.Name, b.Name, new CultureInfo("is-IS"), CompareOptions.None));
+#pragma warning restore CA1309
+        logger.LogDebug("Found {Count} RÚV programs with multiple episodes in refresh queue", programs.Count);
+
+        HashSet<int> loadedIds = [.. programs.Select(p => p.RuvId)];
 
         foreach (RuvProgram program in programs)
         {
+            syncQueue.MarkProcessing(program.RuvId);
+
             logger.LogDebug("Getting episodes for RÚV program '{Name}'", program.Name);
 
             RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(program.RuvId);
@@ -31,6 +55,7 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
                 logger.LogInformation("Deleting RÚV program {Name} and {Count} episodes", program.Name, program.Episodes.Count);
                 dbContext.Set<RuvProgram>().Remove(program);
                 await dbContext.SaveChangesAsync();
+                syncQueue.MarkComplete(program.RuvId);
                 continue;
             }
 
@@ -57,6 +82,12 @@ internal sealed class RuvEpisodesSyncJob(ILogger<RuvEpisodesSyncJob> logger, IRu
             }
 
             await dbContext.SaveChangesAsync();
+            syncQueue.MarkComplete(program.RuvId);
+        }
+
+        foreach (int ruvId in ruvIds.Where(id => !loadedIds.Contains(id)))
+        {
+            syncQueue.MarkComplete(ruvId);
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-using Ruvarr.Ruv.Domain;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.UnitTests.Builders;
 
