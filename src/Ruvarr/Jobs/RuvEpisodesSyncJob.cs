@@ -17,7 +17,8 @@ internal sealed class RuvEpisodesSyncJob(
     ILogger<RuvEpisodesSyncJob> logger,
     IRuvClient ruv,
     RuvarrDbContext dbContext,
-    ProgramRefreshNotifier syncQueue) : IJob
+    ProgramRefreshNotifier syncQueue,
+    TvdbEpisodeLookupNotifier tvdbEpisodeLookupQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -83,6 +84,11 @@ internal sealed class RuvEpisodesSyncJob(
 
             await dbContext.SaveChangesAsync();
             syncQueue.MarkComplete(program.RuvId);
+
+            if (program.Series?.TvdbId is not null && program.Episodes.Any(x => x.TvdbId is null && (x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)))
+            {
+                tvdbEpisodeLookupQueue.Enqueue(program.RuvId, program.Name);
+            }
         }
 
         foreach (int ruvId in ruvIds.Where(id => !loadedIds.Contains(id)))

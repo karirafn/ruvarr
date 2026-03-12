@@ -18,6 +18,7 @@ internal static class ProgramEndpoints
         group.MapWatchDownloadQueueEndpoint();
         group.MapWatchProgramRefreshNotifierEndpoint();
         group.MapWatchTvdbSeriesLookupQueueEndpoint();
+        group.MapWatchTvdbEpisodeLookupQueueEndpoint();
 
         return group;
     }
