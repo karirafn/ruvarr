@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
                 => configuration.GetRequiredSection(RuvarrOptions.SectionName).Bind(options));
 
         services.AddSingleton<ProgramRefreshNotifier>();
+        services.AddSingleton<TvdbSeriesLookupNotifier>();
         services.AddMemoryCache();
         services.AddFfmpeg();
         services.AddTmdb();

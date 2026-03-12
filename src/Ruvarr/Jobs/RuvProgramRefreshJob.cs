@@ -16,7 +16,8 @@ internal sealed class RuvProgramRefreshJob(
     IRuvClient ruv,
     RuvarrDbContext dbContext,
     IOptions<RuvarrOptions> options,
-    ProgramRefreshNotifier syncQueue) : IJob
+    ProgramRefreshNotifier syncQueue,
+    TvdbSeriesLookupNotifier tvdbLookupQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -79,6 +80,17 @@ internal sealed class RuvProgramRefreshJob(
         foreach (RuvTvProgram program in programs.Where(x => x.MultipleEpisodes))
         {
             syncQueue.Enqueue(program.Id, program.Title);
+        }
+
+        List<RuvProgram> unmatchedPrograms = await dbContext.Set<RuvProgram>()
+            .Where(x => x.HasMultipleEpisodes)
+            .Where(x => x.Series == null)
+            .Where(x => x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)
+            .ToListAsync();
+
+        foreach (RuvProgram program in unmatchedPrograms)
+        {
+            tvdbLookupQueue.Enqueue(program.RuvId, program.Name);
         }
     }
 }

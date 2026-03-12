@@ -49,6 +49,25 @@ internal sealed class RuvApiClient(HttpClient httpClient)
         return response.IsSuccessStatusCode;
     }
 
+    public async IAsyncEnumerable<List<TvdbSeriesLookupQueueItemSummary>> WatchTvdbSeriesLookupQueueAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await httpClient.GetAsync(
+            "/programs/tvdb-series-lookup-queue/stream",
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+        SseParser<List<TvdbSeriesLookupQueueItemSummary>> parser = SseParser.Create(
+            stream,
+            (_, data) => JsonSerializer.Deserialize<List<TvdbSeriesLookupQueueItemSummary>>(data, JsonOptions)!);
+
+        await foreach (SseItem<List<TvdbSeriesLookupQueueItemSummary>> item in parser.EnumerateAsync(cancellationToken))
+        {
+            yield return item.Data;
+        }
+    }
+
     public async IAsyncEnumerable<List<ProgramRefreshQueueItemSummary>> WatchProgramRefreshQueueAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         using HttpResponseMessage response = await httpClient.GetAsync(

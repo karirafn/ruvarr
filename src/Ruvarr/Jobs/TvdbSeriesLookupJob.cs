@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Quartz;
 
 using Ruvarr.Extensions;
+using Ruvarr.Programs;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
@@ -13,22 +14,28 @@ using Ruvarr.Infrastructure.Tvdb.Models;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb) : IJob
+internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, RuvarrDbContext dbContext, ITvdbClient tvdb, TvdbSeriesLookupNotifier lookupQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
         logger.LogDebug("Starting Tvdb series lookup job");
 
+        if (!lookupQueue.TryDequeue(out int ruvId))
+        {
+            logger.LogDebug("No RÚV program pending TVDB series lookup");
+            return;
+        }
+
+        lookupQueue.MarkProcessing(ruvId);
+
         RuvProgram? program = await dbContext.Set<RuvProgram>()
-            .Where(x => x.HasMultipleEpisodes)
-            .Where(x => x.Series == null)
-            .Where(x => x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)
-            .OrderBy(x => x.NextLookup)
+            .Where(x => x.RuvId == ruvId)
             .FirstOrDefaultAsync();
 
         if (program is null)
         {
             logger.LogDebug("No RÚV program pending TVDB series lookup");
+            lookupQueue.MarkComplete(ruvId);
             return;
         }
 
@@ -40,6 +47,7 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
         if (match is null)
         {
             await ScheduleLookupAsync(program);
+            lookupQueue.MarkComplete(ruvId);
             return;
         }
 
@@ -52,6 +60,8 @@ internal sealed class TvdbSeriesLookupJob(ILogger<TvdbSeriesLookupJob> logger, R
         program.MatchTvdb(entity);
 
         int added = await dbContext.SaveChangesAsync();
+
+        lookupQueue.MarkComplete(ruvId);
 
         if (added > 0)
         {
