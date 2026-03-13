@@ -107,7 +107,7 @@ else
     }
 }
 
-<MatchEpisodeDialog @ref="_matchDialog" />
+<MatchEpisodeDialog @ref="_matchDialog" OnMatchComplete="ReloadAsync" />
 
 @code {
     private List<ProgramSummary>? _programs;
@@ -119,6 +119,11 @@ else
     private MatchEpisodeDialog? _matchDialog;
 
     protected override async Task OnInitializedAsync()
+    {
+        _programs = await ApiClient.GetEpisodesAsync();
+    }
+
+    private async Task ReloadAsync()
     {
         _programs = await ApiClient.GetEpisodesAsync();
     }

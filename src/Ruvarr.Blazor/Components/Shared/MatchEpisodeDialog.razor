@@ -5,7 +5,7 @@
     <h2>Match to TVDB</h2>
     <label>
         TVDB Episode ID
-        <input type="number" @bind="_tvdbIdInput" @bind:event="oninput" />
+        <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" />
     </label>
     <div class="dialog-actions">
         <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch">Match</button>
@@ -43,7 +43,7 @@
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task SubmitMatch()
     {
-        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId))
+        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId) || tvdbId <= 0)
         {
             return;
         }

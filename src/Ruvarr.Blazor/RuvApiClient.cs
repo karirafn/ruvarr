@@ -50,14 +50,14 @@ internal sealed class RuvApiClient(HttpClient httpClient)
     public async Task<bool> DownloadEpisodeAsync(string ruvId, CancellationToken cancellationToken = default)
     {
         HttpResponseMessage response = await httpClient.PostAsync(
-            $"/programs/episodes/{ruvId}/download", content: null, cancellationToken);
+            $"/programs/episodes/{Uri.EscapeDataString(ruvId)}/download", content: null, cancellationToken);
         return response.IsSuccessStatusCode;
     }
 
     public async Task<bool> MatchEpisodeAsync(string ruvId, int tvdbId, CancellationToken cancellationToken = default)
     {
         HttpResponseMessage response = await httpClient.PostAsync(
-            $"/programs/episodes/{ruvId}/match/{tvdbId}", content: null, cancellationToken);
+            $"/programs/episodes/{Uri.EscapeDataString(ruvId)}/match/{tvdbId}", content: null, cancellationToken);
         return response.IsSuccessStatusCode;
     }
 
