@@ -35,6 +35,13 @@ internal sealed class RuvApiClient(HttpClient httpClient)
         }
     }
 
+    public async Task<bool> RefreshProgramAsync(int ruvId, CancellationToken cancellationToken = default)
+    {
+        HttpResponseMessage response = await httpClient.PostAsync(
+            $"/programs/{ruvId}/refresh", content: null, cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> DownloadEpisodeAsync(string ruvId, CancellationToken cancellationToken = default)
     {
         HttpResponseMessage response = await httpClient.PostAsync(
