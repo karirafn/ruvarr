@@ -6,5 +6,6 @@ public sealed record class GetEpisodesQuery(
     bool? IsProgramMonitored,
     bool? IsProgramMissingEpisodes,
     bool? IsProgramMatched,
+    bool? IsProgramPartiallyMatched,
     bool? IsEpisodeMatched,
     bool? IsEpisodeMissing);
