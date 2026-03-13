@@ -79,15 +79,7 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
 
-            JobKey downloadMissing = new(nameof(DownloadMissingEpisodesJob));
-            options.AddJob<DownloadMissingEpisodesJob>(x => x.WithIdentity(downloadMissing))
-                .AddTrigger(trigger => trigger
-                    .ForJob(downloadMissing)
-                    .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInMinutes(1)
-                    .RepeatForever()));
-
-            JobKey downloadQueue = new(nameof(DownloadQueueProcessor));
+JobKey downloadQueue = new(nameof(DownloadQueueProcessor));
             options.AddJob<DownloadQueueProcessor>(x => x.WithIdentity(downloadQueue))
                 .AddTrigger(trigger => trigger
                     .ForJob(downloadQueue)
