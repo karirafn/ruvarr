@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace Ruvarr.IntegrationTests;
 
@@ -14,6 +16,8 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
     {
         builder.ConfigureServices(services =>
         {
+            services.RemoveAll<IHostedService>();
+
             ServiceDescriptor? descriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<RuvarrDbContext>));
 

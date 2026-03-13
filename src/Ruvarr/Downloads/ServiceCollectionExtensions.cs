@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
+using Ruvarr.Programs.Events;
 
 namespace Ruvarr.Downloads;
 
@@ -12,6 +13,7 @@ internal static class ServiceCollectionExtensions
     {
         services.AddSingleton<DownloadQueueNotifier>();
         services.AddTransient<IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>>, GetDownloadQueueHandler>();
+        services.AddTransient<IDomainEventHandler<EpisodeMissingEvent>, EpisodeMissingEventHandler>();
 
         return services;
     }
