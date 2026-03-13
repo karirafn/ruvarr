@@ -7,4 +7,5 @@ public sealed record EpisodeSummary(
     int? TvdbId,
     int? SeasonNumber,
     int? EpisodeNumber,
-    DateTime FirstRun);
+    DateTime FirstRun,
+    bool IsMissing);
