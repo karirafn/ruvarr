@@ -1,4 +1,6 @@
-﻿namespace Ruvarr.Programs.Domain;
+﻿using Ruvarr.Abstractions;
+
+namespace Ruvarr.Programs.Domain;
 
 internal sealed class RuvProgram
 {
@@ -69,16 +71,7 @@ internal sealed class RuvProgram
     public void ScheduleLookup()
     {
         LookupCount++;
-
-        DateTime now = DateTime.UtcNow;
-        NextLookup = LookupCount switch
-        {
-            1 => now.AddHours(1),
-            2 => now.AddHours(2),
-            3 => now.AddHours(4),
-            4 => now.AddDays(1),
-            _ => now.AddDays(7)
-        };
+        NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
     }
 
     public bool TryAddEpisode(string id, Uri uri, string title, string description, DateTime firstRun)
