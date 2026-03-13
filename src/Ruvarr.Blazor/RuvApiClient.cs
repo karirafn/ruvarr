@@ -13,6 +13,11 @@ internal sealed class RuvApiClient(HttpClient httpClient)
     public Task<List<ProgramSummary>?> GetEpisodesAsync(CancellationToken cancellationToken = default)
         => httpClient.GetFromJsonAsync<List<ProgramSummary>>("/programs/episodes", cancellationToken);
 
+    public Task<List<ProgramSummary>?> GetUnmatchedEpisodesAsync(CancellationToken cancellationToken = default)
+        => httpClient.GetFromJsonAsync<List<ProgramSummary>>(
+            "/programs/episodes?isProgramMissingEpisodes=true&isEpisodeMatched=false",
+            cancellationToken);
+
     public Task<List<DownloadQueueItemSummary>?> GetDownloadQueueAsync(CancellationToken cancellationToken = default)
         => httpClient.GetFromJsonAsync<List<DownloadQueueItemSummary>>("/programs/download-queue", cancellationToken);
 

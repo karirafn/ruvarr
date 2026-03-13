@@ -1,8 +1,8 @@
 @page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject RuvApiClient ApiClient
-@inject IJSRuntime Js
 @using Ruvarr.Contracts
+@using Ruvarr.Blazor.Components.Shared
 
 <h1>Programs</h1>
 
@@ -107,17 +107,7 @@ else
     }
 }
 
-<dialog @ref="_matchDialog" @onclose="OnMatchDialogClose">
-    <h2>Match to TVDB</h2>
-    <label>
-        TVDB Episode ID
-        <input type="number" @bind="_tvdbIdInput" @bind:event="oninput" />
-    </label>
-    <div class="dialog-actions">
-        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch">Match</button>
-        <button class="dialog-button" @onclick="CloseMatchDialog">Cancel</button>
-    </div>
-</dialog>
+<MatchEpisodeDialog @ref="_matchDialog" />
 
 @code {
     private List<ProgramSummary>? _programs;
@@ -126,9 +116,7 @@ else
     private readonly HashSet<string> _queued = [];
     private readonly HashSet<string> _failed = [];
 
-    private ElementReference _matchDialog;
-    private string? _matchEpisodeRuvId;
-    private string _tvdbIdInput = string.Empty;
+    private MatchEpisodeDialog? _matchDialog;
 
     protected override async Task OnInitializedAsync()
     {
@@ -165,32 +153,6 @@ else
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task OpenMatchDialog(string ruvId)
     {
-        _matchEpisodeRuvId = ruvId;
-        _tvdbIdInput = string.Empty;
-        await Js.InvokeVoidAsync("showDialog", _matchDialog);
-    }
-
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task CloseMatchDialog()
-    {
-        await Js.InvokeVoidAsync("closeDialog", _matchDialog);
-    }
-
-    private void OnMatchDialogClose()
-    {
-        _matchEpisodeRuvId = null;
-        _tvdbIdInput = string.Empty;
-    }
-
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task SubmitMatch()
-    {
-        if (_matchEpisodeRuvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId))
-        {
-            return;
-        }
-
-        await ApiClient.MatchEpisodeAsync(_matchEpisodeRuvId, tvdbId);
-        await CloseMatchDialog();
+        await _matchDialog!.OpenAsync(ruvId);
     }
 }

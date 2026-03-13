@@ -1,0 +1,55 @@
+@inject RuvApiClient ApiClient
+@inject IJSRuntime Js
+
+<dialog @ref="_dialog" @onclose="OnDialogClose">
+    <h2>Match to TVDB</h2>
+    <label>
+        TVDB Episode ID
+        <input type="number" @bind="_tvdbIdInput" @bind:event="oninput" />
+    </label>
+    <div class="dialog-actions">
+        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch">Match</button>
+        <button class="dialog-button" @onclick="CloseAsync">Cancel</button>
+    </div>
+</dialog>
+
+@code {
+    [Parameter]
+    public EventCallback OnMatchComplete { get; set; }
+
+    private ElementReference _dialog;
+    private string? _ruvId;
+    private string _tvdbIdInput = string.Empty;
+
+    public async Task OpenAsync(string ruvId)
+    {
+        _ruvId = ruvId;
+        _tvdbIdInput = string.Empty;
+        await Js.InvokeVoidAsync("showDialog", _dialog);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task CloseAsync()
+    {
+        await Js.InvokeVoidAsync("closeDialog", _dialog);
+    }
+
+    private void OnDialogClose()
+    {
+        _ruvId = null;
+        _tvdbIdInput = string.Empty;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task SubmitMatch()
+    {
+        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId))
+        {
+            return;
+        }
+
+        await ApiClient.MatchEpisodeAsync(_ruvId, tvdbId);
+        await CloseAsync();
+        await OnMatchComplete.InvokeAsync();
+    }
+}
