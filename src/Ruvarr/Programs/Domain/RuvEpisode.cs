@@ -93,6 +93,31 @@ internal sealed partial class RuvEpisode
         return $"{filename}-RUV.mp4";
     }
 
+    public string ToFilePath(string rootDirectory, string episodeSubdirectory, bool fileAlreadyExists)
+    {
+        string seriesOrProgramName = Program.Series?.Name ?? Program.Name;
+        string directory = Path.Join(rootDirectory, episodeSubdirectory, seriesOrProgramName);
+
+        string resolvedDirectory = Path.GetFullPath(directory);
+        string resolvedRoot = Path.GetFullPath(rootDirectory);
+        if (!resolvedDirectory.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && resolvedDirectory != resolvedRoot)
+        {
+            throw new InvalidOperationException($"Path traversal detected: '{resolvedDirectory}' is outside root '{resolvedRoot}'.");
+        }
+
+        string filename = ToFilename();
+
+        if (fileAlreadyExists)
+        {
+            string extension = Path.GetExtension(filename);
+            string stem = Path.GetFileNameWithoutExtension(filename);
+            filename = $"{stem}.X{extension}";
+        }
+
+        return Path.Join(directory, filename);
+    }
+
     public void Match(int tvdbId, int season, int episode, bool isMissing)
     {
         Matched = DateTime.UtcNow;
