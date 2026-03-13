@@ -14,10 +14,9 @@ internal sealed class TvdbSeries
 
     public IReadOnlyList<RuvProgram> Programs => [.. _programs];
 
-    internal static TvdbSeries Create(string id, string type, string name)
+    internal static TvdbSeries Create(string id, string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(type);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
         return new()
