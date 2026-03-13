@@ -8,8 +8,14 @@
         <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" />
     </label>
     <div class="dialog-actions">
-        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch">Match</button>
-        <button class="dialog-button" @onclick="CloseAsync">Cancel</button>
+        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@_isSubmitting">
+            @if (_isSubmitting)
+            {
+                <span class="button-spinner"></span>
+            }
+            Match
+        </button>
+        <button class="dialog-button" @onclick="CloseAsync" disabled="@_isSubmitting">Cancel</button>
     </div>
 </dialog>
 
@@ -20,6 +26,7 @@
     private ElementReference _dialog;
     private string? _ruvId;
     private string _tvdbIdInput = string.Empty;
+    private bool _isSubmitting;
 
     public async Task OpenAsync(string ruvId)
     {
@@ -48,7 +55,15 @@
             return;
         }
 
-        await ApiClient.MatchEpisodeAsync(_ruvId, tvdbId);
+        _isSubmitting = true;
+        try
+        {
+            await ApiClient.MatchEpisodeAsync(_ruvId, tvdbId);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
         await CloseAsync();
         await OnMatchComplete.InvokeAsync();
     }
