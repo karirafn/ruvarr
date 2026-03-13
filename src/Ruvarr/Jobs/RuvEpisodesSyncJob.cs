@@ -47,6 +47,9 @@ internal sealed class RuvEpisodesSyncJob(
         HashSet<string> monitoredTvdbIds = [.. sonarrSeries
             .Where(x => x.Monitored)
             .Select(x => x.TvdbId.ToString(CultureInfo.InvariantCulture))];
+        HashSet<string> missingEpisodesTvdbIds = [.. sonarrSeries
+            .Where(x => x.Seasons.Where(s => s.SeasonNumber > 0).Any(s => s.Statistics.PercentOfEpisodes < 1))
+            .Select(x => x.TvdbId.ToString(CultureInfo.InvariantCulture))];
 #pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
         programs.Sort((a, b) => string.Compare(a.Name, b.Name, new CultureInfo("is-IS"), CompareOptions.None));
 #pragma warning restore CA1309
@@ -101,6 +104,10 @@ internal sealed class RuvEpisodesSyncJob(
             bool isMonitored = program.Series is not null &&
                 monitoredTvdbIds.Contains(program.Series.TvdbId);
             program.SetMonitoredStatus(isMonitored);
+
+            bool hasMissingEpisodes = program.Series is not null &&
+                missingEpisodesTvdbIds.Contains(program.Series.TvdbId);
+            program.SetHasMissingEpisodes(hasMissingEpisodes);
 
             await dbContext.SaveChangesAsync();
             syncQueue.MarkComplete(program.RuvId);
