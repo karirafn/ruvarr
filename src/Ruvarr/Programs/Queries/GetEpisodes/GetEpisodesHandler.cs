@@ -2,20 +2,14 @@
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
-using Ruvarr.Infrastructure.Sonarr;
-using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Programs.Queries.GetEpisodes;
 
-internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClient sonarr) : IRequestHandler<GetEpisodesQuery, List<ProgramSummary>>
+internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext) : IRequestHandler<GetEpisodesQuery, List<ProgramSummary>>
 {
     public async Task<List<ProgramSummary>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
-
-        HashSet<int?> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
-
         IQueryable<RuvEpisode> query = dbContext.Set<RuvEpisode>();
 
         if (!string.IsNullOrWhiteSpace(request.Channel))
@@ -40,7 +34,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
 
         if (request.IsEpisodeMissing is not null)
         {
-            query = query.Where(x => missingTvdbIds.Contains(x.TvdbId) == request.IsEpisodeMissing);
+            query = query.Where(x => x.IsMissing == request.IsEpisodeMissing);
         }
 
         if (request.IsProgramMatched is not null)
@@ -80,6 +74,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
                 x.SeasonNumber,
                 x.EpisodeNumber,
                 x.FirstRun,
+                x.IsMissing,
             })
             .ToListAsync(cancellationToken);
 
@@ -100,13 +95,8 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
                     e.SeasonNumber,
                     e.EpisodeNumber,
                     e.FirstRun,
-                    missingTvdbIds.Contains(e.TvdbId)))]))
+                    e.IsMissing))]))
             .OrderBy(p => p.ProgramName);
-
-        if (request.IsProgramMissingEpisodes == true)
-        {
-            programs = programs.Where(p => p.Episodes.Any(e => e.IsMissing));
-        }
 
         return [.. programs];
     }
