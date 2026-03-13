@@ -1,0 +1,53 @@
+using Ruvarr.Contracts;
+using Ruvarr.Programs;
+
+using Shouldly;
+
+namespace Ruvarr.UnitTests.Programs.ProgramRefreshNotifierTests;
+
+public sealed class Items
+{
+    [Fact]
+    public void IsEmptyWhenNothingEnqueued()
+    {
+        // Arrange
+        ProgramRefreshNotifier sut = new();
+
+        // Act
+        IReadOnlyList<ProgramRefreshQueueItemSummary> items = sut.Items;
+
+        // Assert
+        items.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ContainsEnqueuedItemWithPendingStatus()
+    {
+        // Arrange
+        ProgramRefreshNotifier sut = new();
+
+        // Act
+        sut.Enqueue(1, "Program A");
+
+        // Assert
+        ProgramRefreshQueueItemSummary item = sut.Items.ShouldHaveSingleItem();
+        item.RuvId.ShouldBe(1);
+        item.ProgramName.ShouldBe("Program A");
+        item.Status.ShouldBe(ProgramRefreshStatus.Pending);
+    }
+
+    [Fact]
+    public void IsEmptyAfterMarkComplete()
+    {
+        // Arrange
+        ProgramRefreshNotifier sut = new();
+        sut.Enqueue(1, "Program A");
+        List<int> _ = sut.DequeueAll().ToList();
+
+        // Act
+        sut.MarkComplete(1);
+
+        // Assert
+        sut.Items.ShouldBeEmpty();
+    }
+}
