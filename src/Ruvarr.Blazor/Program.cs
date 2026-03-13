@@ -14,8 +14,9 @@ builder.Services.AddHttpClient<RuvApiClient>(client =>
 
 WebApplication app = builder.Build();
 
-app.UseStaticFiles();
+app.MapStaticAssets();
 app.UseAntiforgery();
-app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 await app.RunAsync();

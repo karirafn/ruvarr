@@ -3,11 +3,7 @@
 @implements IDisposable
 
 <nav class="nav">
-    <details class="nav-group" open="@_programsOpen">
-        <summary class="nav-link" @onclick="TogglePrograms" @onclick:preventDefault>Programs</summary>
-        <NavLink class="nav-link nav-link--nested" href="/" Match="NavLinkMatch.All">All Programs</NavLink>
-        <NavLink class="nav-link nav-link--nested" href="/unmatched-episodes">Unmatched Episodes</NavLink>
-    </details>
+    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All" ActiveClass="nav-link--active">Programs</NavLink>
     <details class="nav-group" open="@_queuesOpen">
         <summary class="nav-link" @onclick="ToggleQueues" @onclick:preventDefault>Queues</summary>
         <NavLink class="nav-link nav-link--nested" href="/download-queue">Download</NavLink>
@@ -18,35 +14,26 @@
 </nav>
 
 @code {
-    private bool _programsOpen;
     private bool _queuesOpen;
 
     protected override void OnInitialized()
     {
-        _programsOpen = IsProgramRoute();
         _queuesOpen = IsQueueRoute();
         Navigation.LocationChanged += OnLocationChanged;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        if (IsProgramRoute())
-            _programsOpen = true;
         if (IsQueueRoute())
             _queuesOpen = true;
         InvokeAsync(StateHasChanged);
     }
-
-    private bool IsProgramRoute() =>
-        Navigation.ToBaseRelativePath(Navigation.Uri) is "" or "unmatched-episodes";
 
     private bool IsQueueRoute() =>
         Navigation.Uri.Contains("/download-queue") ||
         Navigation.Uri.Contains("/program-refresh-queue") ||
         Navigation.Uri.Contains("/tvdb-series-lookup-queue") ||
         Navigation.Uri.Contains("/tvdb-episode-lookup-queue");
-
-    private void TogglePrograms() => _programsOpen = !_programsOpen;
 
     private void ToggleQueues() => _queuesOpen = !_queuesOpen;
 

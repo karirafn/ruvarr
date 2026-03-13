@@ -12,9 +12,9 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
 {
     public async Task<List<ProgramSummary>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = request.IsEpisodeMissing is not null
-            ? await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken)
-            : [];
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
+
+        HashSet<int?> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
 
         IQueryable<RuvEpisode> query = dbContext.Set<RuvEpisode>();
 
@@ -40,8 +40,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
 
         if (request.IsEpisodeMissing is not null)
         {
-            HashSet<int?> missingEpisodeIds = [.. missingEpisodes.Select(x => x.TvdbId)];
-            query = query.Where(x => missingEpisodeIds.Contains(x.TvdbId));
+            query = query.Where(x => missingTvdbIds.Contains(x.TvdbId) == request.IsEpisodeMissing);
         }
 
         if (request.IsProgramMatched is not null)
@@ -63,6 +62,8 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
                 x.Program.Channel,
                 ProgramName = x.Program.Name,
                 ProgramRuvId = x.Program.RuvId,
+                IsMonitored = x.Program.IsMonitored,
+                HasMissingEpisodes = x.Program.HasMissingEpisodes,
                 SeriesName = x.Program.Series!.Name,
                 EpisodeTitle = x.Title,
                 EpisodeRuvId = x.RuvId,
@@ -74,12 +75,14 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
             })
             .ToListAsync(cancellationToken);
 
-        return [.. flat
+        IEnumerable<ProgramSummary> programs = flat
             .GroupBy(x => x.ProgramRuvId)
             .Select(g => new ProgramSummary(
                 g.First().Channel,
                 g.First().ProgramName,
                 g.Key,
+                g.First().IsMonitored,
+                g.First().HasMissingEpisodes,
                 g.First().SeriesName,
                 [.. g.Select(e => new EpisodeSummary(
                     e.EpisodeTitle,
@@ -88,7 +91,15 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
                     e.TvdbId,
                     e.SeasonNumber,
                     e.EpisodeNumber,
-                    e.FirstRun))]))
-            .OrderBy(p => p.ProgramName)];
+                    e.FirstRun,
+                    missingTvdbIds.Contains(e.TvdbId)))]))
+            .OrderBy(p => p.ProgramName);
+
+        if (request.IsProgramMissingEpisodes == true)
+        {
+            programs = programs.Where(p => p.Episodes.Any(e => e.IsMissing));
+        }
+
+        return [.. programs];
     }
 }
