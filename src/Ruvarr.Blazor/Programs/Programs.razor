@@ -12,6 +12,7 @@
     <button class="filter-button @(Filter == "unmatched-programs" ? "filter-button--active" : "")" @onclick='() => NavigateTo("unmatched-programs")'>Unmatched Programs</button>
     <button class="filter-button @(Filter == "unmatched-episodes" ? "filter-button--active" : "")" @onclick='() => NavigateTo("unmatched-episodes")'>Unmatched Episodes</button>
     <button class="filter-button @(Filter == "missing-from-sonarr" ? "filter-button--active" : "")" @onclick='() => NavigateTo("missing-from-sonarr")'>Missing from Sonarr</button>
+    <button class="filter-button @(Filter == "partially-matched" ? "filter-button--active" : "")" @onclick='() => NavigateTo("partially-matched")'>Partially Matched</button>
 </div>
 
 <div class="search-bar">
@@ -183,6 +184,7 @@ else
         "unmatched-programs" => "No unmatched programs found.",
         "unmatched-episodes" => "No unmatched episodes found.",
         "missing-from-sonarr" => "No programs with missing episodes found.",
+        "partially-matched" => "No partially matched programs found.",
         _ => "No programs found.",
     };
 

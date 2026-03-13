@@ -19,6 +19,7 @@ internal static class GetProgramsEndpoint
             [FromQuery] bool? isProgramMonitored,
             [FromQuery] bool? isProgramMissingEpisodes,
             [FromQuery] bool? isProgramMatched,
+            [FromQuery] bool? isProgramPartiallyMatched,
             [FromQuery] bool? isEpisodeMatched,
             [FromQuery] bool? isEpisodeMissing,
             CancellationToken cancellationToken) =>
@@ -29,6 +30,7 @@ internal static class GetProgramsEndpoint
                 IsProgramMonitored: isProgramMonitored,
                 IsProgramMissingEpisodes: isProgramMissingEpisodes,
                 IsProgramMatched: isProgramMatched,
+                IsProgramPartiallyMatched: isProgramPartiallyMatched,
                 IsEpisodeMatched: isEpisodeMatched,
                 IsEpisodeMissing: isEpisodeMissing);
 

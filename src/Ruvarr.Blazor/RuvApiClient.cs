@@ -19,6 +19,7 @@ internal sealed class RuvApiClient(HttpClient httpClient)
             "unmatched-programs" => "?isProgramMatched=false",
             "unmatched-episodes" => "?isProgramMatched=true&isEpisodeMatched=false",
             "missing-from-sonarr" => "?isProgramMonitored=true&isProgramMissingEpisodes=true",
+            "partially-matched" => "?isProgramPartiallyMatched=true",
             _ => string.Empty,
         };
 

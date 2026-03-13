@@ -2,9 +2,9 @@
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
-using Ruvarr.Programs.Domain;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Programs.Queries.GetEpisodes;
 
@@ -48,6 +48,14 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
             query = query.Where(x => (x.Program.Series == null) != request.IsProgramMatched);
         }
 
+        if (request.IsProgramPartiallyMatched is true)
+        {
+            query = query.Where(x =>
+                x.Program.Series != null &&
+                x.Program.Episodes.Any(e => e.TvdbId != null) &&
+                x.Program.Episodes.Any(e => e.TvdbId == null));
+        }
+
         if (request.IsEpisodeMatched is not null)
         {
             query = query.Where(x => (x.TvdbId == null) != request.IsEpisodeMatched);
@@ -62,8 +70,8 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
                 x.Program.Channel,
                 ProgramName = x.Program.Name,
                 ProgramRuvId = x.Program.RuvId,
-                IsMonitored = x.Program.IsMonitored,
-                HasMissingEpisodes = x.Program.HasMissingEpisodes,
+                x.Program.IsMonitored,
+                x.Program.HasMissingEpisodes,
                 SeriesName = x.Program.Series!.Name,
                 EpisodeTitle = x.Title,
                 EpisodeRuvId = x.RuvId,
