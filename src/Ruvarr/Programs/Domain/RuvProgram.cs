@@ -28,6 +28,8 @@ internal sealed class RuvProgram
 
     public bool IsMonitored { get; private set; }
 
+    public bool HasMissingEpisodes { get; private set; }
+
     public TvdbSeries? Series { get; private set; }
 
     public TmdbMovie? Movie { get; private set; }
@@ -45,6 +47,8 @@ internal sealed class RuvProgram
     };
 
     public void SetMonitoredStatus(bool monitored) => IsMonitored = monitored;
+
+    public void SetHasMissingEpisodes(bool hasMissingEpisodes) => HasMissingEpisodes = hasMissingEpisodes;
 
     public void MatchTvdb(TvdbSeries series)
     {
