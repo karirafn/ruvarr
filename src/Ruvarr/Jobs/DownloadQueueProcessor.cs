@@ -54,25 +54,23 @@ internal class DownloadQueueProcessor(
         notifier.Notify();
 
         logger.LogInformation("Downloading {Program} - {Title}", item.Episode.Program.Name, item.Episode.Title);
-        string filename = item.Episode.ToFilename();
-        string directory = Path.Join(
+        string tentativePath = item.Episode.ToFilePath(
             options.Value.DownloadsRootDirectory,
             options.Value.EpisodeDownloadDirectory,
-            item.Episode.Program.Series?.Name ?? item.Episode.Program.Name);
-        string filepath = Path.Join(directory, filename);
+            fileAlreadyExists: false);
 
-        if (!Directory.Exists(directory))
+        string filepath = item.Episode.ToFilePath(
+            options.Value.DownloadsRootDirectory,
+            options.Value.EpisodeDownloadDirectory,
+            fileAlreadyExists: File.Exists(tentativePath));
+
+        string? directory = Path.GetDirectoryName(filepath);
+        if (directory is not null && !Directory.Exists(directory))
         {
             Directory.CreateDirectory(directory);
         }
 
-        if (File.Exists(filepath))
-        {
-            string extension = Path.GetExtension(filename);
-            string filenameWithoutExtension = Path.GetFileNameWithoutExtension(filename);
-            filename = $"{filenameWithoutExtension}.X{extension}";
-            filepath = Path.Join(directory, filename);
-        }
+        string filename = Path.GetFileName(filepath);
 
         await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title);
 
