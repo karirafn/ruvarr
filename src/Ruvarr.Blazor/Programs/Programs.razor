@@ -38,7 +38,7 @@ else
     {
         @foreach (ProgramSummary program in visibleList)
         {
-            <details>
+            <details @key="program.ProgramRuvId">
                 <summary style="display: flex; align-items: center;">
                     @program.ProgramName@if (program.SeriesName is not null) { <span class="program-series-name"> (@program.SeriesName)</span> }
                     @if (program.HasMissingEpisodes)
@@ -155,10 +155,15 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _programs = null;
-        _programs = await ApiClient.GetEpisodesAsync(Filter);
+        await LoadProgramsAsync();
     }
 
-    private Task ReloadAsync() => OnParametersSetAsync();
+    private async Task ReloadAsync() => await LoadProgramsAsync();
+
+    private async Task LoadProgramsAsync()
+    {
+        _programs = await ApiClient.GetEpisodesAsync(Filter);
+    }
 
     private void NavigateTo(string filter)
     {
