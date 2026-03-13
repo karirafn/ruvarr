@@ -5,6 +5,7 @@ using Ruvarr.Contracts;
 using Ruvarr.Programs.Commands.DownloadEpisode;
 using Ruvarr.Programs.Commands.MatchEpisode;
 using Ruvarr.Programs.Commands.MatchProgramEpisodes;
+using Ruvarr.Programs.Commands.RefreshProgram;
 using Ruvarr.Programs.Queries.GetEpisodes;
 
 namespace Ruvarr.Programs;
@@ -17,6 +18,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IRequestHandler<MatchEpisodeCommand>, MatchEpisodeHandler>();
         services.AddTransient<IRequestHandler<DownloadEpisodeCommand>, DownloadEpisodeHandler>();
         services.AddTransient<IRequestHandler<MatchProgramEpisodesCommand>, MatchProgramEpisodesHandler>();
+        services.AddTransient<IRequestHandler<RefreshProgramCommand>, RefreshProgramHandler>();
 
         return services;
     }
