@@ -144,6 +144,7 @@ else
     public string? Filter { get; set; }
 
     private List<ProgramSummary>? _programs;
+    private string? _loadedFilter;
     private string _searchText = string.Empty;
     private readonly HashSet<int> _refreshing = [];
     private readonly HashSet<string> _downloading = [];
@@ -154,6 +155,11 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        if (_loadedFilter == Filter)
+        {
+            return;
+        }
+
         _programs = null;
         await LoadProgramsAsync();
     }
@@ -163,6 +169,7 @@ else
     private async Task LoadProgramsAsync()
     {
         _programs = await ApiClient.GetEpisodesAsync(Filter);
+        _loadedFilter = Filter;
     }
 
     private void NavigateTo(string filter)
