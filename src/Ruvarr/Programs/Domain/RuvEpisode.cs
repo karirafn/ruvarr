@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Ruvarr.Abstractions;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Extensions;
+using Ruvarr.Programs.Events;
 
 namespace Ruvarr.Programs.Domain;
 
