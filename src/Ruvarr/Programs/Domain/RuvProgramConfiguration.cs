@@ -35,6 +35,9 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
             .IsUnicode(true)
             .IsFixedLength(false);
 
+        builder.Property(x => x.IsMonitored)
+            .IsRequired();
+
         builder.HasMany(x => x.Episodes)
             .WithOne(x => x.Program)
             .HasForeignKey("program_id")

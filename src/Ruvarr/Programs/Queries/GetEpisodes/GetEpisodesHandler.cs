@@ -14,7 +14,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
 {
     public async Task<List<ProgramSummary>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
     {
-        IReadOnlyList<Series> series = request.IsProgramMonitored is not null || request.IsProgramMissingEpisodes is not null
+        IReadOnlyList<Series> series = request.IsProgramMissingEpisodes is not null
             ? await sonarr.GetSeriesAsync(cancellationToken)
             : [];
 
@@ -36,12 +36,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext, ISonarrClien
 
         if (request.IsProgramMonitored is not null)
         {
-            HashSet<string> seriesIds = [.. series
-                .Where(x => x.Monitored)
-                .Select(x => x.TvdbId.ToString(CultureInfo.InvariantCulture))];
-            query = query
-                .Where(x => x.Program.Series != null)
-                .Where(x => seriesIds.Contains(x.Program.Series!.TvdbId));
+            query = query.Where(x => x.Program.IsMonitored == request.IsProgramMonitored);
         }
 
         if (request.IsProgramMissingEpisodes is not null)

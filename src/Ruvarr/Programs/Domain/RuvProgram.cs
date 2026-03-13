@@ -26,6 +26,8 @@ internal sealed class RuvProgram
 
     public int LookupCount { get; private set; }
 
+    public bool IsMonitored { get; private set; }
+
     public TvdbSeries? Series { get; private set; }
 
     public TmdbMovie? Movie { get; private set; }
@@ -41,6 +43,8 @@ internal sealed class RuvProgram
         HasMultipleEpisodes = multipleEpisodes,
         Created = DateTime.UtcNow,
     };
+
+    public void SetMonitoredStatus(bool monitored) => IsMonitored = monitored;
 
     public void MatchTvdb(TvdbSeries series)
     {
