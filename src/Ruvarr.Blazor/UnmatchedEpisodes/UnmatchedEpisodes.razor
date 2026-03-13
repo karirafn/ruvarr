@@ -1,0 +1,84 @@
+@page "/unmatched-episodes"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject RuvApiClient ApiClient
+@using Ruvarr.Contracts
+@using Ruvarr.Blazor.Components.Shared
+
+<h1>Unmatched Episodes</h1>
+
+@if (_programs is null)
+{
+    <div class="spinner"></div>
+}
+else if (_programs.Count == 0)
+{
+    <p>No unmatched episodes found.</p>
+}
+else
+{
+    @foreach (ProgramSummary program in _programs)
+    {
+        <details>
+            <summary>
+                @program.ProgramName@if (program.SeriesName is not null) { <span class="program-series-name"> (@program.SeriesName)</span> }
+            </summary>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Season</th>
+                        <th>Episode</th>
+                        <th>First Run</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (EpisodeSummary episode in program.Episodes)
+                    {
+                        <tr>
+                            <td>@episode.SeasonNumber</td>
+                            <td>@episode.EpisodeNumber</td>
+                            <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                            <td>@episode.EpisodeTitle</td>
+                            <td>@episode.EpisodeDescription</td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId)" title="Match to TVDB">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Match to TVDB">
+                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </details>
+    }
+}
+
+<MatchEpisodeDialog @ref="_matchDialog" OnMatchComplete="ReloadAsync" />
+
+@code {
+    private List<ProgramSummary>? _programs;
+    private MatchEpisodeDialog? _matchDialog;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _programs = await ApiClient.GetUnmatchedEpisodesAsync();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task OpenMatchDialog(string ruvId)
+    {
+        await _matchDialog!.OpenAsync(ruvId);
+    }
+
+    private async Task ReloadAsync()
+    {
+        _programs = await ApiClient.GetUnmatchedEpisodesAsync();
+    }
+}

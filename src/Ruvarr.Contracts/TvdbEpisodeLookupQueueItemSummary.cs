@@ -3,4 +3,4 @@ namespace Ruvarr.Contracts;
 public sealed record TvdbEpisodeLookupQueueItemSummary(
     int RuvId,
     string ProgramName,
-    TvdbEpisodeLookupStatus Status);
+    TvdbEpisodeLookupStatus Status) : IQueueItemSummary;
