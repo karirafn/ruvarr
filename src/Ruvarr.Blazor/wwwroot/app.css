@@ -47,6 +47,25 @@ body {
     background-color: rgba(255, 255, 255, 0.08);
 }
 
+.nav-group {
+    border: none;
+}
+
+.nav-group-label {
+    padding: 0.6rem 1.25rem 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.nav-link--nested {
+    padding-left: 1.75rem;
+    font-size: 0.9rem;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
 main {
     flex: 1;
     min-width: 0;
@@ -109,6 +128,10 @@ summary::before {
     font-size: 0.65rem;
     opacity: 0.6;
     transition: transform 0.15s ease;
+}
+
+.nav summary::before {
+    display: none;
 }
 
 details[open] > summary::before {
