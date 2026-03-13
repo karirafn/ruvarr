@@ -1,9 +1,41 @@
 @using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <nav class="nav">
     <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Programs</NavLink>
-    <NavLink class="nav-link" href="/download-queue">Download Queue</NavLink>
-    <NavLink class="nav-link" href="/program-refresh-queue">Program Refresh Queue</NavLink>
-    <NavLink class="nav-link" href="/tvdb-series-lookup-queue">TVDB Series Lookup Queue</NavLink>
-    <NavLink class="nav-link" href="/tvdb-episode-lookup-queue">TVDB Episode Lookup Queue</NavLink>
+    <details class="nav-group" open="@_queuesOpen">
+        <summary class="nav-link" @onclick="ToggleQueues" @onclick:preventDefault>Queues</summary>
+        <NavLink class="nav-link nav-link--nested" href="/download-queue">Download</NavLink>
+        <NavLink class="nav-link nav-link--nested" href="/program-refresh-queue">Program Refresh</NavLink>
+        <NavLink class="nav-link nav-link--nested" href="/tvdb-series-lookup-queue">TVDB Series Lookup</NavLink>
+        <NavLink class="nav-link nav-link--nested" href="/tvdb-episode-lookup-queue">TVDB Episode Lookup</NavLink>
+    </details>
 </nav>
+
+@code {
+    private bool _queuesOpen;
+
+    protected override void OnInitialized()
+    {
+        _queuesOpen = IsQueueRoute();
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (IsQueueRoute())
+            _queuesOpen = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsQueueRoute() =>
+        Navigation.Uri.Contains("/download-queue") ||
+        Navigation.Uri.Contains("/program-refresh-queue") ||
+        Navigation.Uri.Contains("/tvdb-series-lookup-queue") ||
+        Navigation.Uri.Contains("/tvdb-episode-lookup-queue");
+
+    private void ToggleQueues() => _queuesOpen = !_queuesOpen;
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}
