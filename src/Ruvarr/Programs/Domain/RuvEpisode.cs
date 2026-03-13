@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Extensions;
 
@@ -9,9 +10,15 @@ namespace Ruvarr.Programs.Domain;
 
 internal sealed partial class RuvEpisode
 {
+    private readonly List<IDomainEvent> _domainEvents = [];
+
     private RuvEpisode()
     {
     }
+
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents;
+
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     public required RuvProgram Program { get; init; }
 
@@ -92,10 +99,18 @@ internal sealed partial class RuvEpisode
         TvdbId = tvdbId;
         SeasonNumber = season;
         EpisodeNumber = episode;
-        IsMissing = isMissing;
+        SetMissing(isMissing);
     }
 
-    public void SetMissing(bool isMissing) => IsMissing = isMissing;
+    public void SetMissing(bool isMissing)
+    {
+        if (isMissing && !IsMissing)
+        {
+            _domainEvents.Add(new EpisodeMissingEvent(this));
+        }
+
+        IsMissing = isMissing;
+    }
 
     public void Download() => DownloadQueueItem = DownloadQueueItem.Create(this);
 
