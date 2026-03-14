@@ -72,6 +72,10 @@ else
                         }
                     </span>
                 </summary>
+                @if (program.TvdbUrl is not null)
+                {
+                    <a class="badge--tvdb" href="@program.TvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
+                }
                 @if (_loadingEpisodes.Contains(program.ProgramRuvId))
                 {
                     <div class="spinner"></div>

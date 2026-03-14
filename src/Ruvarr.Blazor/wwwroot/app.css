@@ -417,3 +417,21 @@ dialog input[type="number"]:focus {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.badge--tvdb {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 4px;
+    border: 1px solid #60a5fa;
+    color: #60a5fa;
+    text-decoration: none;
+    margin-bottom: 0.5rem;
+}
+
+.badge--tvdb:hover {
+    opacity: 0.8;
+}
