@@ -92,5 +92,24 @@ internal sealed class RuvProgramRefreshJob(
         {
             tvdbLookupQueue.Enqueue(program.RuvId, program.Name);
         }
+
+        List<RuvProgram> slugMissingPrograms = await dbContext.Set<RuvProgram>()
+            .Include(x => x.Series)
+            .Where(x => x.HasMultipleEpisodes)
+            .Where(x => x.Series != null)
+            .Where(x => x.Series!.Slug == null)
+            .ToListAsync();
+
+        HashSet<string> enqueuedTvdbIds = [];
+
+        foreach (RuvProgram program in slugMissingPrograms)
+        {
+            if (!enqueuedTvdbIds.Add(program.Series!.TvdbId))
+            {
+                continue;
+            }
+
+            tvdbLookupQueue.Enqueue(program.RuvId, program.Name);
+        }
     }
 }

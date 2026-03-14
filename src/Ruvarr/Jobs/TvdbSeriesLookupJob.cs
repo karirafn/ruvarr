@@ -34,12 +34,39 @@ internal sealed class TvdbSeriesLookupJob(
         lookupQueue.MarkProcessing(ruvId);
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
+            .Include(x => x.Series)
             .Where(x => x.RuvId == ruvId)
             .FirstOrDefaultAsync();
 
         if (program is null)
         {
             logger.LogDebug("No RÚV program pending TVDB series lookup");
+            lookupQueue.MarkComplete(ruvId);
+            return;
+        }
+
+        if (program.Series is not null)
+        {
+            if (!int.TryParse(program.Series.TvdbId, NumberStyles.Integer, CultureInfo.InvariantCulture, out int tvdbId))
+            {
+                logger.LogWarning("Could not parse TvdbId '{TvdbId}' as integer for program '{Program}'", program.Series.TvdbId, program.Name);
+                lookupQueue.MarkComplete(ruvId);
+                return;
+            }
+
+            SeriesData? seriesData = await tvdb.GetSeriesAsync(tvdbId, cancellationToken: context.CancellationToken);
+
+            if (seriesData is null)
+            {
+                logger.LogWarning("TVDB returned no series data for TvdbId '{TvdbId}'", tvdbId);
+                lookupQueue.MarkComplete(ruvId);
+                return;
+            }
+
+            program.Series.UpdateSlug(seriesData.Series.Slug);
+
+            await dbContext.SaveChangesAsync(context.CancellationToken);
+
             lookupQueue.MarkComplete(ruvId);
             return;
         }
