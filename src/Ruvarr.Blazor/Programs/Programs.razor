@@ -43,10 +43,6 @@ else
                      @ontoggle="() => OnToggle(program.ProgramRuvId)">
                 <summary style="display: flex; align-items: center;">
                     @program.ProgramName@if (program.SeriesName is not null) { <span class="program-series-name"> (@program.SeriesName)</span> }
-                    @if (program.HasMissingEpisodes)
-                    {
-                        <span class="badge badge--missing">missing</span>
-                    }
                     <span style="margin-left: auto;">
                         @if (_refreshQueue.TryGetValue(program.ProgramRuvId, out ProgramRefreshStatus status) && status == ProgramRefreshStatus.Processing)
                         {
