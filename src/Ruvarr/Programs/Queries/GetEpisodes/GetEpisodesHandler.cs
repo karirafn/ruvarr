@@ -6,9 +6,9 @@ using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Programs.Queries.GetEpisodes;
 
-internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext) : IRequestHandler<GetEpisodesQuery, List<ProgramSummary>>
+internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext) : IRequestHandler<GetEpisodesQuery, List<ProgramDetails>>
 {
-    public async Task<List<ProgramSummary>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
+    public async Task<List<ProgramDetails>> Handle(GetEpisodesQuery request, CancellationToken cancellationToken)
     {
         IQueryable<RuvEpisode> query = dbContext.Set<RuvEpisode>();
 
@@ -78,9 +78,9 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext) : IRequestHa
             })
             .ToListAsync(cancellationToken);
 
-        IEnumerable<ProgramSummary> programs = flat
+        IEnumerable<ProgramDetails> programs = flat
             .GroupBy(x => x.ProgramRuvId)
-            .Select(g => new ProgramSummary(
+            .Select(g => new ProgramDetails(
                 g.First().Channel,
                 g.First().ProgramName,
                 g.Key,

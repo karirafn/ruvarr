@@ -10,7 +10,7 @@ internal sealed class RuvApiClient(HttpClient httpClient)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public Task<List<ProgramSummary>?> GetEpisodesAsync(
+    public Task<List<ProgramDetails>?> GetEpisodesAsync(
         string? filter = null,
         CancellationToken cancellationToken = default)
     {
@@ -23,10 +23,25 @@ internal sealed class RuvApiClient(HttpClient httpClient)
             _ => string.Empty,
         };
 
-        return httpClient.GetFromJsonAsync<List<ProgramSummary>>(
+        return httpClient.GetFromJsonAsync<List<ProgramDetails>>(
             $"/programs/episodes{queryString}",
             cancellationToken);
     }
+
+    public IAsyncEnumerable<ProgramSummary> GetProgramsAsync(string? filter = null, CancellationToken cancellationToken = default)
+    {
+        string queryString = filter switch
+        {
+            "unmatched-programs" => "?isProgramMatched=false",
+            "missing-from-sonarr" => "?isProgramMonitored=true&isProgramMissingEpisodes=true",
+            "partially-matched" => "?isProgramPartiallyMatched=true",
+            _ => string.Empty,
+        };
+        return httpClient.GetFromJsonAsAsyncEnumerable<ProgramSummary>($"/programs{queryString}", cancellationToken)!;
+    }
+
+    public Task<List<EpisodeSummary>?> GetProgramEpisodesAsync(int ruvId, CancellationToken cancellationToken = default)
+        => httpClient.GetFromJsonAsync<List<EpisodeSummary>>($"/programs/{ruvId}/episodes", cancellationToken);
 
     public Task<List<DownloadQueueItemSummary>?> GetDownloadQueueAsync(CancellationToken cancellationToken = default)
         => httpClient.GetFromJsonAsync<List<DownloadQueueItemSummary>>("/programs/download-queue", cancellationToken);

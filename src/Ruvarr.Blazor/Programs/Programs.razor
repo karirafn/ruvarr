@@ -5,6 +5,7 @@
 @inject NavigationManager Navigation
 @using Ruvarr.Contracts
 @using Ruvarr.Blazor.Components.Shared
+@using Microsoft.AspNetCore.Components.Web.Virtualization
 
 <h1>Programs</h1>
 
@@ -26,11 +27,9 @@
 }
 else
 {
-    IEnumerable<ProgramSummary> visible = string.IsNullOrWhiteSpace(_searchText)
-        ? _programs
-        : _programs.Where(p => p.ProgramName.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
-
-    IReadOnlyList<ProgramSummary> visibleList = [.. visible];
+    List<ProgramSummary> visibleList = string.IsNullOrWhiteSpace(_searchText)
+        ? [.. _programs]
+        : [.. _programs.Where(p => p.ProgramName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))];
 
     if (visibleList.Count == 0)
     {
@@ -38,9 +37,10 @@ else
     }
     else
     {
-        @foreach (ProgramSummary program in visibleList)
-        {
-            <details @key="program.ProgramRuvId">
+        <Virtualize Items="visibleList" Context="program" ItemSize="48" OverscanCount="5">
+            <details @key="program.ProgramRuvId"
+                     open="@(_openPrograms.Contains(program.ProgramRuvId) ? string.Empty : null)"
+                     @ontoggle="() => OnToggle(program.ProgramRuvId)">
                 <summary style="display: flex; align-items: center;">
                     @program.ProgramName@if (program.SeriesName is not null) { <span class="program-series-name"> (@program.SeriesName)</span> }
                     @if (program.HasMissingEpisodes)
@@ -76,76 +76,83 @@ else
                         }
                     </span>
                 </summary>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Season</th>
-                            <th>Episode</th>
-                            <th>First Run</th>
-                            <th>Title</th>
-                            <th>Description</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (EpisodeSummary episode in program.Episodes)
-                        {
+                @if (_loadingEpisodes.Contains(program.ProgramRuvId))
+                {
+                    <div class="spinner"></div>
+                }
+                else if (_episodes.TryGetValue(program.ProgramRuvId, out List<EpisodeSummary>? episodes) && episodes is not null)
+                {
+                    <table>
+                        <thead>
                             <tr>
-                                <td>@episode.SeasonNumber</td>
-                                <td>@episode.EpisodeNumber</td>
-                                <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
-                                <td>@episode.EpisodeTitle</td>
-                                <td>@episode.EpisodeDescription</td>
-                                <td>
-                                    <div class="row-actions">
-                                        @if (program.SeriesName is not null && episode.TvdbId is null)
-                                        {
-                                            <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId)" title="Match to TVDB">
-                                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Match to TVDB">
-                                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                                                </svg>
-                                            </button>
-                                        }
-                                        @if (_downloading.Contains(episode.EpisodeRuvId))
-                                        {
-                                            <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queuing">
-                                                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                            </svg>
-                                        }
-                                        else if (_queued.Contains(episode.EpisodeRuvId))
-                                        {
-                                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queued">
-                                                <polyline points="20 6 9 17 4 12" />
-                                            </svg>
-                                        }
-                                        else if (_failed.Contains(episode.EpisodeRuvId))
-                                        {
-                                            <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
-                                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Retry">
-                                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                                    <path d="M3 3v5h5" />
-                                                </svg>
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
-                                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Download">
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                    <polyline points="7 10 12 15 17 10" />
-                                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                                </svg>
-                                            </button>
-                                        }
-                                    </div>
-                                </td>
+                                <th>Season</th>
+                                <th>Episode</th>
+                                <th>First Run</th>
+                                <th>Title</th>
+                                <th>Description</th>
+                                <th></th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (EpisodeSummary episode in episodes)
+                            {
+                                <tr>
+                                    <td>@episode.SeasonNumber</td>
+                                    <td>@episode.EpisodeNumber</td>
+                                    <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                                    <td>@episode.EpisodeTitle</td>
+                                    <td>@episode.EpisodeDescription</td>
+                                    <td>
+                                        <div class="row-actions">
+                                            @if (program.SeriesName is not null && episode.TvdbId is null)
+                                            {
+                                                <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId)" title="Match to TVDB">
+                                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Match to TVDB">
+                                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                                    </svg>
+                                                </button>
+                                            }
+                                            @if (_downloading.Contains(episode.EpisodeRuvId))
+                                            {
+                                                <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queuing">
+                                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                                </svg>
+                                            }
+                                            else if (_queued.Contains(episode.EpisodeRuvId))
+                                            {
+                                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queued">
+                                                    <polyline points="20 6 9 17 4 12" />
+                                                </svg>
+                                            }
+                                            else if (_failed.Contains(episode.EpisodeRuvId))
+                                            {
+                                                <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
+                                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Retry">
+                                                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                                        <path d="M3 3v5h5" />
+                                                    </svg>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
+                                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Download">
+                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                        <polyline points="7 10 12 15 17 10" />
+                                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                                    </svg>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
             </details>
-        }
+        </Virtualize>
     }
 }
 
@@ -165,12 +172,16 @@ else
     private readonly HashSet<string> _downloading = [];
     private readonly HashSet<string> _queued = [];
     private readonly HashSet<string> _failed = [];
+    private readonly Dictionary<int, List<EpisodeSummary>?> _episodes = [];
+    private readonly HashSet<int> _loadingEpisodes = [];
+    private readonly HashSet<int> _openPrograms = [];
 
     private MatchEpisodeDialog? _matchDialog;
 
     protected override Task OnInitializedAsync()
     {
         _ = WatchAsync();
+        _ = LoadProgramsAsync();
         return Task.CompletedTask;
     }
 
@@ -208,8 +219,51 @@ else
 
     private async Task LoadProgramsAsync()
     {
-        _programs = await ApiClient.GetEpisodesAsync(Filter);
+        _programs = null;
+        _episodes.Clear();
+        _loadingEpisodes.Clear();
         _loadedFilter = Filter;
+        await InvokeAsync(StateHasChanged);
+
+        _programs = [];
+        int count = 0;
+        await foreach (ProgramSummary program in ApiClient.GetProgramsAsync(Filter, _cts.Token))
+        {
+            _programs.Add(program);
+            count++;
+            if (count == 1 || count % 25 == 0)
+                await InvokeAsync(StateHasChanged);
+        }
+        await InvokeAsync(StateHasChanged);
+
+        foreach (int ruvId in _openPrograms.ToList())
+        {
+            _episodes.Remove(ruvId);
+            _ = LoadEpisodesAsync(ruvId);
+        }
+    }
+
+    private async Task LoadEpisodesAsync(int ruvId)
+    {
+        if (_episodes.ContainsKey(ruvId)) return;
+        _loadingEpisodes.Add(ruvId);
+        await InvokeAsync(StateHasChanged);
+        _episodes[ruvId] = await ApiClient.GetProgramEpisodesAsync(ruvId, _cts.Token) ?? [];
+        _loadingEpisodes.Remove(ruvId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnToggle(int ruvId)
+    {
+        if (_openPrograms.Contains(ruvId))
+        {
+            _openPrograms.Remove(ruvId);
+        }
+        else
+        {
+            _openPrograms.Add(ruvId);
+            await LoadEpisodesAsync(ruvId);
+        }
     }
 
     private void NavigateTo(string filter)

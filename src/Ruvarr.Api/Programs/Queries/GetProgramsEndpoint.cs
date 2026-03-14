@@ -13,7 +13,7 @@ internal static class GetProgramsEndpoint
     internal static RouteGroupBuilder MapGetProgramsEndpoint(this RouteGroupBuilder group)
     {
         group.MapGet("/episodes", static async (
-            [FromServices] IRequestHandler<GetEpisodesQuery, List<ProgramSummary>> handler,
+            [FromServices] IRequestHandler<GetEpisodesQuery, List<ProgramDetails>> handler,
             [FromQuery] string? channel,
             [FromQuery] string? programName,
             [FromQuery] bool? isProgramMonitored,
@@ -34,7 +34,7 @@ internal static class GetProgramsEndpoint
                 IsEpisodeMatched: isEpisodeMatched,
                 IsEpisodeMissing: isEpisodeMissing);
 
-            List<ProgramSummary> result = await handler.Handle(query, cancellationToken);
+            List<ProgramDetails> result = await handler.Handle(query, cancellationToken);
 
             return TypedResults.Ok(result);
         })
