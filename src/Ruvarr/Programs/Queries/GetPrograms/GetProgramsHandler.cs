@@ -46,14 +46,25 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
 
         IAsyncEnumerable<ProgramSummary> results = query
             .OrderBy(x => x.Name)
+            .Select(x => new
+            {
+                x.Channel,
+                x.Name,
+                x.RuvId,
+                x.IsMonitored,
+                x.HasMissingEpisodes,
+                SeriesName = x.Series!.Name,
+                SeriesSlug = x.Series!.Slug,
+            })
+            .AsAsyncEnumerable()
             .Select(x => new ProgramSummary(
                 x.Channel,
                 x.Name,
                 x.RuvId,
                 x.IsMonitored,
                 x.HasMissingEpisodes,
-                x.Series!.Name))
-            .AsAsyncEnumerable();
+                x.SeriesName,
+                x.SeriesSlug is { } slug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(slug)}") : null));
 
         await foreach (ProgramSummary summary in results.WithCancellation(cancellationToken))
         {
