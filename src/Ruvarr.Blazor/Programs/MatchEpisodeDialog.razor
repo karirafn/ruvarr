@@ -8,7 +8,7 @@
         <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" />
     </label>
     <div class="dialog-actions">
-        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@_isSubmitting">
+        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@IsMatchDisabled(_tvdbIdInput, _currentTvdbId, _isSubmitting)">
             @if (_isSubmitting)
             {
                 <span class="button-spinner"></span>
@@ -26,12 +26,14 @@
     private ElementReference _dialog;
     private string? _ruvId;
     private string _tvdbIdInput = string.Empty;
+    private int? _currentTvdbId;
     private bool _isSubmitting;
 
-    public async Task OpenAsync(string ruvId)
+    public async Task OpenAsync(string ruvId, int? currentTvdbId)
     {
         _ruvId = ruvId;
-        _tvdbIdInput = string.Empty;
+        _currentTvdbId = currentTvdbId;
+        _tvdbIdInput = currentTvdbId?.ToString() ?? string.Empty;
         await Js.InvokeVoidAsync("showDialog", _dialog);
     }
 
@@ -44,6 +46,7 @@
     private void OnDialogClose()
     {
         _ruvId = null;
+        _currentTvdbId = null;
         _tvdbIdInput = string.Empty;
     }
 
@@ -66,5 +69,20 @@
         }
         await CloseAsync();
         await OnMatchComplete.InvokeAsync();
+    }
+
+    internal static bool IsMatchDisabled(string input, int? currentTvdbId, bool isSubmitting)
+    {
+        if (isSubmitting)
+        {
+            return true;
+        }
+
+        if (!int.TryParse(input, out int parsed) || parsed <= 0)
+        {
+            return true;
+        }
+
+        return parsed == currentTvdbId;
     }
 }
