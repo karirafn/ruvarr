@@ -60,7 +60,7 @@ internal sealed class TvdbSeriesLookupJob(
             .Set<TvdbSeries>()
             .Where(x => x.TvdbId == match.TvdbId)
             .FirstOrDefaultAsync()
-            ?? TvdbSeries.Create(match.TvdbId, match.Name);
+            ?? TvdbSeries.Create(match.TvdbId, match.Name, match.Slug);
 
         program.MatchTvdb(entity);
 

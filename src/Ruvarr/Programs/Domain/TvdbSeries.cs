@@ -12,9 +12,11 @@ internal sealed class TvdbSeries
 
     public required string Name { get; init; }
 
+    public string? Slug { get; private set; }
+
     public IReadOnlyList<RuvProgram> Programs => [.. _programs];
 
-    internal static TvdbSeries Create(string id, string name)
+    internal static TvdbSeries Create(string id, string name, string? slug = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -22,7 +24,8 @@ internal sealed class TvdbSeries
         return new()
         {
             TvdbId = id,
-            Name = name
+            Name = name,
+            Slug = slug
         };
     }
 }

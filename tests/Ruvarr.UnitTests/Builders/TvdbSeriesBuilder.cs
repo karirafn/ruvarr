@@ -9,6 +9,7 @@ internal sealed class TvdbSeriesBuilder
 {
     private string _id = RandomNumberGenerator.GetInt32(1, 10000).ToString(CultureInfo.InvariantCulture);
     private string _name = "Test series";
+    private string? _slug;
 
     public TvdbSeriesBuilder WithId(string id)
     {
@@ -22,7 +23,14 @@ internal sealed class TvdbSeriesBuilder
         return this;
     }
 
+    public TvdbSeriesBuilder WithSlug(string? slug)
+    {
+        _slug = slug;
+        return this;
+    }
+
     public TvdbSeries Build() => TvdbSeries.Create(
         id: _id,
-        name: _name);
+        name: _name,
+        slug: _slug);
 }
