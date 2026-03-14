@@ -43,6 +43,11 @@ internal sealed class RuvProgram
     {
         get
         {
+            if (string.IsNullOrWhiteSpace(Name))
+            {
+                return 0;
+            }
+
             string suffix = Name.Split(' ')[^1];
 
             if (RomanNumeral.TryParse(suffix, out RomanNumeral? rn) && rn.Number > 0)

@@ -71,7 +71,10 @@ internal sealed class MatchProgramEpisodesHandler(
                 return ProgramErrors.UnparsableEpisodeTitle;
             }
 
-            Episode tvdbEpisode = episodes[number];
+            if (!episodes.TryGetValue(number, out Episode? tvdbEpisode))
+            {
+                return ProgramErrors.EpisodeNotFound;
+            }
 
             logger.LogInformation(
                 "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}'",
