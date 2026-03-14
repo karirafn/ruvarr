@@ -62,6 +62,8 @@ internal sealed class TvdbSeriesLookupJob(
             .FirstOrDefaultAsync()
             ?? TvdbSeries.Create(match.TvdbId, match.Name, match.Slug);
 
+        entity.UpdateSlug(match.Slug);
+
         program.MatchTvdb(entity);
 
         int added = await dbContext.SaveChangesAsync();
