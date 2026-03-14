@@ -33,8 +33,8 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
+        List<ProgramDetails>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramDetails>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
 
         // Assert
         result.ShouldNotBeNull();
@@ -64,8 +64,8 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
+        List<ProgramDetails>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramDetails>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
 
         // Assert
         result.ShouldNotBeNull();
@@ -91,8 +91,8 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
+        List<ProgramDetails>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramDetails>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
 
         // Assert
         result.ShouldNotBeNull();
@@ -121,8 +121,8 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
+        List<ProgramDetails>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramDetails>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
 
         // Assert
         result.ShouldNotBeNull();
@@ -144,8 +144,8 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
+        List<ProgramDetails>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramDetails>>("/programs/episodes?isProgramPartiallyMatched=true", cancellationToken);
 
         // Assert
         result.ShouldNotBeNull();

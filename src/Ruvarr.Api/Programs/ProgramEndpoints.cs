@@ -14,6 +14,8 @@ internal static class ProgramEndpoints
         group.MapMatchProgramEpisodesEndpoint();
         group.MapDownloadEpisodeEndpoint();
         group.MapRefreshProgramEndpoint();
+        group.MapGetProgramListEndpoint();
+        group.MapGetProgramEpisodesEndpoint();
         group.MapGetProgramsEndpoint();
         group.MapGetDownloadQueueEndpoint();
         group.MapWatchDownloadQueueEndpoint();
