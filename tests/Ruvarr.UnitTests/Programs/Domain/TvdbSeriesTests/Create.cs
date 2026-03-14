@@ -62,4 +62,24 @@ public sealed class Create
         // Assert
         result.Programs.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void SetsSlug()
+    {
+        // Arrange / Act
+        TvdbSeries result = new TvdbSeriesBuilder().WithSlug("breaking-bad").Build();
+
+        // Assert
+        result.Slug.ShouldBe("breaking-bad");
+    }
+
+    [Fact]
+    public void SlugIsNullByDefault()
+    {
+        // Arrange / Act
+        TvdbSeries result = new TvdbSeriesBuilder().Build();
+
+        // Assert
+        result.Slug.ShouldBeNull();
+    }
 }
