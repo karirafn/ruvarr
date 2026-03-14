@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 using Microsoft.Extensions.Options;
 
@@ -8,7 +8,7 @@ internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegSe
 {
     public async Task DownloadAsync(Uri uri, string filepath, string title)
     {
-        string arguments = new FfmpegArgumentsBuilder()
+        List<string> argumentList = new FfmpegArgumentsBuilder()
             .WithInput(uri)
             .WithLogLevel("verbose")
             .WithCodec("copy")
@@ -23,12 +23,16 @@ internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegSe
         ProcessStartInfo psi = new()
         {
             FileName = options.Value.ExecutablePath,
-            Arguments = arguments,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+
+        foreach (string arg in argumentList)
+        {
+            psi.ArgumentList.Add(arg);
+        }
 
         using Process process = new() { StartInfo = psi };
 

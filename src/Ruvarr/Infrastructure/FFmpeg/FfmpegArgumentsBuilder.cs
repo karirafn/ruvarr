@@ -1,4 +1,4 @@
-﻿namespace Ruvarr.Infrastructure.FFmpeg;
+namespace Ruvarr.Infrastructure.FFmpeg;
 
 internal sealed class FfmpegArgumentsBuilder
 {
@@ -7,25 +7,29 @@ internal sealed class FfmpegArgumentsBuilder
 
     public FfmpegArgumentsBuilder WithInput(Uri input)
     {
-        _arguments.Add($"-i {input}");
+        _arguments.Add("-i");
+        _arguments.Add(input.ToString());
         return this;
     }
 
     public FfmpegArgumentsBuilder WithCodec(string codec)
     {
-        _arguments.Add($"-c {codec}");
+        _arguments.Add("-c");
+        _arguments.Add(codec);
         return this;
     }
 
     public FfmpegArgumentsBuilder WithLogLevel(string loglevel)
     {
-        _arguments.Add($"-loglevel {loglevel}");
+        _arguments.Add("-loglevel");
+        _arguments.Add(loglevel);
         return this;
     }
 
     public FfmpegArgumentsBuilder WithAudioBitStreamFilter(string filter)
     {
-        _arguments.Add($"-bsf:a {filter}");
+        _arguments.Add("-bsf:a");
+        _arguments.Add(filter);
         return this;
     }
 
@@ -61,15 +65,21 @@ internal sealed class FfmpegArgumentsBuilder
 
     public FfmpegArgumentsBuilder WithMetadata(string key, string value)
     {
-        _arguments.Add($@"-metadata {key}=""{value}""");
+        _arguments.Add("-metadata");
+        _arguments.Add($"{key}={value}");
         return this;
     }
 
     public FfmpegArgumentsBuilder WithOutput(string output)
     {
-        _output = $@"""{output}""";
+        _output = output;
         return this;
     }
 
-    public string Build() => $"{string.Join(' ', _arguments)} {_output}";
+    public List<string> Build()
+    {
+        List<string> result = [.. _arguments];
+        result.Add(_output);
+        return result;
+    }
 }
