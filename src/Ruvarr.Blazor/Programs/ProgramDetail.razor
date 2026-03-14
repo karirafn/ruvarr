@@ -4,11 +4,19 @@
 @inject RuvApiClient ApiClient
 @using Ruvarr.Contracts
 
-<a href="/">← Back to Programs</a>
+<a class="detail-back" href="/">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+        <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
+    </svg>
+    Programs
+</a>
 
 @if (_notFound)
 {
-    <p>Program not found.</p>
+    <div class="empty-state">
+        <p>Program not found.</p>
+        <a class="detail-back" href="/">Back to programs</a>
+    </div>
 }
 else if (_program is null)
 {
@@ -16,18 +24,56 @@ else if (_program is null)
 }
 else
 {
-    <h1>@_program.ProgramName</h1>
-
-    @if (_program.SeriesName is not null)
-    {
-        <div>
-            @_program.SeriesName
-            @if (_program.TvdbUrl is not null)
+    <div class="program-header">
+        <div class="program-header-meta">
+            <span class="channel-tag">@_program.Channel</span>
+            @if (_program.IsMonitored)
             {
-                <a class="badge--tvdb" href="@_program.TvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
+                <span class="status-pill status-pill--monitored">Monitored</span>
+            }
+            else
+            {
+                <span class="status-pill status-pill--unmonitored">Unmonitored</span>
+            }
+            @if (_refreshQueue.TryGetValue(_program.ProgramRuvId, out ProgramRefreshStatus status) && status == ProgramRefreshStatus.Processing)
+            {
+                <span class="icon-button">
+                    <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refreshing">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                </span>
+            }
+            else if (_refreshQueue.ContainsKey(_program.ProgramRuvId) || _pendingRefresh.Contains(_program.ProgramRuvId))
+            {
+                <span class="icon-button">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Pending">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                </span>
+            }
+            else
+            {
+                <button class="icon-button" @onclick="() => RefreshProgram(_program.ProgramRuvId)" title="Refresh program">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refresh">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                    </svg>
+                </button>
             }
         </div>
-    }
+        <h1>@_program.ProgramName</h1>
+        @if (_program.SeriesName is not null)
+        {
+            <div class="series-meta">
+                <span class="series-name">@_program.SeriesName</span>
+                @if (_program.TvdbUrl is not null)
+                {
+                    <a class="badge--tvdb" href="@_program.TvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
+                }
+            </div>
+        }
+    </div>
 
     @if (_episodes is null)
     {
@@ -35,7 +81,7 @@ else
     }
     else if (_episodes.Count == 0)
     {
-        <p>No episodes found.</p>
+        <p class="empty-message">No episodes found.</p>
     }
     else
     {
@@ -54,11 +100,11 @@ else
                 @foreach (EpisodeSummary episode in _episodes)
                 {
                     <tr>
-                        <td>@episode.SeasonNumber</td>
-                        <td>@episode.EpisodeNumber</td>
-                        <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                        <td class="col-number">@episode.SeasonNumber</td>
+                        <td class="col-number">@episode.EpisodeNumber</td>
+                        <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
                         <td>@episode.EpisodeTitle</td>
-                        <td>@episode.EpisodeDescription</td>
+                        <td class="col-description">@episode.EpisodeDescription</td>
                         <td>
                             <div class="row-actions">
                                 @if (_program.SeriesName is not null)
@@ -122,6 +168,8 @@ else
     private readonly HashSet<string> _downloading = [];
     private readonly HashSet<string> _queued = [];
     private readonly HashSet<string> _failed = [];
+    private readonly HashSet<int> _pendingRefresh = [];
+    private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();
 
     private MatchEpisodeDialog? _matchDialog;
@@ -129,6 +177,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         _ = WatchDownloadQueueAsync();
+        _ = WatchRefreshQueueAsync();
 
         Task<ProgramSummary?> programTask = ApiClient.GetProgramAsync(RuvId, _cts.Token);
         Task<List<EpisodeSummary>?> episodesTask = ApiClient.GetProgramEpisodesAsync(RuvId, _cts.Token);
@@ -148,6 +197,19 @@ else
             foreach (string ruvId in _queued.Where(id => !inQueue.Contains(id)).ToList())
             {
                 _queued.Remove(ruvId);
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task WatchRefreshQueueAsync()
+    {
+        await foreach (List<ProgramRefreshQueueItemSummary> items in ApiClient.WatchProgramRefreshQueueAsync(_cts.Token))
+        {
+            _refreshQueue = items.ToDictionary(x => x.RuvId, x => x.Status);
+            foreach (int ruvId in _pendingRefresh.Where(id => _refreshQueue.ContainsKey(id)).ToList())
+            {
+                _pendingRefresh.Remove(ruvId);
             }
             await InvokeAsync(StateHasChanged);
         }
@@ -184,6 +246,13 @@ else
         {
             _failed.Add(ruvId);
         }
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task RefreshProgram(int ruvId)
+    {
+        _pendingRefresh.Add(ruvId);
+        await ApiClient.RefreshProgramAsync(ruvId);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]

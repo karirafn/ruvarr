@@ -418,6 +418,164 @@ dialog input[type="number"]:focus {
     to { transform: rotate(360deg); }
 }
 
+/* Programs table — override global nth-child column widths */
+.programs-table th:nth-child(1),
+.programs-table td:nth-child(1) { width: auto; }
+
+.programs-table th:nth-child(2),
+.programs-table td:nth-child(2) { width: 7rem; }
+
+.programs-table th:nth-child(3),
+.programs-table td:nth-child(3) { width: 7rem; white-space: unset; text-align: center; }
+
+.programs-table th:nth-child(4),
+.programs-table td:nth-child(4) { width: 6rem; text-align: center; }
+
+.programs-table th:nth-child(5),
+.programs-table td:nth-child(5) { width: 16rem; }
+
+.col-center { text-align: center; }
+
+.col-number { width: 5rem; }
+.col-date { white-space: nowrap; }
+.col-description { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; }
+
+/* Program name link */
+.program-link {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+.program-link:hover {
+    color: #60a5fa;
+}
+
+/* Series link in programs table */
+.series-link {
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.series-link:hover {
+    color: #fff;
+}
+
+/* Unmatched dash */
+.unmatched-dash {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+/* Channel pill */
+.channel-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    padding: 0.15rem 0.45rem;
+    white-space: nowrap;
+}
+
+/* Monitored / missing icons */
+.icon--monitored { color: #2dd4bf; }
+.icon--unmonitored { color: rgba(255, 255, 255, 0.2); }
+.icon--missing { color: #f59e0b; }
+
+/* Status pills (detail page) */
+.status-pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+}
+
+.status-pill--monitored {
+    color: #2dd4bf;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.25);
+}
+
+.status-pill--unmonitored {
+    color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Empty message */
+.empty-message {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.95rem;
+    margin-top: 2rem;
+}
+
+/* Empty state (detail not found) */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+/* Detail page back link */
+.detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration: none;
+    margin-bottom: 1.75rem;
+    transition: color 0.15s ease;
+    letter-spacing: 0.01em;
+}
+
+.detail-back:hover {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* Detail page program header */
+.program-header {
+    margin-bottom: 1.75rem;
+}
+
+.program-header h1 {
+    margin: 0.4rem 0 0.6rem;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.program-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.series-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.series-name {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1rem;
+}
+
 .badge--tvdb {
     display: inline-block;
     padding: 0.2rem 0.55rem;

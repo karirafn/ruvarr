@@ -32,17 +32,17 @@ else
 
     if (visibleList.Count == 0)
     {
-        <p>@GetEmptyMessage()</p>
+        <p class="empty-message">@GetEmptyMessage()</p>
     }
     else
     {
-        <table>
+        <table class="programs-table">
             <thead>
                 <tr>
-                    <th>Program Name</th>
+                    <th>Program</th>
                     <th>Channel</th>
-                    <th>Monitored</th>
-                    <th>Missing Episodes</th>
+                    <th class="col-center">Monitored</th>
+                    <th class="col-center">Missing</th>
                     <th>TVDB Series</th>
                     <th></th>
                 </tr>
@@ -50,18 +50,47 @@ else
             <tbody>
                 <Virtualize Items="visibleList" Context="program" ItemSize="48" OverscanCount="5">
                     <tr @key="program.ProgramRuvId">
-                        <td><a href="/programs/@program.ProgramRuvId">@program.ProgramName</a></td>
-                        <td>@program.Channel</td>
-                        <td>@program.IsMonitored</td>
-                        <td>@program.HasMissingEpisodes</td>
-                        <td>
-                            @if (program.TvdbUrl is not null)
+                        <td><a class="program-link" href="/programs/@program.ProgramRuvId">@program.ProgramName</a></td>
+                        <td><span class="channel-tag">@program.Channel</span></td>
+                        <td class="col-center">
+                            @if (program.IsMonitored)
                             {
-                                <a href="@program.TvdbUrl" target="_blank" rel="noopener noreferrer">@program.SeriesName</a>
+                                <svg class="icon icon--monitored" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Monitored">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
                             }
                             else
                             {
-                                @program.SeriesName
+                                <svg class="icon icon--unmonitored" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Unmonitored">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                </svg>
+                            }
+                        </td>
+                        <td class="col-center">
+                            @if (program.HasMissingEpisodes)
+                            {
+                                <svg class="icon icon--missing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Missing episodes">
+                                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                    <line x1="12" y1="9" x2="12" y2="13" />
+                                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                            }
+                        </td>
+                        <td>
+                            @if (program.TvdbUrl is not null)
+                            {
+                                <a class="series-link" href="@program.TvdbUrl" target="_blank" rel="noopener noreferrer">@program.SeriesName</a>
+                            }
+                            else if (program.SeriesName is not null)
+                            {
+                                <span>@program.SeriesName</span>
+                            }
+                            else
+                            {
+                                <span class="unmatched-dash">—</span>
                             }
                         </td>
                         <td>
