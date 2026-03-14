@@ -12,7 +12,9 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
 {
     public async IAsyncEnumerable<ProgramSummary> Handle(GetProgramsQuery request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        IQueryable<RuvProgram> query = dbContext.Set<RuvProgram>();
+        IQueryable<RuvProgram> query = dbContext
+            .Set<RuvProgram>()
+            .Where(x => x.HasMultipleEpisodes);
 
         if (!string.IsNullOrWhiteSpace(request.Channel))
         {

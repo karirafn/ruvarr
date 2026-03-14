@@ -81,4 +81,58 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         result.ShouldContain(p => p.ProgramRuvId == 20003);
         result.ShouldNotContain(p => p.ProgramRuvId == 20002);
     }
+
+    [Fact]
+    public async Task ExcludesSingleEpisodePrograms()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram multiEpisode = RuvProgram.Create(20010, "RÚV1", "Multi Episode Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(multiEpisode);
+
+        RuvProgram singleEpisode = RuvProgram.Create(20011, "RÚV1", "Single Episode Program", null, multipleEpisodes: false);
+        dbContext.Set<RuvProgram>().Add(singleEpisode);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain(p => p.ProgramRuvId == 20010);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20011);
+    }
+
+    [Fact]
+    public async Task ExcludesSingleEpisodeProgramsWhenFilteringByOtherCriteria()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram multiEpisode = RuvProgram.Create(20020, "RÚV1", "Multi Episode Unmatched", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(multiEpisode);
+
+        RuvProgram singleEpisode = RuvProgram.Create(20021, "RÚV1", "Single Episode Unmatched", null, multipleEpisodes: false);
+        dbContext.Set<RuvProgram>().Add(singleEpisode);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramSummary>>("/programs?isProgramMatched=false", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain(p => p.ProgramRuvId == 20020);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20021);
+    }
 }
