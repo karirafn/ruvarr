@@ -7,7 +7,8 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
 {
     public void Configure(EntityTypeBuilder<RuvProgram> builder)
     {
-        builder.ToTable("programs");
+        builder.ToTable("programs", t =>
+            t.HasCheckConstraint("ck_programs_slug_format", "slug IS NULL OR slug GLOB '[a-z0-9-]*'"));
 
         builder.Property<int>("id");
         builder.HasKey("id");
@@ -34,6 +35,10 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
             .HasMaxLength(256)
             .IsUnicode(true)
             .IsFixedLength(false);
+
+        builder.Property(x => x.Slug)
+            .HasMaxLength(256)
+            .IsUnicode(false);
 
         builder.Property(x => x.IsMonitored)
             .IsRequired();

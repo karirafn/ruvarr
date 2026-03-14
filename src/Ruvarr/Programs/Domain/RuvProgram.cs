@@ -1,4 +1,6 @@
-﻿using Ruvarr.Abstractions;
+﻿using System.Text.RegularExpressions;
+
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.RomanNumerals;
 
@@ -6,6 +8,8 @@ namespace Ruvarr.Programs.Domain;
 
 internal sealed class RuvProgram
 {
+    private static readonly Regex SlugPattern = new(@"^[a-z0-9\-]{1,128}$", RegexOptions.Compiled);
+
     private readonly List<RuvEpisode> _episodes = [];
 
     private RuvProgram()
@@ -33,6 +37,8 @@ internal sealed class RuvProgram
     public bool IsMonitored { get; private set; }
 
     public bool HasMissingEpisodes { get; private set; }
+
+    public string? Slug { get; private set; }
 
     public TvdbSeries? Series { get; private set; }
 
@@ -65,7 +71,7 @@ internal sealed class RuvProgram
         }
     }
 
-    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes) => new()
+    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null) => new()
     {
         RuvId = id,
         Channel = channel,
@@ -73,7 +79,13 @@ internal sealed class RuvProgram
         ForeignName = foreignName,
         HasMultipleEpisodes = multipleEpisodes,
         Created = DateTime.UtcNow,
+        Slug = SanitizeSlug(slug),
     };
+
+    public void UpdateSlug(string? slug) => Slug = SanitizeSlug(slug);
+
+    private static string? SanitizeSlug(string? slug) =>
+        slug is not null && SlugPattern.IsMatch(slug) ? slug : null;
 
     public void SetMonitoredStatus(bool monitored) => IsMonitored = monitored;
 

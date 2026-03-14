@@ -38,6 +38,8 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
             .IsFixedLength(false)
             .IsRequired();
 
+        builder.Ignore(x => x.RuvUrl);
+
         builder.HasOne(x => x.DownloadQueueItem)
             .WithOne(x => x.Episode)
             .HasForeignKey<RuvEpisode>("download_queue_item_id")

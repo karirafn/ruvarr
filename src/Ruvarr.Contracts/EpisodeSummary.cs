@@ -8,4 +8,5 @@ public sealed record EpisodeSummary(
     int? SeasonNumber,
     int? EpisodeNumber,
     DateTime FirstRun,
-    bool IsMissing);
+    bool IsMissing,
+    Uri? RuvUrl);

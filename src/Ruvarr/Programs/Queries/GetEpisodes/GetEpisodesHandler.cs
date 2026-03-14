@@ -64,6 +64,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext) : IRequestHa
                 x.Program.Channel,
                 ProgramName = x.Program.Name,
                 ProgramRuvId = x.Program.RuvId,
+                ProgramSlug = x.Program.Slug,
                 x.Program.IsMonitored,
                 x.Program.HasMissingEpisodes,
                 SeriesName = x.Program.Series!.Name,
@@ -97,7 +98,10 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext) : IRequestHa
                     e.SeasonNumber,
                     e.EpisodeNumber,
                     e.FirstRun,
-                    e.IsMissing))]))
+                    e.IsMissing,
+                    string.IsNullOrEmpty(e.ProgramSlug)
+                        ? null
+                        : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(e.ProgramSlug!)}/{e.ProgramRuvId}/{e.EpisodeRuvId}")))]))
             .OrderBy(p => p.ProgramName);
 
         return [.. programs];

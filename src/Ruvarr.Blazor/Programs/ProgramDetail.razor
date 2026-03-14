@@ -107,6 +107,10 @@ else
                         <td class="col-description">@episode.EpisodeDescription</td>
                         <td>
                             <div class="row-actions">
+                                @if (episode.RuvUrl is not null)
+                                {
+                                    <a class="badge--ruv" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
+                                }
                                 @if (_program.SeriesName is not null)
                                 {
                                     <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbId)" title="Match to TVDB">
