@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Jobs;
@@ -20,10 +22,12 @@ public sealed class SlugRefresh
     private readonly TvdbSeriesLookupNotifier _lookupQueue = new();
     private readonly TvdbEpisodeLookupNotifier _episodeLookupQueue = new();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
 
     public SlugRefresh()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
+        _context.CancellationToken.Returns(CancellationToken.None);
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -56,7 +60,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         await _tvdb.Received(1).GetSeriesAsync(1000, Arg.Any<CancellationToken>());
@@ -79,7 +83,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         TvdbSeries? saved = await dbContext.Set<TvdbSeries>().FirstOrDefaultAsync(TestContext.Current.CancellationToken);
@@ -104,7 +108,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         await _tvdb.DidNotReceive().SearchAsync(
@@ -139,7 +143,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         program.NextLookup.ShouldBeNull();
@@ -162,7 +166,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _episodeLookupQueue.Items.ShouldBeEmpty();
@@ -184,7 +188,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         program.NextLookup.ShouldBeNull();

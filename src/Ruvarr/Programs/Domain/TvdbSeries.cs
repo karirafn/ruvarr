@@ -32,6 +32,7 @@ internal sealed partial class TvdbSeries
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 256);
 
         return new()
         {

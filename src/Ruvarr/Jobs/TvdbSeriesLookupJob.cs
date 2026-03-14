@@ -54,7 +54,7 @@ internal sealed class TvdbSeriesLookupJob(
                 return;
             }
 
-            SeriesData? seriesData = await tvdb.GetSeriesAsync(tvdbId, cancellationToken: default);
+            SeriesData? seriesData = await tvdb.GetSeriesAsync(tvdbId, cancellationToken: context.CancellationToken);
 
             if (seriesData is null)
             {
@@ -65,7 +65,7 @@ internal sealed class TvdbSeriesLookupJob(
 
             program.Series.UpdateSlug(seriesData.Series.Slug);
 
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(context.CancellationToken);
 
             lookupQueue.MarkComplete(ruvId);
             return;
