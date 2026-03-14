@@ -162,6 +162,11 @@ public sealed class SeasonFallback
             .WithNumber(1)
             .WithNameTranslations("isl")
             .Build();
+        Episode tvdbEpisode102 = new TvdbEpisodeDataBuilder()
+            .WithId(102)
+            .WithSeasonNumber(1)
+            .WithNumber(2)
+            .Build();
         Episode tvdbEpisode202 = new TvdbEpisodeDataBuilder()
             .WithId(202)
             .WithSeasonNumber(2)
@@ -169,7 +174,7 @@ public sealed class SeasonFallback
             .Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000)
-            .WithEpisodes(tvdbEpisode101, tvdbEpisode202)
+            .WithEpisodes(tvdbEpisode101, tvdbEpisode102, tvdbEpisode202)
             .Build();
         _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -183,6 +188,35 @@ public sealed class SeasonFallback
         // Assert
         program.Episodes[0].TvdbId.ShouldBe(101);
         program.Episodes[1].TvdbId.ShouldBe(202);
+    }
+
+    [Fact]
+    public async Task SkipsFallbackWhenOtherSeasonHasSameEpisodeCount()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId("1000").Build();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show II").Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        program.MatchTvdb(series);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
+        Episode tvdbEpisode4 = new TvdbEpisodeDataBuilder().WithId(401).WithSeasonNumber(4).WithNumber(1).Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder()
+            .WithId(1000)
+            .WithEpisodes(tvdbEpisode2, tvdbEpisode4)
+            .Build();
+        _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
+        _notifier.Enqueue(1, program.Name);
+        TvdbEpisodeLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(null!);
+
+        // Assert
+        program.Episodes[0].TvdbId.ShouldBeNull();
     }
 
     [Fact]

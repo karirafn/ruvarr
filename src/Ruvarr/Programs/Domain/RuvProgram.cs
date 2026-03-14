@@ -1,4 +1,5 @@
 ﻿using Ruvarr.Abstractions;
+using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.RomanNumerals;
 
 namespace Ruvarr.Programs.Domain;
@@ -116,5 +117,32 @@ internal sealed class RuvProgram
     public void RemoveEpisode(RuvEpisode episode)
     {
         _episodes.Remove(episode);
+    }
+
+    public int ResolveMatchingSeason(IEnumerable<Episode> tvdbEpisodes)
+    {
+        List<Episode> nonSpecials = [.. tvdbEpisodes.Where(x => x.SeasonNumber > 0)];
+
+        if (SeasonNumber > 0)
+        {
+            int namedSeasonCount = nonSpecials.Count(x => x.SeasonNumber == SeasonNumber);
+            bool otherSeasonSharesCount = nonSpecials
+                .Where(x => x.SeasonNumber != SeasonNumber)
+                .GroupBy(x => x.SeasonNumber)
+                .Any(g => g.Count() == namedSeasonCount);
+
+            return otherSeasonSharesCount ? 0 : SeasonNumber;
+        }
+
+        int matchingSeasonCount = nonSpecials
+            .GroupBy(x => x.SeasonNumber)
+            .Count(g => g.Count() == _episodes.Count);
+
+        return matchingSeasonCount == 1
+            ? nonSpecials
+                .GroupBy(x => x.SeasonNumber)
+                .First(g => g.Count() == _episodes.Count)
+                .Key
+            : 0;
     }
 }
