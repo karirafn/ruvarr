@@ -11,10 +11,10 @@ public sealed class Create
     public void SetsTvdbId()
     {
         // Arrange / Act
-        TvdbSeries result = new TvdbSeriesBuilder().WithId("12345").Build();
+        TvdbSeries result = new TvdbSeriesBuilder().WithId(12345).Build();
 
         // Assert
-        result.TvdbId.ShouldBe("12345");
+        result.TvdbId.ShouldBe(12345);
     }
 
     [Fact]
@@ -28,16 +28,15 @@ public sealed class Create
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ThrowsWhenIdIsNullOrWhiteSpace(string? id)
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void ThrowsWhenIdIsLessThanOne(int id)
     {
         // Arrange / Act
-        Action act = () => TvdbSeries.Create(id!, "Breaking Bad");
+        Action act = () => TvdbSeries.Create(id, "Breaking Bad");
 
         // Assert
-        act.ShouldThrow<ArgumentException>();
+        act.ShouldThrow<ArgumentOutOfRangeException>();
     }
 
     [Theory]
@@ -47,7 +46,7 @@ public sealed class Create
     public void ThrowsWhenNameIsNullOrWhiteSpace(string? name)
     {
         // Arrange / Act
-        Action act = () => TvdbSeries.Create("12345", name!);
+        Action act = () => TvdbSeries.Create(12345, name!);
 
         // Assert
         act.ShouldThrow<ArgumentException>();

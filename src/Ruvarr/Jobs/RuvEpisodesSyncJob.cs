@@ -44,12 +44,12 @@ internal sealed class RuvEpisodesSyncJob(
         HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
 
         IReadOnlyList<Series> sonarrSeries = await sonarr.GetSeriesAsync();
-        HashSet<string> monitoredTvdbIds = [.. sonarrSeries
+        HashSet<int> monitoredTvdbIds = [.. sonarrSeries
             .Where(x => x.Monitored)
-            .Select(x => x.TvdbId.ToString(CultureInfo.InvariantCulture))];
-        HashSet<string> missingEpisodesTvdbIds = [.. sonarrSeries
+            .Select(x => x.TvdbId)];
+        HashSet<int> missingEpisodesTvdbIds = [.. sonarrSeries
             .Where(x => x.Seasons.Where(s => s.SeasonNumber > 0).Any(s => s.Statistics.PercentOfEpisodes < 1))
-            .Select(x => x.TvdbId.ToString(CultureInfo.InvariantCulture))];
+            .Select(x => x.TvdbId)];
 #pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
         programs.Sort((a, b) => string.Compare(a.Name, b.Name, new CultureInfo("is-IS"), CompareOptions.None));
 #pragma warning restore CA1309
@@ -112,7 +112,7 @@ internal sealed class RuvEpisodesSyncJob(
             await dbContext.SaveChangesAsync();
             syncQueue.MarkComplete(program.RuvId);
 
-            if (program.Series?.TvdbId is not null && program.Episodes.Any(x => x.TvdbId is null && (x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)))
+            if (program.Series is not null && program.Episodes.Any(x => x.TvdbId is null && (x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)))
             {
                 tvdbEpisodeLookupQueue.Enqueue(program.RuvId, program.Name);
             }

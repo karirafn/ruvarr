@@ -10,7 +10,7 @@ internal sealed partial class TvdbSeries
     {
     }
 
-    public required string TvdbId { get; init; }
+    public required int TvdbId { get; init; }
 
     public required string Name { get; init; }
 
@@ -28,9 +28,9 @@ internal sealed partial class TvdbSeries
         Slug = slug;
     }
 
-    internal static TvdbSeries Create(string id, string name, string? slug = null)
+    internal static TvdbSeries Create(int id, string name, string? slug = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentOutOfRangeException.ThrowIfLessThan(id, 1);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 256);
 

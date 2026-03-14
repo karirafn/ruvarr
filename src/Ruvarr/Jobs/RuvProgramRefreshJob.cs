@@ -100,7 +100,7 @@ internal sealed class RuvProgramRefreshJob(
             .Where(x => x.Series!.Slug == null)
             .ToListAsync();
 
-        HashSet<string> enqueuedTvdbIds = [];
+        HashSet<int> enqueuedTvdbIds = [];
 
         foreach (RuvProgram program in slugMissingPrograms)
         {

@@ -64,7 +64,7 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram matched = RuvProgram.Create(20002, "RÚV1", "Matched Program", null, multipleEpisodes: true);
-        matched.MatchTvdb(TvdbSeries.Create("9001", "Some Series"));
+        matched.MatchTvdb(TvdbSeries.Create(9001, "Some Series"));
         dbContext.Set<RuvProgram>().Add(matched);
 
         RuvProgram unmatched = RuvProgram.Create(20003, "RÚV1", "Unmatched Program", null, multipleEpisodes: true);
@@ -146,7 +146,7 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(20022, "RÚV1", "Series With Slug", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("3001", "Series With Slug", slug: "some-slug"));
+        program.MatchTvdb(TvdbSeries.Create(3001, "Series With Slug", slug: "some-slug"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -171,7 +171,7 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(20023, "RÚV1", "Series Without Slug", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("3002", "Series Without Slug"));
+        program.MatchTvdb(TvdbSeries.Create(3002, "Series Without Slug"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -219,7 +219,7 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
-        TvdbSeries series = TvdbSeries.Create("4001", "Series With Bad Slug");
+        TvdbSeries series = TvdbSeries.Create(4001, "Series With Bad Slug");
         series.UpdateSlug("bad?slug=1");
 
         RuvProgram program = RuvProgram.Create(20025, "RÚV1", "Series With Bad Slug", null, multipleEpisodes: true);

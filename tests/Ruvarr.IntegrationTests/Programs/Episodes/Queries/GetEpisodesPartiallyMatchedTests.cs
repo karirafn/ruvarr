@@ -21,7 +21,7 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(10001, "RÚV1", "Partially Matched Show", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("1001", "Some Series"));
+        program.MatchTvdb(TvdbSeries.Create(1001,"Some Series"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -51,7 +51,7 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(10002, "RÚV1", "Fully Matched Show", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("1002", "Fully Matched Series"));
+        program.MatchTvdb(TvdbSeries.Create(1002,"Fully Matched Series"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -82,7 +82,7 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(10003, "RÚV1", "Fully Unmatched Show", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("1003", "Fully Unmatched Series"));
+        program.MatchTvdb(TvdbSeries.Create(1003,"Fully Unmatched Series"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -139,7 +139,7 @@ public sealed class GetEpisodesPartiallyMatchedTests(IntegrationTestFactory fact
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(10005, "RÚV1", "No Episodes Show", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("1005", "No Episodes Series"));
+        program.MatchTvdb(TvdbSeries.Create(1005,"No Episodes Series"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 

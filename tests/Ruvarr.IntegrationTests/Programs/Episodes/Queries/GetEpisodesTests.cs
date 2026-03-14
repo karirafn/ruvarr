@@ -35,7 +35,7 @@ public sealed class GetEpisodesTests(IntegrationTestFactory factory) : IClassFix
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(40001, "RÚV1", "Series With Slug", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("2001", "Series With Slug", slug: "series-with-slug"));
+        program.MatchTvdb(TvdbSeries.Create(2001, "Series With Slug", slug: "series-with-slug"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -63,7 +63,7 @@ public sealed class GetEpisodesTests(IntegrationTestFactory factory) : IClassFix
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(40002, "RÚV1", "Series Without Slug", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("2002", "Series Without Slug"));
+        program.MatchTvdb(TvdbSeries.Create(2002, "Series Without Slug"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
