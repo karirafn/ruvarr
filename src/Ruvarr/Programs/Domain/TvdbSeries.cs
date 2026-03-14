@@ -1,6 +1,8 @@
-﻿namespace Ruvarr.Programs.Domain;
+﻿using System.Text.RegularExpressions;
 
-internal sealed class TvdbSeries
+namespace Ruvarr.Programs.Domain;
+
+internal sealed partial class TvdbSeries
 {
     private readonly List<RuvProgram> _programs = [];
 
@@ -16,8 +18,13 @@ internal sealed class TvdbSeries
 
     public IReadOnlyList<RuvProgram> Programs => [.. _programs];
 
+    [GeneratedRegex(@"^[a-z0-9\-]{1,128}$")]
+    private static partial Regex SlugPattern();
+
     internal void UpdateSlug(string? slug)
     {
+        if (slug is not null && !SlugPattern().IsMatch(slug))
+            return;
         Slug = slug;
     }
 
@@ -30,7 +37,7 @@ internal sealed class TvdbSeries
         {
             TvdbId = id,
             Name = name,
-            Slug = slug
+            Slug = slug is not null && SlugPattern().IsMatch(slug) ? slug : null
         };
     }
 }

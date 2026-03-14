@@ -88,7 +88,7 @@ internal sealed class GetEpisodesHandler(RuvarrDbContext dbContext) : IRequestHa
                 g.First().IsMonitored,
                 g.First().HasMissingEpisodes,
                 g.First().SeriesName,
-                g.First().SeriesSlug is { } slug ? new Uri($"https://www.thetvdb.com/series/{slug}") : null,
+                g.First().SeriesSlug is { } slug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(slug)}") : null,
                 [.. g.Select(e => new EpisodeSummary(
                     e.EpisodeTitle,
                     e.EpisodeRuvId,

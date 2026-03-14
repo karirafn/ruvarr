@@ -135,4 +135,106 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         result.ShouldContain(p => p.ProgramRuvId == 20020);
         result.ShouldNotContain(p => p.ProgramRuvId == 20021);
     }
+
+    [Fact]
+    public async Task ReturnsTvdbUrlWhenSeriesHasSlug()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(20022, "RÚV1", "Series With Slug", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create("3001", "Series With Slug", slug: "some-slug"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20022);
+        found.ShouldNotBeNull();
+        found.TvdbUrl.ShouldBe(new Uri("https://www.thetvdb.com/series/some-slug"));
+    }
+
+    [Fact]
+    public async Task ReturnsTvdbUrlAsNullWhenSeriesHasNullSlug()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(20023, "RÚV1", "Series Without Slug", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create("3002", "Series Without Slug"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20023);
+        found.ShouldNotBeNull();
+        found.TvdbUrl.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReturnsTvdbUrlAsNullWhenProgramIsUnmatched()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(20024, "RÚV1", "Unmatched Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20024);
+        found.ShouldNotBeNull();
+        found.TvdbUrl.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReturnsTvdbUrlAsNullWhenSlugIsMalformed()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        TvdbSeries series = TvdbSeries.Create("4001", "Series With Bad Slug");
+        series.UpdateSlug("bad?slug=1");
+
+        RuvProgram program = RuvProgram.Create(20025, "RÚV1", "Series With Bad Slug", null, multipleEpisodes: true);
+        program.MatchTvdb(series);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20025);
+        found.ShouldNotBeNull();
+        found.TvdbUrl.ShouldBeNull();
+    }
 }
