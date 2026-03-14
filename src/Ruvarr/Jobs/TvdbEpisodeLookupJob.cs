@@ -33,10 +33,11 @@ internal sealed class TvdbEpisodeLookupJob(
         lookupQueue.MarkProcessing(ruvId);
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
+            .Include(x => x.Series)
             .Where(x => x.RuvId == ruvId)
             .FirstOrDefaultAsync();
 
-        if (program is null || program.Series is null || !int.TryParse(program.Series.TvdbId, out int seriesId) || seriesId < 1)
+        if (program is null || program.Series is null)
         {
             logger.LogDebug("No RÚV program pending TVDB episode lookup");
             lookupQueue.MarkComplete(ruvId);
@@ -44,7 +45,7 @@ internal sealed class TvdbEpisodeLookupJob(
         }
 
         logger.LogDebug("Getting TVDB series data");
-        SeriesData? seriesData = await tvdb.GetSeriesAsync(seriesId);
+        SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId);
 
         if (seriesData is null)
         {

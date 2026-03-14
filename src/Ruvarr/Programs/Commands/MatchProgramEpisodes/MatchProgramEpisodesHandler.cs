@@ -33,12 +33,7 @@ internal sealed class MatchProgramEpisodesHandler(
             return ProgramErrors.ProgramNotMatched;
         }
 
-        if (!int.TryParse(program.Series.TvdbId, out int tvdbSeriesId) || tvdbSeriesId < 1)
-        {
-            return TvdbErrors.SeriesNotFound;
-        }
-
-        SeriesData? series = await tvdb.GetSeriesAsync(tvdbSeriesId, cancellationToken);
+        SeriesData? series = await tvdb.GetSeriesAsync(program.Series.TvdbId, cancellationToken);
 
         if (series is null)
         {

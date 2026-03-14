@@ -42,7 +42,7 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         RuvProgram program = RuvProgram.Create(30002, "RÚV1", "Ordered Episodes Program", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create("8001", "Ordered Series"));
+        program.MatchTvdb(TvdbSeries.Create(8001, "Ordered Series"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 

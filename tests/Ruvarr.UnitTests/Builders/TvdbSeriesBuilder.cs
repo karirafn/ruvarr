@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
 using Ruvarr.Programs.Domain;
 
@@ -7,11 +6,11 @@ namespace Ruvarr.UnitTests.Builders;
 
 internal sealed class TvdbSeriesBuilder
 {
-    private string _id = RandomNumberGenerator.GetInt32(1, 10000).ToString(CultureInfo.InvariantCulture);
+    private int _id = RandomNumberGenerator.GetInt32(1, 10000);
     private string _name = "Test series";
     private string? _slug;
 
-    public TvdbSeriesBuilder WithId(string id)
+    public TvdbSeriesBuilder WithId(int id)
     {
         _id = id;
         return this;

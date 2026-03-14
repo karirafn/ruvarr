@@ -48,7 +48,7 @@ public sealed class SlugRefresh
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId("1000").WithSlug(null).Build();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).WithSlug(null).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
@@ -71,7 +71,7 @@ public sealed class SlugRefresh
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId("1000").WithSlug(null).Build();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).WithSlug(null).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
@@ -96,7 +96,7 @@ public sealed class SlugRefresh
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId("1000").WithSlug(null).Build();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).WithSlug(null).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
@@ -131,7 +131,7 @@ public sealed class SlugRefresh
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId("1000").WithSlug(null).Build();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).WithSlug(null).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
@@ -154,7 +154,7 @@ public sealed class SlugRefresh
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId("1000").WithSlug(null).Build();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).WithSlug(null).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
@@ -177,7 +177,7 @@ public sealed class SlugRefresh
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId("1000").WithSlug(null).Build();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).WithSlug(null).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
