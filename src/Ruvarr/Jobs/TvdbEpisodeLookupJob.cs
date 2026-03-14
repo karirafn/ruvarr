@@ -100,6 +100,46 @@ internal sealed class TvdbEpisodeLookupJob(
             episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number, missingTvdbIds.Contains(translatedEpisode.Id));
         }
 
+        List<RuvEpisode> unmatchedEpisodes = [.. program.Episodes.Where(x => x.TvdbId is null)];
+
+        if (unmatchedEpisodes.Count > 0)
+        {
+            int season = program.SeasonNumber;
+
+            if (season > 0)
+            {
+                List<Episode> tvdbSeasonEpisodes = [.. seriesData.Episodes.Where(x => x.SeasonNumber == season)];
+
+                if (tvdbSeasonEpisodes.Count == unmatchedEpisodes.Count)
+                {
+                    foreach (RuvEpisode unmatchedEpisode in unmatchedEpisodes)
+                    {
+                        if (!unmatchedEpisode.TryGetEpisodeNumber(out int episodeNumber))
+                        {
+                            continue;
+                        }
+
+                        Episode? tvdbEpisode = tvdbSeasonEpisodes.FirstOrDefault(x => x.Number == episodeNumber);
+
+                        if (tvdbEpisode is null)
+                        {
+                            continue;
+                        }
+
+                        logger.LogInformation(
+                            "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}' via season/episode fallback",
+                            unmatchedEpisode.Title,
+                            program.Name,
+                            seriesData.Series.Name,
+                            tvdbEpisode.SeasonNumber,
+                            tvdbEpisode.Number,
+                            tvdbEpisode.Name);
+                        unmatchedEpisode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id));
+                    }
+                }
+            }
+        }
+
         await ScheduleLookupAsync(program);
         lookupQueue.MarkComplete(ruvId);
     }

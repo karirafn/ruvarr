@@ -151,6 +151,19 @@ internal sealed partial class RuvEpisode
         NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
     }
 
+    public bool TryGetEpisodeNumber(out int number)
+    {
+        string[] parts = Title.Split(' ');
+
+        if (parts.Length < 2 || !parts[0].Equals("þáttur", StringComparison.OrdinalIgnoreCase))
+        {
+            number = 0;
+            return false;
+        }
+
+        return int.TryParse(parts[1], out number);
+    }
+
     public bool IsMatch(string value)
     {
         if (Title.Equals(value, StringComparison.OrdinalIgnoreCase))

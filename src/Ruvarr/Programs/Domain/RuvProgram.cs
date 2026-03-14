@@ -1,4 +1,5 @@
 ﻿using Ruvarr.Abstractions;
+using Ruvarr.RomanNumerals;
 
 namespace Ruvarr.Programs.Domain;
 
@@ -37,6 +38,26 @@ internal sealed class RuvProgram
     public TmdbMovie? Movie { get; private set; }
 
     public IReadOnlyList<RuvEpisode> Episodes => [.. _episodes];
+
+    public int SeasonNumber
+    {
+        get
+        {
+            string suffix = Name.Split(' ')[^1];
+
+            if (RomanNumeral.TryParse(suffix, out RomanNumeral? rn) && rn.Number > 0)
+            {
+                return rn.Number;
+            }
+
+            if (int.TryParse(suffix, out int n) && n > 0)
+            {
+                return n;
+            }
+
+            return 0;
+        }
+    }
 
     public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes) => new()
     {

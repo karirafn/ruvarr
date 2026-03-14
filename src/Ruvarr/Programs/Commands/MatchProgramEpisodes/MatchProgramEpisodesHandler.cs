@@ -9,7 +9,6 @@ using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
-using Ruvarr.RomanNumerals;
 
 namespace Ruvarr.Programs.Commands.MatchProgramEpisodes;
 
@@ -67,8 +66,7 @@ internal sealed class MatchProgramEpisodesHandler(
 
         foreach (RuvEpisode episode in program.Episodes)
         {
-            string[] parts = episode.Title.Split(' ');
-            if (!parts[0].Equals("þáttur", StringComparison.OrdinalIgnoreCase) || !int.TryParse(parts[1], out int number))
+            if (!episode.TryGetEpisodeNumber(out int number))
             {
                 return ProgramErrors.UnparsableEpisodeTitle;
             }
@@ -93,9 +91,9 @@ internal sealed class MatchProgramEpisodesHandler(
 
     private static int GetSeason(RuvProgram program, IEnumerable<Episode> episodes)
     {
-        if (RomanNumeral.TryParse(program.Name.Split(' ')[^1], out RomanNumeral? romanNumeral))
+        if (program.SeasonNumber > 0)
         {
-            return romanNumeral.Number;
+            return program.SeasonNumber;
         }
 
         Dictionary<int, int> episodesPerSeason = episodes
