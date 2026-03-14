@@ -16,6 +16,11 @@ internal sealed class TvdbSeries
 
     public IReadOnlyList<RuvProgram> Programs => [.. _programs];
 
+    internal void UpdateSlug(string? slug)
+    {
+        Slug = slug;
+    }
+
     internal static TvdbSeries Create(string id, string name, string? slug = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
