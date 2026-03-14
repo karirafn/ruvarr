@@ -9,7 +9,7 @@ using Ruvarr.Infrastructure.Ruv.Models;
 using Ruvarr.Jobs;
 using Ruvarr.Programs;
 using Ruvarr.Programs.Domain;
-using Ruvarr.UnitTests.Builders;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 

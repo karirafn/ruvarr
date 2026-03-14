@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 
 using Ruvarr.Programs.Domain;
 
-namespace Ruvarr.UnitTests.Builders;
+namespace Ruvarr.Testing.Builders;
 
 internal sealed class TmdbMovieBuilder
 {

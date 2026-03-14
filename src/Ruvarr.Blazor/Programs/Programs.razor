@@ -32,130 +32,103 @@ else
 
     if (visibleList.Count == 0)
     {
-        <p>@GetEmptyMessage()</p>
+        <p class="empty-message">@GetEmptyMessage()</p>
     }
     else
     {
-        <Virtualize Items="visibleList" Context="program" ItemSize="48" OverscanCount="5">
-            <details @key="program.ProgramRuvId"
-                     open="@(_openPrograms.Contains(program.ProgramRuvId) ? string.Empty : null)"
-                     @ontoggle="() => OnToggle(program.ProgramRuvId)">
-                <summary style="display: flex; align-items: center;">
-                    @program.ProgramName@if (program.SeriesName is not null) { <span class="program-series-name"> (@program.SeriesName)</span> }
-                    <span style="margin-left: auto;">
-                        @if (_refreshQueue.TryGetValue(program.ProgramRuvId, out ProgramRefreshStatus status) && status == ProgramRefreshStatus.Processing)
-                        {
-                            <span class="icon-button">
-                                <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refreshing">
-                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                </svg>
-                            </span>
-                        }
-                        else if (_refreshQueue.ContainsKey(program.ProgramRuvId) || _pendingRefresh.Contains(program.ProgramRuvId))
-                        {
-                            <span class="icon-button">
-                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Pending">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <polyline points="12 6 12 12 16 14" />
-                                </svg>
-                            </span>
-                        }
-                        else
-                        {
-                            <button class="icon-button" @onclick="() => RefreshProgram(program.ProgramRuvId)" @onclick:stopPropagation title="Refresh">
-                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refresh">
-                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                    <path d="M3 3v5h5" />
-                                </svg>
-                            </button>
-                        }
-                    </span>
-                </summary>
-                @if (program.TvdbUrl is not null)
-                {
-                    <a class="badge--tvdb" href="@program.TvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
-                }
-                @if (_loadingEpisodes.Contains(program.ProgramRuvId))
-                {
-                    <div class="spinner"></div>
-                }
-                else if (_episodes.TryGetValue(program.ProgramRuvId, out List<EpisodeSummary>? episodes) && episodes is not null)
-                {
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Season</th>
-                                <th>Episode</th>
-                                <th>First Run</th>
-                                <th>Title</th>
-                                <th>Description</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (EpisodeSummary episode in episodes)
+        <table class="programs-table">
+            <thead>
+                <tr>
+                    <th>Program</th>
+                    <th>Channel</th>
+                    <th class="col-center">Monitored</th>
+                    <th class="col-center">Missing</th>
+                    <th>TVDB Series</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <Virtualize Items="visibleList" Context="program" ItemSize="48" OverscanCount="5">
+                    <tr @key="program.ProgramRuvId">
+                        <td><a class="program-link" href="/programs/@program.ProgramRuvId">@program.ProgramName</a></td>
+                        <td><span class="channel-tag">@program.Channel</span></td>
+                        <td class="col-center">
+                            @if (program.IsMonitored)
                             {
-                                <tr>
-                                    <td>@episode.SeasonNumber</td>
-                                    <td>@episode.EpisodeNumber</td>
-                                    <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
-                                    <td>@episode.EpisodeTitle</td>
-                                    <td>@episode.EpisodeDescription</td>
-                                    <td>
-                                        <div class="row-actions">
-                                            @if (program.SeriesName is not null)
-                                            {
-                                                <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbId)" title="Match to TVDB">
-                                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Match to TVDB">
-                                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                                                    </svg>
-                                                </button>
-                                            }
-                                            @if (_downloading.Contains(episode.EpisodeRuvId))
-                                            {
-                                                <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queuing">
-                                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                                </svg>
-                                            }
-                                            else if (_queued.Contains(episode.EpisodeRuvId))
-                                            {
-                                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queued">
-                                                    <polyline points="20 6 9 17 4 12" />
-                                                </svg>
-                                            }
-                                            else if (_failed.Contains(episode.EpisodeRuvId))
-                                            {
-                                                <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
-                                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Retry">
-                                                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                                        <path d="M3 3v5h5" />
-                                                    </svg>
-                                                </button>
-                                            }
-                                            else
-                                            {
-                                                <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
-                                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Download">
-                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                        <polyline points="7 10 12 15 17 10" />
-                                                        <line x1="12" y1="15" x2="12" y2="3" />
-                                                    </svg>
-                                                </button>
-                                            }
-                                        </div>
-                                    </td>
-                                </tr>
+                                <svg class="icon icon--monitored" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Monitored">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
                             }
-                        </tbody>
-                    </table>
-                }
-            </details>
-        </Virtualize>
+                            else
+                            {
+                                <svg class="icon icon--unmonitored" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Unmonitored">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                                    <line x1="1" y1="1" x2="23" y2="23" />
+                                </svg>
+                            }
+                        </td>
+                        <td class="col-center">
+                            @if (program.HasMissingEpisodes)
+                            {
+                                <svg class="icon icon--missing" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Missing episodes">
+                                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                    <line x1="12" y1="9" x2="12" y2="13" />
+                                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                            }
+                        </td>
+                        <td>
+                            @if (program.TvdbUrl is not null)
+                            {
+                                <a class="series-link" href="@program.TvdbUrl" target="_blank" rel="noopener noreferrer">@program.SeriesName</a>
+                            }
+                            else if (program.SeriesName is not null)
+                            {
+                                <span>@program.SeriesName</span>
+                            }
+                            else
+                            {
+                                <span class="unmatched-dash">—</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="row-actions">
+                                @if (_refreshQueue.TryGetValue(program.ProgramRuvId, out ProgramRefreshStatus status) && status == ProgramRefreshStatus.Processing)
+                                {
+                                    <span class="icon-button">
+                                        <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refreshing">
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                        </svg>
+                                    </span>
+                                }
+                                else if (_refreshQueue.ContainsKey(program.ProgramRuvId) || _pendingRefresh.Contains(program.ProgramRuvId))
+                                {
+                                    <span class="icon-button">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Pending">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <polyline points="12 6 12 12 16 14" />
+                                        </svg>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button class="icon-button" @onclick="() => RefreshProgram(program.ProgramRuvId)" title="Refresh">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refresh">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                            <path d="M3 3v5h5" />
+                                        </svg>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                </Virtualize>
+            </tbody>
+        </table>
     }
 }
-
-<MatchEpisodeDialog @ref="_matchDialog" OnMatchComplete="ReloadAsync" />
 
 @code {
     [Parameter]
@@ -168,17 +141,22 @@ else
     private readonly HashSet<int> _pendingRefresh = [];
     private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();
-    private readonly HashSet<string> _downloading = [];
-    private readonly HashSet<string> _queued = [];
-    private readonly HashSet<string> _failed = [];
-    private readonly Dictionary<int, List<EpisodeSummary>?> _episodes = [];
-    private readonly HashSet<int> _loadingEpisodes = [];
-    private readonly HashSet<int> _openPrograms = [];
 
-    private MatchEpisodeDialog? _matchDialog;
+    private static readonly HashSet<string> AllowedFilters =
+    [
+        "unmatched-programs",
+        "unmatched-episodes",
+        "missing-from-sonarr",
+        "partially-matched"
+    ];
 
     protected override Task OnInitializedAsync()
     {
+        if (Filter is not null && !AllowedFilters.Contains(Filter))
+        {
+            Filter = null;
+        }
+
         _ = WatchAsync();
         _ = LoadProgramsAsync();
         return Task.CompletedTask;
@@ -205,6 +183,11 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        if (Filter is not null && !AllowedFilters.Contains(Filter))
+        {
+            Filter = null;
+        }
+
         if (_loadedFilter == Filter)
         {
             return;
@@ -214,13 +197,9 @@ else
         await LoadProgramsAsync();
     }
 
-    private async Task ReloadAsync() => await LoadProgramsAsync();
-
     private async Task LoadProgramsAsync()
     {
         _programs = null;
-        _episodes.Clear();
-        _loadingEpisodes.Clear();
         _loadedFilter = Filter;
         await InvokeAsync(StateHasChanged);
 
@@ -234,35 +213,6 @@ else
                 await InvokeAsync(StateHasChanged);
         }
         await InvokeAsync(StateHasChanged);
-
-        foreach (int ruvId in _openPrograms.ToList())
-        {
-            _episodes.Remove(ruvId);
-            _ = LoadEpisodesAsync(ruvId);
-        }
-    }
-
-    private async Task LoadEpisodesAsync(int ruvId)
-    {
-        if (_episodes.ContainsKey(ruvId)) return;
-        _loadingEpisodes.Add(ruvId);
-        await InvokeAsync(StateHasChanged);
-        _episodes[ruvId] = await ApiClient.GetProgramEpisodesAsync(ruvId, _cts.Token) ?? [];
-        _loadingEpisodes.Remove(ruvId);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnToggle(int ruvId)
-    {
-        if (_openPrograms.Contains(ruvId))
-        {
-            _openPrograms.Remove(ruvId);
-        }
-        else
-        {
-            _openPrograms.Add(ruvId);
-            await LoadEpisodesAsync(ruvId);
-        }
     }
 
     private void NavigateTo(string filter)
@@ -285,30 +235,5 @@ else
     {
         _pendingRefresh.Add(ruvId);
         await ApiClient.RefreshProgramAsync(ruvId);
-    }
-
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task Download(string ruvId)
-    {
-        _downloading.Add(ruvId);
-
-        bool success = await ApiClient.DownloadEpisodeAsync(ruvId);
-
-        _downloading.Remove(ruvId);
-
-        if (success)
-        {
-            _queued.Add(ruvId);
-        }
-        else
-        {
-            _failed.Add(ruvId);
-        }
-    }
-
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task OpenMatchDialog(string ruvId, int? currentTvdbId)
-    {
-        await _matchDialog!.OpenAsync(ruvId, currentTvdbId);
     }
 }

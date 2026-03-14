@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Ruvarr\Ruvarr.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ruvarr.UnitTests" />
+    <InternalsVisibleTo Include="Ruvarr.IntegrationTests" />
+  </ItemGroup>
+
+</Project>

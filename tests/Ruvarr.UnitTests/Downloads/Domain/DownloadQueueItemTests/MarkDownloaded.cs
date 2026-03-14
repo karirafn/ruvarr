@@ -1,6 +1,6 @@
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
-using Ruvarr.UnitTests.Builders;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 

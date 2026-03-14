@@ -1,6 +1,6 @@
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
-using Ruvarr.UnitTests.Builders;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 

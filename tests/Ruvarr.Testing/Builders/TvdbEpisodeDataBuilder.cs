@@ -1,6 +1,6 @@
 using Ruvarr.Infrastructure.Tvdb.Models;
 
-namespace Ruvarr.UnitTests.Builders;
+namespace Ruvarr.Testing.Builders;
 
 internal sealed class TvdbEpisodeDataBuilder
 {
