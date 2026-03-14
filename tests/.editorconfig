@@ -14,3 +14,6 @@ dotnet_diagnostic.CA1816.severity = none
 
 # CA2234: Pass system uri objects instead of strings
 dotnet_diagnostic.CA2234.severity = none
+
+# S1075: Refactor your code not to use hardcoded absolute paths or URIs
+dotnet_diagnostic.S1075.severity = none

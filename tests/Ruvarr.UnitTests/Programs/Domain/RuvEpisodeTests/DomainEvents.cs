@@ -1,6 +1,6 @@
 using Ruvarr.Programs.Domain;
 using Ruvarr.Programs.Events;
-using Ruvarr.UnitTests.Builders;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 

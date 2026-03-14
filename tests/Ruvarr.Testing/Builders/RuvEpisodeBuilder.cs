@@ -1,6 +1,6 @@
-﻿using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Domain;
 
-namespace Ruvarr.UnitTests.Builders;
+namespace Ruvarr.Testing.Builders;
 
 internal sealed class RuvEpisodeBuilder
 {

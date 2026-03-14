@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ruvarr.Api\Ruvarr.Api.csproj" />
+    <ProjectReference Include="..\Ruvarr.Testing\Ruvarr.Testing.csproj" />
   </ItemGroup>
 
 </Project>

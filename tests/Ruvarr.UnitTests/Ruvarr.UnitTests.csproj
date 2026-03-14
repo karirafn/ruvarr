@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ruvarr\Ruvarr.csproj" />
+    <ProjectReference Include="..\Ruvarr.Testing\Ruvarr.Testing.csproj" />
   </ItemGroup>
 
 </Project>
