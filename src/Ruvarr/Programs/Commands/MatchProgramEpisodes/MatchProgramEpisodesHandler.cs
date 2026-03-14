@@ -1,6 +1,4 @@
-﻿using System.Globalization;
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Ruvarr.Abstractions;
@@ -35,7 +33,12 @@ internal sealed class MatchProgramEpisodesHandler(
             return ProgramErrors.ProgramNotMatched;
         }
 
-        SeriesData? series = await tvdb.GetSeriesAsync(int.Parse(program.Series.TvdbId, CultureInfo.InvariantCulture), cancellationToken);
+        if (!int.TryParse(program.Series.TvdbId, out int tvdbSeriesId) || tvdbSeriesId < 1)
+        {
+            return TvdbErrors.SeriesNotFound;
+        }
+
+        SeriesData? series = await tvdb.GetSeriesAsync(tvdbSeriesId, cancellationToken);
 
         if (series is null)
         {
