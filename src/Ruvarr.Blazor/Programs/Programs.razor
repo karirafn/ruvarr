@@ -4,7 +4,6 @@
 @inject RuvApiClient ApiClient
 @inject NavigationManager Navigation
 @using Ruvarr.Contracts
-@using Ruvarr.Blazor.Components.Shared
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 
 <h1>Programs</h1>
@@ -104,9 +103,9 @@ else
                                     <td>@episode.EpisodeDescription</td>
                                     <td>
                                         <div class="row-actions">
-                                            @if (program.SeriesName is not null && episode.TvdbId is null)
+                                            @if (program.SeriesName is not null)
                                             {
-                                                <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId)" title="Match to TVDB">
+                                                <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbId)" title="Match to TVDB">
                                                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Match to TVDB">
                                                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                                                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
@@ -308,8 +307,8 @@ else
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task OpenMatchDialog(string ruvId)
+    private async Task OpenMatchDialog(string ruvId, int? currentTvdbId)
     {
-        await _matchDialog!.OpenAsync(ruvId);
+        await _matchDialog!.OpenAsync(ruvId, currentTvdbId);
     }
 }
