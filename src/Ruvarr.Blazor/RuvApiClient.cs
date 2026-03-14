@@ -40,6 +40,9 @@ internal sealed class RuvApiClient(HttpClient httpClient)
         return httpClient.GetFromJsonAsAsyncEnumerable<ProgramSummary>($"/programs{queryString}", cancellationToken)!;
     }
 
+    public Task<ProgramSummary?> GetProgramAsync(int ruvId, CancellationToken cancellationToken = default)
+        => httpClient.GetFromJsonAsync<ProgramSummary>($"/programs/{ruvId}", cancellationToken);
+
     public Task<List<EpisodeSummary>?> GetProgramEpisodesAsync(int ruvId, CancellationToken cancellationToken = default)
         => httpClient.GetFromJsonAsync<List<EpisodeSummary>>($"/programs/{ruvId}/episodes", cancellationToken);
 
@@ -52,6 +55,7 @@ internal sealed class RuvApiClient(HttpClient httpClient)
             "/programs/download-queue/stream",
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
+        response.EnsureSuccessStatusCode();
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
@@ -92,6 +96,7 @@ internal sealed class RuvApiClient(HttpClient httpClient)
             "/programs/tvdb-episode-lookup-queue/stream",
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
+        response.EnsureSuccessStatusCode();
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
@@ -111,6 +116,7 @@ internal sealed class RuvApiClient(HttpClient httpClient)
             "/programs/tvdb-series-lookup-queue/stream",
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
+        response.EnsureSuccessStatusCode();
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
@@ -130,6 +136,7 @@ internal sealed class RuvApiClient(HttpClient httpClient)
             "/programs/program-refresh-queue/stream",
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
+        response.EnsureSuccessStatusCode();
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 

@@ -7,6 +7,7 @@ using Ruvarr.Programs.Commands.MatchEpisode;
 using Ruvarr.Programs.Commands.MatchProgramEpisodes;
 using Ruvarr.Programs.Commands.RefreshProgram;
 using Ruvarr.Programs.Queries.GetEpisodes;
+using Ruvarr.Programs.Queries.GetProgram;
 using Ruvarr.Programs.Queries.GetPrograms;
 using Ruvarr.Programs.Queries.GetProgramEpisodes;
 
@@ -17,6 +18,7 @@ internal static class ServiceCollectionExtensions
     internal static IServiceCollection AddPrograms(this IServiceCollection services)
     {
         services.AddTransient<IRequestHandler<GetEpisodesQuery, List<ProgramDetails>>, GetEpisodesHandler>();
+        services.AddTransient<IRequestHandler<GetProgramQuery, ProgramSummary?>, GetProgramHandler>();
         services.AddTransient<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>, GetProgramsHandler>();
         services.AddTransient<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>, GetProgramEpisodesHandler>();
         services.AddTransient<IRequestHandler<MatchEpisodeCommand>, MatchEpisodeHandler>();
