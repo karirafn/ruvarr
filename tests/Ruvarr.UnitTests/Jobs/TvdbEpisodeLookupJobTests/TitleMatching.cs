@@ -84,7 +84,8 @@ public sealed class TitleMatching
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder().WithId(101).WithNameTranslations("isl").Build();
-        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
+        Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder().WithId(102).WithNumber(2).Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode, tvdbEpisode2).Build();
         _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((EpisodeTranslation?)null);
@@ -111,7 +112,8 @@ public sealed class TitleMatching
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder().WithId(101).WithNameTranslations("eng").Build();
-        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
+        Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder().WithId(102).WithNumber(2).Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode, tvdbEpisode2).Build();
         _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
         _notifier.Enqueue(1, program.Name);
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
@@ -137,7 +139,8 @@ public sealed class TitleMatching
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder().WithId(101).WithNameTranslations("isl").Build();
-        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
+        Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder().WithId(102).WithNumber(2).Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode, tvdbEpisode2).Build();
         _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new EpisodeTranslation("Different title", "", "isl", true));

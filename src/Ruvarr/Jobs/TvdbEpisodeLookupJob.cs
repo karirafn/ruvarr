@@ -104,7 +104,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
         if (unmatchedEpisodes.Count > 0)
         {
-            int season = program.SeasonNumber;
+            int season = program.ResolveMatchingSeason(seriesData.Episodes);
 
             if (season > 0)
             {

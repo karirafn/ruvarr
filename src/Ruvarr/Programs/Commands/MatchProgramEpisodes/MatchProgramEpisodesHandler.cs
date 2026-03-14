@@ -42,17 +42,14 @@ internal sealed class MatchProgramEpisodesHandler(
             return TvdbErrors.SeriesNotFound;
         }
 
-        IEnumerable<Episode> episodesEnumerable = series.Episodes
-            .Where(x => x.SeasonNumber > 0);
-
-        int season = GetSeason(program, episodesEnumerable);
+        int season = program.ResolveMatchingSeason(series.Episodes);
 
         if (season == 0)
         {
             return ProgramErrors.SeasonUndetermined;
         }
 
-        Dictionary<int, Episode> episodes = episodesEnumerable
+        Dictionary<int, Episode> episodes = series.Episodes
             .Where(x => x.SeasonNumber == season)
             .ToDictionary(x => x.Number);
 
@@ -90,21 +87,5 @@ internal sealed class MatchProgramEpisodesHandler(
         await dbcontext.SaveChangesAsync(cancellationToken);
 
         return RuvarrResult.Success;
-    }
-
-    private static int GetSeason(RuvProgram program, IEnumerable<Episode> episodes)
-    {
-        if (program.SeasonNumber > 0)
-        {
-            return program.SeasonNumber;
-        }
-
-        Dictionary<int, int> episodesPerSeason = episodes
-            .GroupBy(x => x.SeasonNumber)
-            .Select(x => (Season: x.Key, Count: x.Count()))
-            .Where(x => x.Count == program.Episodes.Count)
-            .ToDictionary(x => x.Season, x => x.Count);
-
-        return episodesPerSeason.Count == 1 ? episodesPerSeason.Single().Key : 0;
     }
 }
