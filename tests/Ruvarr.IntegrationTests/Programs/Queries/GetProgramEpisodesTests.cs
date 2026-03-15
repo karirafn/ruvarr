@@ -86,4 +86,56 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
         result.ShouldNotBeNull();
         result.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task ReturnsRuvUrlWhenSlugPresent()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(30004, "RÚV1", "Slug Program", null, multipleEpisodes: true, slug: "frettir");
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("ab1234", new Uri("https://example.com/ep.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<EpisodeSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<EpisodeSummary>>("/programs/30004/episodes", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBe(1);
+        result[0].RuvUrl.ShouldBe(new Uri("https://www.ruv.is/sjonvarp/spila/frettir/30004/ab1234"));
+    }
+
+    [Fact]
+    public async Task ReturnsNullRuvUrlWhenSlugAbsent()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(30005, "RÚV1", "No Slug Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("cd5678", new Uri("https://example.com/ep.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<EpisodeSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<EpisodeSummary>>("/programs/30005/episodes", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Count.ShouldBe(1);
+        result[0].RuvUrl.ShouldBeNull();
+    }
 }

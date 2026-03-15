@@ -62,7 +62,7 @@ internal sealed class RuvProgramRefreshJob(
 
         List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
-            .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes))];
+            .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes, x.Slug))];
 
         if (newPrograms.Count > 0)
         {
@@ -74,6 +74,19 @@ internal sealed class RuvProgramRefreshJob(
 
         dbContext.Set<RuvProgram>()
             .AddRange(newPrograms);
+
+        Dictionary<int, string> slugByRuvId = programs
+            .Where(x => x.Slug is not null)
+            .ToDictionary(x => x.Id, x => x.Slug);
+
+        foreach (RuvProgram existing in existingTvPrograms)
+        {
+            slugByRuvId.TryGetValue(existing.RuvId, out string? incomingSlug);
+            if (existing.Slug != incomingSlug)
+            {
+                existing.UpdateSlug(incomingSlug);
+            }
+        }
 
         await dbContext.SaveChangesAsync();
 

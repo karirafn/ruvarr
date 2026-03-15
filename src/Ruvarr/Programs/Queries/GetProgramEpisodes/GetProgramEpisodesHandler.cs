@@ -21,6 +21,9 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
                 x.SeasonNumber,
                 x.EpisodeNumber,
                 x.FirstRun,
-                x.IsMissing))
+                x.IsMissing,
+                string.IsNullOrEmpty(x.Program.Slug)
+                    ? null
+                    : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(x.Program.Slug!)}/{x.Program.RuvId}/{x.RuvId}")))
             .ToListAsync(cancellationToken);
 }

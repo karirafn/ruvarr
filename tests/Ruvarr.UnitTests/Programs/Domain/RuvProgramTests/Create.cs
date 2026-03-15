@@ -69,4 +69,44 @@ public sealed class Create
         // Assert
         result.Created.ShouldBeInRange(before, DateTime.UtcNow);
     }
+
+    [Fact]
+    public void SetsSlug()
+    {
+        // Arrange / Act
+        RuvProgram result = new RuvProgramBuilder().WithSlug("frettir").Build();
+
+        // Assert
+        result.Slug.ShouldBe("frettir");
+    }
+
+    [Fact]
+    public void SlugIsNullByDefault()
+    {
+        // Arrange / Act
+        RuvProgram result = new RuvProgramBuilder().Build();
+
+        // Assert
+        result.Slug.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ValidSlugPassesThroughUnchanged()
+    {
+        // Arrange / Act
+        RuvProgram result = new RuvProgramBuilder().WithSlug("stjornubio").Build();
+
+        // Assert
+        result.Slug.ShouldBe("stjornubio");
+    }
+
+    [Fact]
+    public void InvalidSlugIsStoredAsNull()
+    {
+        // Arrange / Act
+        RuvProgram result = new RuvProgramBuilder().WithSlug("../../evil").Build();
+
+        // Assert
+        result.Slug.ShouldBeNull();
+    }
 }
