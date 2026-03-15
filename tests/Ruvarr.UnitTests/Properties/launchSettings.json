@@ -1,12 +1,12 @@
 {
   "profiles": {
-    "Ruvarr.Blazor.Tests": {
+    "Ruvarr.UnitTests": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:55525;http://localhost:55526"
+      "applicationUrl": "https://localhost:59889;http://localhost:59890"
     }
   }
 }

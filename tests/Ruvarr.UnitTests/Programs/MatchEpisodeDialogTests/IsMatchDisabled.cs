@@ -2,7 +2,7 @@ using Ruvarr.Programs;
 
 using Shouldly;
 
-namespace Ruvarr.Blazor.Tests.Programs.MatchEpisodeDialogTests;
+namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 
 public sealed class IsMatchDisabled
 {

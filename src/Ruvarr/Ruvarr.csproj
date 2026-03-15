@@ -22,7 +22,6 @@
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     <InternalsVisibleTo Include="Ruvarr.IntegrationTests" />
     <InternalsVisibleTo Include="Ruvarr.Testing" />
-    <InternalsVisibleTo Include="Ruvarr.Blazor.Tests" />
   </ItemGroup>
 
 </Project>

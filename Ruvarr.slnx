@@ -13,8 +13,7 @@
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests/.editorconfig" />
-    <Project Path="tests/Ruvarr.Blazor.Tests/Ruvarr.Blazor.Tests.csproj" />
-    <Project Path="tests/Ruvarr.IntegrationTests/Ruvarr.IntegrationTests.csproj" />
+<Project Path="tests/Ruvarr.IntegrationTests/Ruvarr.IntegrationTests.csproj" />
     <Project Path="tests/Ruvarr.Testing/Ruvarr.Testing.csproj" />
     <Project Path="tests/Ruvarr.UnitTests/Ruvarr.UnitTests.csproj" />
   </Folder>

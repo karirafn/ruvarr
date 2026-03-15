@@ -10,7 +10,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Programs;
 using Ruvarr.Programs.Commands.MatchEpisode;
 
-namespace Ruvarr.Blazor.Tests.Programs.MatchEpisodeDialogTests;
+namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 
 public sealed class HandleKeyDown : BunitContext
 {
