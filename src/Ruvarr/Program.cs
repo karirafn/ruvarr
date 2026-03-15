@@ -2,7 +2,6 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 using Ruvarr;
-using Ruvarr.Blazor;
 using Ruvarr.Components;
 using Ruvarr.Programs;
 
@@ -15,13 +14,6 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddRuvarr(builder.Configuration.GetConnectionString("Default")
     ?? throw new ArgumentException("Connection string not found"));
-
-builder.Services.AddHttpClient<RuvApiClient>((_, client) =>
-{
-    ConfigurationManager config = builder.Configuration;
-    string urls = config["urls"] ?? config["ASPNETCORE_URLS"] ?? "http://localhost:5156";
-    client.BaseAddress = new Uri(urls.Split(';')[0]);
-});
 
 WebApplication app = builder.Build();
 

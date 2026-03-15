@@ -1,7 +1,11 @@
 @page "/download-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-@inject RuvApiClient ApiClient
+@using Ruvarr.Abstractions
 @using Ruvarr.Contracts
+@using Ruvarr.Downloads
+@using Ruvarr.Downloads.Queries.GetDownloadQueue
+@inject IServiceScopeFactory ScopeFactory
+@inject DownloadQueueNotifier DownloadNotifier
 @implements IAsyncDisposable
 
 <h1>Download Queue</h1>
@@ -71,11 +75,22 @@ else
 
     private async Task WatchAsync()
     {
-        await foreach (List<DownloadQueueItemSummary> items in ApiClient.WatchDownloadQueueAsync(_cts.Token))
+        _items = await QueryAsync();
+        await InvokeAsync(StateHasChanged);
+
+        await foreach (byte _ in DownloadNotifier.WatchAsync(_cts.Token))
         {
-            _items = items;
+            _items = await QueryAsync();
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task<List<DownloadQueueItemSummary>> QueryAsync()
+    {
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>>>();
+        return await handler.Handle(new GetDownloadQueueQuery(IncludeDownloaded: true), _cts.Token);
     }
 
     public async ValueTask DisposeAsync()

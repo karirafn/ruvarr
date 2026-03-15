@@ -1,10 +1,14 @@
 @page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @implements IAsyncDisposable
-@inject RuvApiClient ApiClient
-@inject NavigationManager Navigation
-@using Ruvarr.Contracts
 @using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Ruvarr.Abstractions
+@using Ruvarr.Contracts
+@using Ruvarr.Programs.Commands.RefreshProgram
+@using Ruvarr.Programs.Queries.GetPrograms
+@inject IServiceScopeFactory ScopeFactory
+@inject ProgramRefreshNotifier RefreshNotifier
+@inject NavigationManager Navigation
 
 <h1>Programs</h1>
 
@@ -164,9 +168,9 @@ else
 
     private async Task WatchAsync()
     {
-        await foreach (List<ProgramRefreshQueueItemSummary> items in ApiClient.WatchProgramRefreshQueueAsync(_cts.Token))
+        await foreach (byte _ in RefreshNotifier.WatchAsync(_cts.Token))
         {
-            _refreshQueue = items.ToDictionary(x => x.RuvId, x => x.Status);
+            _refreshQueue = RefreshNotifier.Items.ToDictionary(x => x.RuvId, x => x.Status);
             foreach (int ruvId in _pendingRefresh.Where(id => _refreshQueue.ContainsKey(id)).ToList())
             {
                 _pendingRefresh.Remove(ruvId);
@@ -203,15 +207,25 @@ else
         _loadedFilter = Filter;
         await InvokeAsync(StateHasChanged);
 
-        _programs = [];
-        int count = 0;
-        await foreach (ProgramSummary program in ApiClient.GetProgramsAsync(Filter, _cts.Token))
+        GetProgramsQuery query = Filter switch
         {
-            _programs.Add(program);
-            count++;
-            if (count == 1 || count % 25 == 0)
-                await InvokeAsync(StateHasChanged);
+            "unmatched-programs" => new GetProgramsQuery(null, null, null, IsProgramMatched: false, null),
+            "missing-from-sonarr" => new GetProgramsQuery(null, IsProgramMonitored: true, IsProgramMissingEpisodes: true, null, null),
+            "partially-matched" => new GetProgramsQuery(null, null, null, null, IsProgramPartiallyMatched: true),
+            _ => new GetProgramsQuery(null, null, null, null, null),
+        };
+
+        List<ProgramSummary> loaded = [];
+        await using (AsyncServiceScope scope = ScopeFactory.CreateAsyncScope())
+        {
+            IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+                scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+            await foreach (ProgramSummary program in handler.Handle(query, _cts.Token))
+            {
+                loaded.Add(program);
+            }
         }
+        _programs = loaded;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -234,6 +248,9 @@ else
     private async Task RefreshProgram(int ruvId)
     {
         _pendingRefresh.Add(ruvId);
-        await ApiClient.RefreshProgramAsync(ruvId);
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<RefreshProgramCommand> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<RefreshProgramCommand>>();
+        await handler.Handle(new RefreshProgramCommand(ruvId), _cts.Token);
     }
 }

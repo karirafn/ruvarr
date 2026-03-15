@@ -1,9 +1,17 @@
 @page "/program/{RuvId:int}"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @implements IAsyncDisposable
-@inject RuvApiClient ApiClient
+@using Ruvarr.Abstractions
 @using Ruvarr.Contracts
-@using Ruvarr.Blazor.Programs
+@using Ruvarr.Downloads
+@using Ruvarr.Downloads.Queries.GetDownloadQueue
+@using Ruvarr.Programs.Commands.DownloadEpisode
+@using Ruvarr.Programs.Commands.RefreshProgram
+@using Ruvarr.Programs.Queries.GetProgram
+@using Ruvarr.Programs.Queries.GetProgramEpisodes
+@inject IServiceScopeFactory ScopeFactory
+@inject ProgramRefreshNotifier RefreshNotifier
+@inject DownloadQueueNotifier DownloadNotifier
 
 <a class="detail-back" href="/">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
@@ -184,20 +192,31 @@ else
         _ = WatchDownloadQueueAsync();
         _ = WatchRefreshQueueAsync();
 
-        Task<ProgramSummary?> programTask = ApiClient.GetProgramAsync(RuvId, _cts.Token);
-        Task<List<EpisodeSummary>?> episodesTask = ApiClient.GetProgramEpisodesAsync(RuvId, _cts.Token);
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> programHandler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> episodesHandler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
+
+        Task<ProgramSummary?> programTask = programHandler.Handle(new GetProgramQuery(RuvId), _cts.Token);
+        Task<List<EpisodeSummary>> episodesTask = episodesHandler.Handle(new GetProgramEpisodesQuery(RuvId), _cts.Token);
 
         await Task.WhenAll(programTask, episodesTask);
 
         _program = await programTask;
         _notFound = _program is null;
-        _episodes = await episodesTask ?? [];
+        _episodes = await episodesTask;
     }
 
     private async Task WatchDownloadQueueAsync()
     {
-        await foreach (List<DownloadQueueItemSummary> items in ApiClient.WatchDownloadQueueAsync(_cts.Token))
+        await foreach (byte _ in DownloadNotifier.WatchAsync(_cts.Token))
         {
+            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+            IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>> handler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>>>();
+            List<DownloadQueueItemSummary> items = await handler.Handle(new GetDownloadQueueQuery(IncludeDownloaded: true), _cts.Token);
+
             HashSet<string> inQueue = [.. items.Select(x => x.EpisodeRuvId)];
             foreach (string ruvId in _queued.Where(id => !inQueue.Contains(id)).ToList())
             {
@@ -209,9 +228,9 @@ else
 
     private async Task WatchRefreshQueueAsync()
     {
-        await foreach (List<ProgramRefreshQueueItemSummary> items in ApiClient.WatchProgramRefreshQueueAsync(_cts.Token))
+        await foreach (byte _ in RefreshNotifier.WatchAsync(_cts.Token))
         {
-            _refreshQueue = items.ToDictionary(x => x.RuvId, x => x.Status);
+            _refreshQueue = RefreshNotifier.Items.ToDictionary(x => x.RuvId, x => x.Status);
             foreach (int ruvId in _pendingRefresh.Where(id => _refreshQueue.ContainsKey(id)).ToList())
             {
                 _pendingRefresh.Remove(ruvId);
@@ -230,7 +249,10 @@ else
     {
         _episodes = null;
         await InvokeAsync(StateHasChanged);
-        _episodes = await ApiClient.GetProgramEpisodesAsync(RuvId, _cts.Token) ?? [];
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
+        _episodes = await handler.Handle(new GetProgramEpisodesQuery(RuvId), _cts.Token);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -239,11 +261,14 @@ else
     {
         _downloading.Add(ruvId);
 
-        bool success = await ApiClient.DownloadEpisodeAsync(ruvId);
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<DownloadEpisodeCommand> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<DownloadEpisodeCommand>>();
+        RuvarrResult result = await handler.Handle(new DownloadEpisodeCommand(ruvId), _cts.Token);
 
         _downloading.Remove(ruvId);
 
-        if (success)
+        if (result.IsSuccess)
         {
             _queued.Add(ruvId);
         }
@@ -257,7 +282,10 @@ else
     private async Task RefreshProgram(int ruvId)
     {
         _pendingRefresh.Add(ruvId);
-        await ApiClient.RefreshProgramAsync(ruvId);
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<RefreshProgramCommand> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<RefreshProgramCommand>>();
+        await handler.Handle(new RefreshProgramCommand(ruvId), _cts.Token);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]

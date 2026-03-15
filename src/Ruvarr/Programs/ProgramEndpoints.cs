@@ -1,4 +1,4 @@
-﻿using Ruvarr.Programs.Commands;
+using Ruvarr.Programs.Commands;
 using Ruvarr.Programs.Queries;
 
 namespace Ruvarr.Programs;
@@ -19,10 +19,6 @@ internal static class ProgramEndpoints
         group.MapGetProgramEpisodesEndpoint();
         group.MapGetProgramsEndpoint();
         group.MapGetDownloadQueueEndpoint();
-        group.MapWatchDownloadQueueEndpoint();
-        group.MapWatchProgramRefreshNotifierEndpoint();
-        group.MapWatchTvdbSeriesLookupQueueEndpoint();
-        group.MapWatchTvdbEpisodeLookupQueueEndpoint();
 
         return group;
     }
