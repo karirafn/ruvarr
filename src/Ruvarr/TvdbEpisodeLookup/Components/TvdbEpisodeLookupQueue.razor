@@ -26,7 +26,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (TvdbEpisodeLookupQueueItemSummary item in _items.OrderByDescending(x => x.Status))
+            @foreach (TvdbEpisodeLookupQueueItemSummary item in _items)
             {
                 <tr>
                     <td>@item.ProgramName</td>
