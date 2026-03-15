@@ -1,5 +1,8 @@
-@namespace Ruvarr.Blazor.Programs
-@inject RuvApiClient ApiClient
+@namespace Ruvarr.Programs
+@using Ruvarr.Abstractions
+@using Ruvarr.Programs.Commands.MatchEpisode
+@implements IAsyncDisposable
+@inject IServiceScopeFactory ScopeFactory
 @inject IJSRuntime Js
 
 <dialog @ref="_dialog" @onclose="OnDialogClose">
@@ -29,6 +32,7 @@
     private string _tvdbIdInput = string.Empty;
     private int? _currentTvdbId;
     private bool _isSubmitting;
+    private readonly CancellationTokenSource _cts = new();
 
     public async Task OpenAsync(string ruvId, int? currentTvdbId)
     {
@@ -69,7 +73,10 @@
 
         try
         {
-            await ApiClient.MatchEpisodeAsync(_ruvId, tvdbId);
+            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+            IRequestHandler<MatchEpisodeCommand> handler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<MatchEpisodeCommand>>();
+            await handler.Handle(new MatchEpisodeCommand(_ruvId, tvdbId), _cts.Token);
         }
         finally
         {
@@ -86,6 +93,12 @@
         {
             await SubmitMatch();
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _cts.Dispose();
     }
 
     internal static bool IsMatchDisabled(string input, int? currentTvdbId, bool isSubmitting)

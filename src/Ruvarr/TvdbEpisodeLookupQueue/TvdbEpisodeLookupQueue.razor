@@ -1,7 +1,8 @@
 @page "/tvdb-episode-lookup-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-@inject RuvApiClient ApiClient
 @using Ruvarr.Contracts
+@using Ruvarr.Programs
+@inject TvdbEpisodeLookupNotifier LookupNotifier
 @implements IAsyncDisposable
 
 <h1>TVDB Episode Lookup Queue</h1>
@@ -51,7 +52,7 @@ else
 }
 
 @code {
-    private List<TvdbEpisodeLookupQueueItemSummary>? _items;
+    private IReadOnlyList<TvdbEpisodeLookupQueueItemSummary>? _items;
     private readonly CancellationTokenSource _cts = new();
 
     protected override Task OnInitializedAsync()
@@ -62,9 +63,12 @@ else
 
     private async Task WatchAsync()
     {
-        await foreach (List<TvdbEpisodeLookupQueueItemSummary> items in ApiClient.WatchTvdbEpisodeLookupQueueAsync(_cts.Token))
+        _items = LookupNotifier.Items;
+        await InvokeAsync(StateHasChanged);
+
+        await foreach (byte _ in LookupNotifier.WatchAsync(_cts.Token))
         {
-            _items = items;
+            _items = LookupNotifier.Items;
             await InvokeAsync(StateHasChanged);
         }
     }

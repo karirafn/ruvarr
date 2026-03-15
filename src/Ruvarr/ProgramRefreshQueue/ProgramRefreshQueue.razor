@@ -1,7 +1,8 @@
 @page "/program-refresh-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
-@inject RuvApiClient ApiClient
 @using Ruvarr.Contracts
+@using Ruvarr.Programs
+@inject ProgramRefreshNotifier RefreshNotifier
 @implements IAsyncDisposable
 
 <h1>Program Refresh Queue</h1>
@@ -51,7 +52,7 @@ else
 }
 
 @code {
-    private List<ProgramRefreshQueueItemSummary>? _items;
+    private IReadOnlyList<ProgramRefreshQueueItemSummary>? _items;
     private readonly CancellationTokenSource _cts = new();
 
     protected override Task OnInitializedAsync()
@@ -62,9 +63,12 @@ else
 
     private async Task WatchAsync()
     {
-        await foreach (List<ProgramRefreshQueueItemSummary> items in ApiClient.WatchProgramRefreshQueueAsync(_cts.Token))
+        _items = RefreshNotifier.Items;
+        await InvokeAsync(StateHasChanged);
+
+        await foreach (byte _ in RefreshNotifier.WatchAsync(_cts.Token))
         {
-            _items = items;
+            _items = RefreshNotifier.Items;
             await InvokeAsync(StateHasChanged);
         }
     }

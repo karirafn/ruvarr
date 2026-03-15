@@ -1,4 +1,4 @@
-using Ruvarr.Blazor.Programs;
+using Ruvarr.Programs;
 
 using Shouldly;
 
