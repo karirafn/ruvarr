@@ -1,36 +1,26 @@
-using System.Net;
-using System.Net.Http.Json;
-
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Queries.GetProgramEpisodes;
 
 using Shouldly;
 
 namespace Ruvarr.IntegrationTests.Programs.Queries;
 
-public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>, IAsyncLifetime
 {
-    [Fact]
-    public async Task ReturnsOk()
+    public async ValueTask InitializeAsync()
     {
-        // Arrange
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-
-        RuvProgram program = RuvProgram.Create(30001, "RÚV1", "Episode Test Program", null, multipleEpisodes: true);
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Act
-        HttpResponseMessage result = await factory.CreateClient().GetAsync("/programs/30001/episodes", cancellationToken);
-
-        // Assert
-        result.StatusCode.ShouldBe(HttpStatusCode.OK);
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.MigrateAsync();
     }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public async Task ReturnsEpisodesInOrder()
@@ -40,6 +30,8 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
 
         RuvProgram program = RuvProgram.Create(30002, "RÚV1", "Ordered Episodes Program", null, multipleEpisodes: true);
         program.MatchTvdb(TvdbSeries.Create(8001, "Ordered Series"));
@@ -55,11 +47,9 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<EpisodeSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<EpisodeSummary>>("/programs/30002/episodes", cancellationToken);
+        List<EpisodeSummary> result = await handler.Handle(new GetProgramEpisodesQuery(30002), cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.Count.ShouldBe(2);
         result[0].EpisodeNumber.ShouldBe(1);
         result[1].EpisodeNumber.ShouldBe(2);
@@ -73,17 +63,17 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
 
         RuvProgram program = RuvProgram.Create(30003, "RÚV1", "No Episodes Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<EpisodeSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<EpisodeSummary>>("/programs/30003/episodes", cancellationToken);
+        List<EpisodeSummary> result = await handler.Handle(new GetProgramEpisodesQuery(30003), cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.ShouldBeEmpty();
     }
 
@@ -95,6 +85,8 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
 
         RuvProgram program = RuvProgram.Create(30004, "RÚV1", "Slug Program", null, multipleEpisodes: true, slug: "frettir");
         dbContext.Set<RuvProgram>().Add(program);
@@ -104,11 +96,9 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<EpisodeSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<EpisodeSummary>>("/programs/30004/episodes", cancellationToken);
+        List<EpisodeSummary> result = await handler.Handle(new GetProgramEpisodesQuery(30004), cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.Count.ShouldBe(1);
         result[0].RuvUrl.ShouldBe(new Uri("https://www.ruv.is/sjonvarp/spila/frettir/30004/ab1234"));
     }
@@ -121,6 +111,8 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
 
         RuvProgram program = RuvProgram.Create(30005, "RÚV1", "No Slug Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(program);
@@ -130,11 +122,9 @@ public sealed class GetProgramEpisodesTests(IntegrationTestFactory factory) : IC
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<EpisodeSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<EpisodeSummary>>("/programs/30005/episodes", cancellationToken);
+        List<EpisodeSummary> result = await handler.Handle(new GetProgramEpisodesQuery(30005), cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.Count.ShouldBe(1);
         result[0].RuvUrl.ShouldBeNull();
     }

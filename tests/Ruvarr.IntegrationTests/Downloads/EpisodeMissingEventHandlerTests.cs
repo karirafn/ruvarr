@@ -8,8 +8,18 @@ using Shouldly;
 
 namespace Ruvarr.IntegrationTests.Downloads;
 
-public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>, IAsyncLifetime
 {
+    public async ValueTask InitializeAsync()
+    {
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.MigrateAsync();
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
     [Fact]
     public async Task EnqueuesDownload_WhenEpisodeBecomesIsMissing()
     {

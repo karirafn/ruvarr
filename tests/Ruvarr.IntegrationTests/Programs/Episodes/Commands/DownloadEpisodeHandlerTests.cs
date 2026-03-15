@@ -1,18 +1,28 @@
-using System.Net;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Extensions;
+using Ruvarr.Programs.Commands.DownloadEpisode;
 using Ruvarr.Programs.Domain;
 
 using Shouldly;
 
 namespace Ruvarr.IntegrationTests.Programs.Episodes.Commands;
 
-public sealed class DownloadEpisodeTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class DownloadEpisodeHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>, IAsyncLifetime
 {
+    public async ValueTask InitializeAsync()
+    {
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.MigrateAsync();
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
     [Fact]
     public async Task DoesNotAddDuplicateWhenEpisodeAlreadyQueued()
     {
@@ -21,6 +31,8 @@ public sealed class DownloadEpisodeTests(IntegrationTestFactory factory) : IClas
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<DownloadEpisodeCommand> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<DownloadEpisodeCommand>>();
 
         RuvProgram program = RuvProgram.Create(1, "RÚV1", "Test Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(program);
@@ -34,11 +46,10 @@ public sealed class DownloadEpisodeTests(IntegrationTestFactory factory) : IClas
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        HttpResponseMessage response = await factory.CreateClient()
-            .PostAsync("/programs/episodes/ABC123/download", content: null, cancellationToken);
+        RuvarrResult result = await handler.Handle(new DownloadEpisodeCommand("ABC123"), cancellationToken);
 
         // Assert
-        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        result.IsSuccess.ShouldBeTrue();
 
         await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
         RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();

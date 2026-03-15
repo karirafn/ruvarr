@@ -3,11 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 using Ruvarr;
 using Ruvarr.Components;
-using Ruvarr.Programs;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddOpenApi();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -32,14 +29,8 @@ using (IServiceScope scope = app.Services.CreateScope())
     await dbContext.Database.MigrateAsync();
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
 app.MapStaticAssets();
 app.UseAntiforgery();
-app.MapPogramEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

@@ -1,10 +1,10 @@
-using System.Net;
-using System.Net.Http.Json;
-
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Queries.GetProgram;
 
 using Ruvarr.Testing.Builders;
 
@@ -12,16 +12,28 @@ using Shouldly;
 
 namespace Ruvarr.IntegrationTests.Programs.Queries;
 
-public sealed class GetProgramTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class GetProgramHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>, IAsyncLifetime
 {
+    public async ValueTask InitializeAsync()
+    {
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.MigrateAsync();
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
     [Fact]
-    public async Task ReturnsOkWithCorrectShape()
+    public async Task ReturnsCorrectShape()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
 
         RuvProgram program = new RuvProgramBuilder()
             .WithRuvId(40001)
@@ -37,8 +49,7 @@ public sealed class GetProgramTests(IntegrationTestFactory factory) : IClassFixt
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        ProgramSummary? result = await factory.CreateClient()
-            .GetFromJsonAsync<ProgramSummary>("/programs/40001", cancellationToken);
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40001), cancellationToken);
 
         // Assert
         result.ShouldNotBeNull();
@@ -50,16 +61,19 @@ public sealed class GetProgramTests(IntegrationTestFactory factory) : IClassFixt
     }
 
     [Fact]
-    public async Task ReturnsNotFoundForUnknownRuvId()
+    public async Task ReturnsNullForUnknownRuvId()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
         // Act
-        HttpResponseMessage response = await factory.CreateClient()
-            .GetAsync("/programs/99999", cancellationToken);
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(99999), cancellationToken);
 
         // Assert
-        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        result.ShouldBeNull();
     }
 }

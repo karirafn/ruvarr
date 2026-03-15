@@ -1,29 +1,26 @@
-using System.Net;
-using System.Net.Http.Json;
-
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Queries.GetPrograms;
 
 using Shouldly;
 
 namespace Ruvarr.IntegrationTests.Programs.Queries;
 
-public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>, IAsyncLifetime
 {
-    [Fact]
-    public async Task ReturnsOk()
+    public async ValueTask InitializeAsync()
     {
-        // Arrange
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-
-        // Act
-        HttpResponseMessage result = await factory.CreateClient().GetAsync("/programs", cancellationToken);
-
-        // Assert
-        result.StatusCode.ShouldBe(HttpStatusCode.OK);
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.MigrateAsync();
     }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public async Task ReturnsProgramsWithoutEpisodes()
@@ -33,6 +30,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram program = RuvProgram.Create(20001, "RÚV1", "Test Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(program);
@@ -42,11 +41,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20001);
         found.ShouldNotBeNull();
         found.Channel.ShouldBe("RÚV1");
@@ -62,6 +61,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram matched = RuvProgram.Create(20002, "RÚV1", "Matched Program", null, multipleEpisodes: true);
         matched.MatchTvdb(TvdbSeries.Create(9001, "Some Series"));
@@ -73,11 +74,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs?isProgramMatched=false", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, IsProgramMatched: false, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.ShouldContain(p => p.ProgramRuvId == 20003);
         result.ShouldNotContain(p => p.ProgramRuvId == 20002);
     }
@@ -90,6 +91,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram multiEpisode = RuvProgram.Create(20010, "RÚV1", "Multi Episode Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(multiEpisode);
@@ -100,11 +103,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.ShouldContain(p => p.ProgramRuvId == 20010);
         result.ShouldNotContain(p => p.ProgramRuvId == 20011);
     }
@@ -117,6 +120,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram multiEpisode = RuvProgram.Create(20020, "RÚV1", "Multi Episode Unmatched", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(multiEpisode);
@@ -127,11 +132,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs?isProgramMatched=false", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, IsProgramMatched: false, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.ShouldContain(p => p.ProgramRuvId == 20020);
         result.ShouldNotContain(p => p.ProgramRuvId == 20021);
     }
@@ -144,6 +149,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram withUnmatched = RuvProgram.Create(20030, "RÚV1", "Program With Unmatched Episodes", null, multipleEpisodes: true);
         withUnmatched.MatchTvdb(TvdbSeries.Create(5001, "Some Series"));
@@ -158,11 +165,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs?isEpisodeMatched=false", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, IsEpisodeMatched: false), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         result.ShouldContain(p => p.ProgramRuvId == 20030);
         result.ShouldNotContain(p => p.ProgramRuvId == 20031);
     }
@@ -175,6 +182,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram program = RuvProgram.Create(20022, "RÚV1", "Series With Slug", null, multipleEpisodes: true);
         program.MatchTvdb(TvdbSeries.Create(3001, "Series With Slug", slug: "some-slug"));
@@ -182,11 +191,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20022);
         found.ShouldNotBeNull();
         found.TvdbUrl.ShouldBe(new Uri("https://www.thetvdb.com/series/some-slug"));
@@ -200,6 +209,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram program = RuvProgram.Create(20023, "RÚV1", "Series Without Slug", null, multipleEpisodes: true);
         program.MatchTvdb(TvdbSeries.Create(3002, "Series Without Slug"));
@@ -207,11 +218,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20023);
         found.ShouldNotBeNull();
         found.TvdbUrl.ShouldBeNull();
@@ -225,17 +236,19 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         RuvProgram program = RuvProgram.Create(20024, "RÚV1", "Unmatched Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20024);
         found.ShouldNotBeNull();
         found.TvdbUrl.ShouldBeNull();
@@ -249,6 +262,8 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
         TvdbSeries series = TvdbSeries.Create(4001, "Series With Bad Slug");
         series.UpdateSlug("bad?slug=1");
@@ -259,11 +274,11 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        List<ProgramSummary>? result = await factory.CreateClient()
-            .GetFromJsonAsync<List<ProgramSummary>>("/programs", cancellationToken);
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
 
         // Assert
-        result.ShouldNotBeNull();
         ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20025);
         found.ShouldNotBeNull();
         found.TvdbUrl.ShouldBeNull();

@@ -1,19 +1,28 @@
-using System.Net;
-using System.Net.Http.Json;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Extensions;
+using Ruvarr.Downloads.Queries.GetDownloadQueue;
 using Ruvarr.Programs.Domain;
 
 using Shouldly;
 
 namespace Ruvarr.IntegrationTests.Programs.Episodes.Queries;
 
-public sealed class GetDownloadQueueTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>
+public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory) : IClassFixture<IntegrationTestFactory>, IAsyncLifetime
 {
+    public async ValueTask InitializeAsync()
+    {
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.MigrateAsync();
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
     [Fact]
     public async Task DoesNotReturnOrphanedItems()
     {
@@ -22,6 +31,8 @@ public sealed class GetDownloadQueueTests(IntegrationTestFactory factory) : ICla
 
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>>>();
 
         RuvProgram program = RuvProgram.Create(2, "RÚV1", "Test Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(program);
@@ -41,14 +52,11 @@ public sealed class GetDownloadQueueTests(IntegrationTestFactory factory) : ICla
             cancellationToken);
 
         // Act
-        HttpResponseMessage response = await factory.CreateClient()
-            .GetAsync("/programs/download-queue?includeDownloaded=true", cancellationToken);
+        List<DownloadQueueItemSummary> items = await handler.Handle(
+            new GetDownloadQueueQuery(IncludeDownloaded: true),
+            cancellationToken);
 
         // Assert
-        response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        List<DownloadQueueItemSummary>? items = await response.Content
-            .ReadFromJsonAsync<List<DownloadQueueItemSummary>>(cancellationToken);
-        items.ShouldNotBeNull();
         items.ShouldAllBe(x => x.EpisodeRuvId != null);
     }
 }
