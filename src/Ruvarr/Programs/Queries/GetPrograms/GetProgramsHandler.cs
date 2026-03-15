@@ -44,6 +44,11 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 x.Episodes.Any(e => e.TvdbId == null));
         }
 
+        if (request.IsEpisodeMatched is not null)
+        {
+            query = query.Where(x => x.Episodes.Any(e => (e.TvdbId == null) != request.IsEpisodeMatched));
+        }
+
         IAsyncEnumerable<ProgramSummary> results = query
             .OrderBy(x => x.Name)
             .Select(x => new

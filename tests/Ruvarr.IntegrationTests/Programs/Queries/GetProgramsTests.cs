@@ -137,6 +137,37 @@ public sealed class GetProgramsTests(IntegrationTestFactory factory) : IClassFix
     }
 
     [Fact]
+    public async Task FiltersByUnmatchedEpisodes()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram withUnmatched = RuvProgram.Create(20030, "RÚV1", "Program With Unmatched Episodes", null, multipleEpisodes: true);
+        withUnmatched.MatchTvdb(TvdbSeries.Create(5001, "Some Series"));
+        dbContext.Set<RuvProgram>().Add(withUnmatched);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        withUnmatched.TryAddEpisode("WU-EP1", new Uri("https://example.com/wu-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvProgram allMatched = RuvProgram.Create(20031, "RÚV1", "Program With All Matched Episodes", null, multipleEpisodes: true);
+        allMatched.MatchTvdb(TvdbSeries.Create(5002, "Other Series"));
+        dbContext.Set<RuvProgram>().Add(allMatched);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary>? result = await factory.CreateClient()
+            .GetFromJsonAsync<List<ProgramSummary>>("/programs?isEpisodeMatched=false", cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain(p => p.ProgramRuvId == 20030);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20031);
+    }
+
+    [Fact]
     public async Task ReturnsTvdbUrlWhenSeriesHasSlug()
     {
         // Arrange

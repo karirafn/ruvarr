@@ -5,4 +5,5 @@ public sealed record GetProgramsQuery(
     bool? IsProgramMonitored,
     bool? IsProgramMissingEpisodes,
     bool? IsProgramMatched,
-    bool? IsProgramPartiallyMatched);
+    bool? IsProgramPartiallyMatched,
+    bool? IsEpisodeMatched);
