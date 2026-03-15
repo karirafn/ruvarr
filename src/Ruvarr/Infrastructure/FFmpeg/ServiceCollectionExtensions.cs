@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-
-namespace Ruvarr.Infrastructure.FFmpeg;
+﻿namespace Ruvarr.Infrastructure.FFmpeg;
 
 internal static class ServiceCollectionExtensions
 {

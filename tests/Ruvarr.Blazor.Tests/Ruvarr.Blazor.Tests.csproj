@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Ruvarr.Blazor\Ruvarr.Blazor.csproj" />
+    <ProjectReference Include="..\..\src\Ruvarr\Ruvarr.csproj" />
   </ItemGroup>
 
 </Project>

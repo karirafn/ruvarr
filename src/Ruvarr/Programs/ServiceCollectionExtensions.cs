@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-using Ruvarr.Abstractions;
+﻿using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Commands.DownloadEpisode;
 using Ruvarr.Programs.Commands.MatchEpisode;
@@ -8,8 +6,8 @@ using Ruvarr.Programs.Commands.MatchProgramEpisodes;
 using Ruvarr.Programs.Commands.RefreshProgram;
 using Ruvarr.Programs.Queries.GetEpisodes;
 using Ruvarr.Programs.Queries.GetProgram;
-using Ruvarr.Programs.Queries.GetPrograms;
 using Ruvarr.Programs.Queries.GetProgramEpisodes;
+using Ruvarr.Programs.Queries.GetPrograms;
 
 namespace Ruvarr.Programs;
 

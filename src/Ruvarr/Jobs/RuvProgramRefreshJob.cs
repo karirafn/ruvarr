@@ -1,13 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using Quartz;
 
-using Ruvarr.Programs;
-using Ruvarr.Programs.Domain;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
+using Ruvarr.Programs;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Jobs;
 
