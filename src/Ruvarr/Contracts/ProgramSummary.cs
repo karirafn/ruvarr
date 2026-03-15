@@ -7,4 +7,5 @@ public sealed record ProgramSummary(
     bool IsMonitored,
     bool HasMissingEpisodes,
     string? SeriesName,
-    Uri? TvdbUrl);
+    Uri? TvdbUrl,
+    int? TvdbSeriesId);

@@ -5,6 +5,7 @@
 @using Ruvarr.Abstractions
 @using Ruvarr.Contracts
 @using Ruvarr.ProgramRefreshQueue.Notifiers
+@using Ruvarr.Programs.Commands.MatchProgram
 @using Ruvarr.Programs.Commands.RefreshProgram
 @using Ruvarr.Programs.Queries.GetPrograms
 @inject IServiceScopeFactory ScopeFactory
@@ -64,6 +65,7 @@ else
     }
     else
     {
+        <MatchProgramDialog @ref="_matchProgramDialog" OnMatchComplete="LoadProgramsAsync" />
         <table class="programs-table">
             <thead>
                 <tr>
@@ -123,6 +125,18 @@ else
                         </td>
                         <td>
                             <div class="row-actions">
+                                @if (program.TvdbSeriesId is null)
+                                {
+                                    <button class="icon-button" @onclick="() => OpenMatchProgramDialog(program)" title="Match to TVDB">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             aria-label="Match to TVDB">
+                                            <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+                                            <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
+                                            <line x1="8" y1="12" x2="16" y2="12" />
+                                        </svg>
+                                    </button>
+                                }
                                 @if (_refreshQueue.TryGetValue(program.ProgramRuvId, out ProgramRefreshStatus status) && status == ProgramRefreshStatus.Processing)
                                 {
                                     <span class="icon-button">
@@ -175,6 +189,7 @@ else
         _filterMonitored ||
         !string.IsNullOrEmpty(_filterChannel);
 
+    private MatchProgramDialog? _matchProgramDialog;
     private List<ProgramSummary>? _programs;
     private string _searchText = string.Empty;
     private readonly HashSet<int> _pendingRefresh = [];
@@ -266,6 +281,12 @@ else
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task OpenMatchProgramDialog(ProgramSummary program)
+    {
+        await _matchProgramDialog!.OpenAsync(program.ProgramRuvId, program.TvdbSeriesId);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]

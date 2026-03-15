@@ -20,6 +20,7 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
                 x.HasMissingEpisodes,
                 SeriesName = x.Series!.Name,
                 SeriesSlug = x.Series!.Slug,
+                SeriesTvdbId = (int?)x.Series!.TvdbId,
             })
             .Select(x => new ProgramSummary(
                 x.Channel,
@@ -28,6 +29,7 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
                 x.IsMonitored,
                 x.HasMissingEpisodes,
                 x.SeriesName,
-                x.SeriesSlug != null ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(x.SeriesSlug)}") : null))
+                x.SeriesSlug != null ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(x.SeriesSlug)}") : null,
+                x.SeriesTvdbId))
             .FirstOrDefaultAsync(cancellationToken);
 }
