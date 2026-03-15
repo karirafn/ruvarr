@@ -1,0 +1,133 @@
+@namespace Ruvarr.Programs
+@using Ruvarr.Abstractions
+@using Ruvarr.Programs.Commands.MatchProgram
+@implements IAsyncDisposable
+@inject IServiceScopeFactory ScopeFactory
+@inject IJSRuntime Js
+
+<dialog @ref="_dialog" @onclose="OnDialogClose">
+    <h2>Match to TVDB</h2>
+    <label>
+        TVDB Series ID
+        <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" @onkeydown="HandleKeyDown" />
+    </label>
+    @if (_errorMessage is not null)
+    {
+        <p class="dialog-error">@_errorMessage</p>
+    }
+    <div class="dialog-actions">
+        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@IsMatchDisabled(_tvdbIdInput, _currentTvdbSeriesId, _isSubmitting)">
+            @if (_isSubmitting)
+            {
+                <span class="button-spinner"></span>
+            }
+            Match
+        </button>
+        <button class="dialog-button" @onclick="CloseAsync" disabled="@_isSubmitting">Cancel</button>
+    </div>
+</dialog>
+
+@code {
+    [Parameter]
+    public EventCallback OnMatchComplete { get; set; }
+
+    private ElementReference _dialog;
+    private int? _ruvId;
+    private string _tvdbIdInput = string.Empty;
+    private int? _currentTvdbSeriesId;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private readonly CancellationTokenSource _cts = new();
+
+    public async Task OpenAsync(int ruvId, int? currentTvdbSeriesId)
+    {
+        _ruvId = ruvId;
+        _currentTvdbSeriesId = currentTvdbSeriesId;
+        _tvdbIdInput = currentTvdbSeriesId?.ToString() ?? string.Empty;
+        _errorMessage = null;
+        await InvokeAsync(StateHasChanged);
+        await Js.InvokeVoidAsync("showDialog", _dialog);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task CloseAsync()
+    {
+        await Js.InvokeVoidAsync("closeDialog", _dialog);
+    }
+
+    private void OnDialogClose()
+    {
+        _ruvId = null;
+        _currentTvdbSeriesId = null;
+        _tvdbIdInput = string.Empty;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task SubmitMatch()
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbSeriesId) || tvdbSeriesId <= 0)
+        {
+            _isSubmitting = false;
+            return;
+        }
+
+        try
+        {
+            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+            IRequestHandler<MatchProgramCommand> handler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<MatchProgramCommand>>();
+            RuvarrResult result = await handler.Handle(new MatchProgramCommand(_ruvId.Value, tvdbSeriesId), _cts.Token);
+
+            if (!result.IsSuccess)
+            {
+                _errorMessage = result.Error.Description;
+                return;
+            }
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+
+        await CloseAsync();
+        await OnMatchComplete.InvokeAsync();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onkeydown")]
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !IsMatchDisabled(_tvdbIdInput, _currentTvdbSeriesId, _isSubmitting))
+        {
+            await SubmitMatch();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _cts.Dispose();
+    }
+
+    internal static bool IsMatchDisabled(string input, int? currentTvdbSeriesId, bool isSubmitting)
+    {
+        if (isSubmitting)
+        {
+            return true;
+        }
+
+        if (!int.TryParse(input, out int parsed) || parsed <= 0)
+        {
+            return true;
+        }
+
+        return parsed == currentTvdbSeriesId;
+    }
+}

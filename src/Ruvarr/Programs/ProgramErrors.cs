@@ -27,6 +27,10 @@ public static class ProgramErrors
         "Episodes.UnparsableTitle",
         "Episode titles must be on start with 'Þáttur' followed by an integer for them to be parsable.");
 
+    public static RuvarrError TvdbSeriesIdOutOfRange => new(
+        "Programs.TvdbSeriesIdOutOfRange",
+        "TVDB series ID must be between 1 and 10,000,000.");
+
     public static RuvarrError SeasonUndetermined => new(
         "Episodes.SeasonUndetermined",
         "TVDB has multiple seasons. Failed to determine which season the RÚV episodes are from.");

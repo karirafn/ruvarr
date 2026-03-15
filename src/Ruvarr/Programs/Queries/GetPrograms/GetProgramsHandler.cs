@@ -60,6 +60,7 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 x.HasMissingEpisodes,
                 SeriesName = x.Series!.Name,
                 SeriesSlug = x.Series!.Slug,
+                SeriesTvdbId = (int?)x.Series!.TvdbId,
             })
             .AsAsyncEnumerable()
             .Select(x => new ProgramSummary(
@@ -69,7 +70,8 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 x.IsMonitored,
                 x.HasMissingEpisodes,
                 x.SeriesName,
-                x.SeriesSlug is { } slug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(slug)}") : null));
+                x.SeriesSlug is { } slug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(slug)}") : null,
+                x.SeriesTvdbId));
 
         await foreach (ProgramSummary summary in results.WithCancellation(cancellationToken))
         {
