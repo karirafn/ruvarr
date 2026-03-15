@@ -17,6 +17,7 @@ internal static class GetProgramListEndpoint
             [FromQuery] bool? isProgramMissingEpisodes,
             [FromQuery] bool? isProgramMatched,
             [FromQuery] bool? isProgramPartiallyMatched,
+            [FromQuery] bool? isEpisodeMatched,
             CancellationToken cancellationToken) =>
         {
             GetProgramsQuery query = new(
@@ -24,7 +25,8 @@ internal static class GetProgramListEndpoint
                 IsProgramMonitored: isProgramMonitored,
                 IsProgramMissingEpisodes: isProgramMissingEpisodes,
                 IsProgramMatched: isProgramMatched,
-                IsProgramPartiallyMatched: isProgramPartiallyMatched);
+                IsProgramPartiallyMatched: isProgramPartiallyMatched,
+                IsEpisodeMatched: isEpisodeMatched);
 
             return handler.Handle(query, cancellationToken);
         })

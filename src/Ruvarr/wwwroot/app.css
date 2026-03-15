@@ -263,35 +263,103 @@ tbody tr:hover {
 .queue-status--downloading { color: #60a5fa; }
 .queue-status--complete { color: #4ade80; }
 
-.filter-bar {
+.filter-panel {
     display: flex;
-    gap: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
     margin-bottom: 1rem;
 }
 
-.filter-button {
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    padding: 0.55rem 1rem;
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 0.85rem;
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
     font-weight: 500;
     letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.filter-chip:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.filter-chip--active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.filter-chip input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+.filter-divider {
+    width: 1px;
+    height: 1.25rem;
+    background: rgba(255, 255, 255, 0.12);
+    flex-shrink: 0;
+}
+
+.filter-select {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.35rem 1.75rem 0.35rem 0.6rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    transition: border-color 0.15s ease;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.filter-select option {
+    background-color: #2a2a2a;
+}
+
+.filter-clear {
+    margin-left: auto;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: color 0.15s ease, border-color 0.15s ease;
-    white-space: nowrap;
 }
 
-.filter-button:hover {
+.filter-clear:hover {
     color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
-.filter-button--active {
-    color: #fff;
-    border-bottom-color: #fff;
+.filter-clear:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .search-bar {

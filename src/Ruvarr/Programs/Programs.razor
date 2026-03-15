@@ -9,16 +9,39 @@
 @using Ruvarr.Programs.Queries.GetPrograms
 @inject IServiceScopeFactory ScopeFactory
 @inject ProgramRefreshNotifier RefreshNotifier
-@inject NavigationManager Navigation
 
 <h1>Programs</h1>
 
-<div class="filter-bar">
-    <button class="filter-button @(Filter is null or "" ? "filter-button--active" : "")" @onclick='() => NavigateTo("")'>All</button>
-    <button class="filter-button @(Filter == "unmatched-programs" ? "filter-button--active" : "")" @onclick='() => NavigateTo("unmatched-programs")'>Unmatched Programs</button>
-    <button class="filter-button @(Filter == "unmatched-episodes" ? "filter-button--active" : "")" @onclick='() => NavigateTo("unmatched-episodes")'>Unmatched Episodes</button>
-    <button class="filter-button @(Filter == "missing-from-sonarr" ? "filter-button--active" : "")" @onclick='() => NavigateTo("missing-from-sonarr")'>Missing from Sonarr</button>
-    <button class="filter-button @(Filter == "partially-matched" ? "filter-button--active" : "")" @onclick='() => NavigateTo("partially-matched")'>Partially Matched</button>
+<div class="filter-panel">
+    <label class="filter-chip @(_filterUnmatchedPrograms ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="_filterUnmatchedPrograms" @bind:after="LoadProgramsAsync" />
+        Unmatched Programs
+    </label>
+    <label class="filter-chip @(_filterUnmatchedEpisodes ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="_filterUnmatchedEpisodes" @bind:after="LoadProgramsAsync" />
+        Unmatched Episodes
+    </label>
+    <label class="filter-chip @(_filterMissingFromSonarr ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="_filterMissingFromSonarr" @bind:after="LoadProgramsAsync" />
+        Missing from Sonarr
+    </label>
+    <label class="filter-chip @(_filterPartiallyMatched ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="_filterPartiallyMatched" @bind:after="LoadProgramsAsync" />
+        Partially Matched
+    </label>
+    <label class="filter-chip @(_filterMonitored ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="_filterMonitored" @bind:after="LoadProgramsAsync" />
+        Monitored
+    </label>
+    <span class="filter-divider"></span>
+    <select class="filter-select" @bind="_filterChannel">
+        <option value="">All channels</option>
+        @foreach (string channel in _channels)
+        {
+            <option value="@channel">@channel</option>
+        }
+    </select>
+    <button class="filter-clear" @onclick="ClearFilters" disabled="@(!HasActiveFilters)">Clear filters</button>
 </div>
 
 <div class="search-bar">
@@ -31,13 +54,13 @@
 }
 else
 {
-    List<ProgramSummary> visibleList = string.IsNullOrWhiteSpace(_searchText)
-        ? [.. _programs]
-        : [.. _programs.Where(p => p.ProgramName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))];
+    List<ProgramSummary> visibleList = [.. _programs
+        .Where(p => string.IsNullOrWhiteSpace(_searchText) || p.ProgramName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+        .Where(p => string.IsNullOrEmpty(_filterChannel) || p.Channel == _filterChannel)];
 
     if (visibleList.Count == 0)
     {
-        <p class="empty-message">@GetEmptyMessage()</p>
+        <p class="empty-message">@(HasActiveFilters ? "No programs match the selected filters." : "No programs found.")</p>
     }
     else
     {
@@ -136,32 +159,30 @@ else
 }
 
 @code {
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "filter")]
-    public string? Filter { get; set; }
+    private bool _filterUnmatchedPrograms;
+    private bool _filterUnmatchedEpisodes;
+    private bool _filterMissingFromSonarr;
+    private bool _filterPartiallyMatched;
+    private bool _filterMonitored;
+    private string _filterChannel = string.Empty;
+    private List<string> _channels = [];
+
+    private bool HasActiveFilters =>
+        _filterUnmatchedPrograms ||
+        _filterUnmatchedEpisodes ||
+        _filterMissingFromSonarr ||
+        _filterPartiallyMatched ||
+        _filterMonitored ||
+        !string.IsNullOrEmpty(_filterChannel);
 
     private List<ProgramSummary>? _programs;
-    private string? _loadedFilter;
     private string _searchText = string.Empty;
     private readonly HashSet<int> _pendingRefresh = [];
     private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();
 
-    private static readonly HashSet<string> AllowedFilters =
-    [
-        "unmatched-programs",
-        "unmatched-episodes",
-        "missing-from-sonarr",
-        "partially-matched"
-    ];
-
     protected override Task OnInitializedAsync()
     {
-        if (Filter is not null && !AllowedFilters.Contains(Filter))
-        {
-            Filter = null;
-        }
-
         _ = WatchAsync();
         _ = LoadProgramsAsync();
         return Task.CompletedTask;
@@ -186,35 +207,44 @@ else
         _cts.Dispose();
     }
 
-    protected override async Task OnParametersSetAsync()
+    private async Task ClearFilters()
     {
-        if (Filter is not null && !AllowedFilters.Contains(Filter))
-        {
-            Filter = null;
-        }
-
-        if (_loadedFilter == Filter)
-        {
-            return;
-        }
-
-        _programs = null;
+        _filterUnmatchedPrograms = false;
+        _filterUnmatchedEpisodes = false;
+        _filterMissingFromSonarr = false;
+        _filterPartiallyMatched = false;
+        _filterMonitored = false;
+        _filterChannel = string.Empty;
         await LoadProgramsAsync();
     }
 
     private async Task LoadProgramsAsync()
     {
         _programs = null;
-        _loadedFilter = Filter;
         await InvokeAsync(StateHasChanged);
 
-        GetProgramsQuery query = Filter switch
+        bool? isProgramMatched = (_filterUnmatchedPrograms, _filterUnmatchedEpisodes) switch
         {
-            "unmatched-programs" => new GetProgramsQuery(null, null, null, IsProgramMatched: false, null),
-            "missing-from-sonarr" => new GetProgramsQuery(null, IsProgramMonitored: true, IsProgramMissingEpisodes: true, null, null),
-            "partially-matched" => new GetProgramsQuery(null, null, null, null, IsProgramPartiallyMatched: true),
-            _ => new GetProgramsQuery(null, null, null, null, null),
+            (true, false) => false,
+            (false, true) => true,
+            _ => null
         };
+
+        bool? isEpisodeMatched = _filterUnmatchedEpisodes ? false : null;
+
+        bool? isProgramMonitored = (_filterMonitored || _filterMissingFromSonarr) ? true : null;
+
+        bool? isProgramMissingEpisodes = _filterMissingFromSonarr ? true : null;
+
+        bool? isProgramPartiallyMatched = _filterPartiallyMatched ? true : null;
+
+        GetProgramsQuery query = new(
+            null,
+            isProgramMonitored,
+            isProgramMissingEpisodes,
+            isProgramMatched,
+            isProgramPartiallyMatched,
+            isEpisodeMatched);
 
         List<ProgramSummary> loaded = [];
         await using (AsyncServiceScope scope = ScopeFactory.CreateAsyncScope())
@@ -226,24 +256,17 @@ else
                 loaded.Add(program);
             }
         }
+
         _programs = loaded;
+        _channels = [.. _programs.Select(p => p.Channel).Distinct().Order()];
+
+        if (!string.IsNullOrEmpty(_filterChannel) && !_channels.Contains(_filterChannel))
+        {
+            _filterChannel = string.Empty;
+        }
+
         await InvokeAsync(StateHasChanged);
     }
-
-    private void NavigateTo(string filter)
-    {
-        string url = string.IsNullOrEmpty(filter) ? "/" : $"/?filter={Uri.EscapeDataString(filter)}";
-        Navigation.NavigateTo(url);
-    }
-
-    private string GetEmptyMessage() => Filter switch
-    {
-        "unmatched-programs" => "No unmatched programs found.",
-        "unmatched-episodes" => "No unmatched episodes found.",
-        "missing-from-sonarr" => "No programs with missing episodes found.",
-        "partially-matched" => "No partially matched programs found.",
-        _ => "No programs found.",
-    };
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task RefreshProgram(int ruvId)
