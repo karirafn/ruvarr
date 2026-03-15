@@ -1,17 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using Quartz;
 
 using Ruvarr.Downloads;
 using Ruvarr.Infrastructure.FFmpeg;
-using Ruvarr.Jobs;
-using Ruvarr.Programs;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
+using Ruvarr.Jobs;
+using Ruvarr.Programs;
 
 using TMDbLib.Client;
 
@@ -79,7 +77,7 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
 
-JobKey downloadQueue = new(nameof(DownloadQueueProcessor));
+            JobKey downloadQueue = new(nameof(DownloadQueueProcessor));
             options.AddJob<DownloadQueueProcessor>(x => x.WithIdentity(downloadQueue))
                 .AddTrigger(trigger => trigger
                     .ForJob(downloadQueue)

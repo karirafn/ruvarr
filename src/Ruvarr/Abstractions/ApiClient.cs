@@ -1,8 +1,4 @@
-﻿using System.Net.Http.Json;
-
-using Microsoft.Extensions.Logging;
-
-namespace Ruvarr.Abstractions;
+﻿namespace Ruvarr.Abstractions;
 
 internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
 {

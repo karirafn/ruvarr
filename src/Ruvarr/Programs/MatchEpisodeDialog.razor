@@ -1,0 +1,105 @@
+@namespace Ruvarr.Blazor.Programs
+@inject RuvApiClient ApiClient
+@inject IJSRuntime Js
+
+<dialog @ref="_dialog" @onclose="OnDialogClose">
+    <h2>Match to TVDB</h2>
+    <label>
+        TVDB Episode ID
+        <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" @onkeydown="HandleKeyDown" />
+    </label>
+    <div class="dialog-actions">
+        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@IsMatchDisabled(_tvdbIdInput, _currentTvdbId, _isSubmitting)">
+            @if (_isSubmitting)
+            {
+                <span class="button-spinner"></span>
+            }
+            Match
+        </button>
+        <button class="dialog-button" @onclick="CloseAsync" disabled="@_isSubmitting">Cancel</button>
+    </div>
+</dialog>
+
+@code {
+    [Parameter]
+    public EventCallback OnMatchComplete { get; set; }
+
+    private ElementReference _dialog;
+    private string? _ruvId;
+    private string _tvdbIdInput = string.Empty;
+    private int? _currentTvdbId;
+    private bool _isSubmitting;
+
+    public async Task OpenAsync(string ruvId, int? currentTvdbId)
+    {
+        _ruvId = ruvId;
+        _currentTvdbId = currentTvdbId;
+        _tvdbIdInput = currentTvdbId?.ToString() ?? string.Empty;
+        await Js.InvokeVoidAsync("showDialog", _dialog);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task CloseAsync()
+    {
+        await Js.InvokeVoidAsync("closeDialog", _dialog);
+    }
+
+    private void OnDialogClose()
+    {
+        _ruvId = null;
+        _currentTvdbId = null;
+        _tvdbIdInput = string.Empty;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task SubmitMatch()
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+
+        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId) || tvdbId <= 0)
+        {
+            _isSubmitting = false;
+            return;
+        }
+
+        try
+        {
+            await ApiClient.MatchEpisodeAsync(_ruvId, tvdbId);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+        await CloseAsync();
+        await OnMatchComplete.InvokeAsync();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onkeydown")]
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !IsMatchDisabled(_tvdbIdInput, _currentTvdbId, _isSubmitting))
+        {
+            await SubmitMatch();
+        }
+    }
+
+    internal static bool IsMatchDisabled(string input, int? currentTvdbId, bool isSubmitting)
+    {
+        if (isSubmitting)
+        {
+            return true;
+        }
+
+        if (!int.TryParse(input, out int parsed) || parsed <= 0)
+        {
+            return true;
+        }
+
+        return parsed == currentTvdbId;
+    }
+}

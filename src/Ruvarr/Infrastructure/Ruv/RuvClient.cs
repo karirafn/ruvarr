@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-using Ruvarr.Abstractions;
+﻿using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv.Models;
 
 namespace Ruvarr.Infrastructure.Ruv;

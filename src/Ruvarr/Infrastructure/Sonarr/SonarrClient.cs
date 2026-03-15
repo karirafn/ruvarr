@@ -1,8 +1,6 @@
 ﻿using System.Collections.Specialized;
 using System.Web;
 
-using Microsoft.Extensions.Logging;
-
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr.Models;
 

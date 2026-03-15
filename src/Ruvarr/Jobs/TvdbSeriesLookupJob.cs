@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 using Quartz;
 

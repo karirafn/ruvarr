@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Ruvarr.Api\Ruvarr.Api.csproj" />
+    <ProjectReference Include="..\..\src\Ruvarr\Ruvarr.csproj" />
     <ProjectReference Include="..\Ruvarr.Testing\Ruvarr.Testing.csproj" />
   </ItemGroup>
 
