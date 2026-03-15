@@ -21,7 +21,8 @@ internal sealed class GetDownloadQueueHandler(RuvarrDbContext dbContext)
 
         return await query
             .OrderBy(x => x.Downloaded.HasValue)
-            .ThenByDescending(x => x.Created)
+            .ThenByDescending(x => x.Status == DownloadQueueStatus.Downloading)
+            .ThenBy(x => x.Created)
             .Select(x => new DownloadQueueItemSummary(
                 x.Episode.RuvId,
                 x.Episode.Title,

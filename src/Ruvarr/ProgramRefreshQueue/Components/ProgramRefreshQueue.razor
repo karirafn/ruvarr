@@ -26,7 +26,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (ProgramRefreshQueueItemSummary item in _items.OrderByDescending(x => x.Status))
+            @foreach (ProgramRefreshQueueItemSummary item in _items)
             {
                 <tr>
                     <td>@item.ProgramName</td>

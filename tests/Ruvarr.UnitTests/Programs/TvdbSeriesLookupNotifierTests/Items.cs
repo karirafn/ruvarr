@@ -50,4 +50,39 @@ public sealed class Items
         // Assert
         sut.Items.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void ReturnsPendingItemsInEnqueueOrder()
+    {
+        // Arrange
+        TvdbSeriesLookupNotifier sut = new();
+
+        // Act
+        sut.Enqueue(2, "Program B");
+        sut.Enqueue(1, "Program A");
+
+        // Assert
+        IReadOnlyList<TvdbSeriesLookupQueueItemSummary> items = sut.Items;
+        items.Count.ShouldBe(2);
+        items[0].RuvId.ShouldBe(2);
+        items[1].RuvId.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ReturnsProcessingItemBeforePendingItems()
+    {
+        // Arrange
+        TvdbSeriesLookupNotifier sut = new();
+        sut.Enqueue(1, "Program A");
+        sut.Enqueue(2, "Program B");
+
+        // Act
+        sut.MarkProcessing(2);
+
+        // Assert
+        IReadOnlyList<TvdbSeriesLookupQueueItemSummary> items = sut.Items;
+        items.Count.ShouldBe(2);
+        items[0].RuvId.ShouldBe(2);
+        items[1].RuvId.ShouldBe(1);
+    }
 }

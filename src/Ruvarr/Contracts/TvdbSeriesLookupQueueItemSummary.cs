@@ -3,4 +3,7 @@ namespace Ruvarr.Contracts;
 public sealed record TvdbSeriesLookupQueueItemSummary(
     int RuvId,
     string ProgramName,
-    TvdbSeriesLookupStatus Status) : IQueueItemSummary;
+    TvdbSeriesLookupStatus Status) : IQueueItemSummary
+{
+    public bool IsProcessing => Status == TvdbSeriesLookupStatus.Processing;
+}
