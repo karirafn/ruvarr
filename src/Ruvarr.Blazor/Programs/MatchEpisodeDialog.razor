@@ -5,7 +5,7 @@
     <h2>Match to TVDB</h2>
     <label>
         TVDB Episode ID
-        <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" />
+        <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" @onkeydown="HandleKeyDown" />
     </label>
     <div class="dialog-actions">
         <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@IsMatchDisabled(_tvdbIdInput, _currentTvdbId, _isSubmitting)">
@@ -53,12 +53,19 @@
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task SubmitMatch()
     {
-        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId) || tvdbId <= 0)
+        if (_isSubmitting)
         {
             return;
         }
 
         _isSubmitting = true;
+
+        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId) || tvdbId <= 0)
+        {
+            _isSubmitting = false;
+            return;
+        }
+
         try
         {
             await ApiClient.MatchEpisodeAsync(_ruvId, tvdbId);
@@ -69,6 +76,15 @@
         }
         await CloseAsync();
         await OnMatchComplete.InvokeAsync();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onkeydown")]
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !IsMatchDisabled(_tvdbIdInput, _currentTvdbId, _isSubmitting))
+        {
+            await SubmitMatch();
+        }
     }
 
     internal static bool IsMatchDisabled(string input, int? currentTvdbId, bool isSubmitting)
