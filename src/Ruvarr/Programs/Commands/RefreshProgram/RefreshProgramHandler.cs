@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
 
 namespace Ruvarr.Programs.Commands.RefreshProgram;
 

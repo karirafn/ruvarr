@@ -1,11 +1,12 @@
-@page "/tvdb-series-lookup-queue"
+@page "/program-refresh-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@namespace Ruvarr.ProgramRefreshQueue.Components
 @using Ruvarr.Contracts
-@using Ruvarr.Programs
-@inject TvdbSeriesLookupNotifier LookupNotifier
+@using Ruvarr.ProgramRefreshQueue.Notifiers
+@inject ProgramRefreshNotifier RefreshNotifier
 @implements IAsyncDisposable
 
-<h1>TVDB Series Lookup Queue</h1>
+<h1>Program Refresh Queue</h1>
 
 @if (_items is null)
 {
@@ -13,7 +14,7 @@
 }
 else if (_items.Count == 0)
 {
-    <p>No programs pending TVDB series lookup.</p>
+    <p>No programs pending refresh.</p>
 }
 else
 {
@@ -25,20 +26,20 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (TvdbSeriesLookupQueueItemSummary item in _items.OrderByDescending(x => x.Status))
+            @foreach (ProgramRefreshQueueItemSummary item in _items.OrderByDescending(x => x.Status))
             {
                 <tr>
                     <td>@item.ProgramName</td>
                     <td class="queue-status queue-status--@item.Status.ToString().ToLowerInvariant()">
                         @switch (item.Status)
                         {
-                            case TvdbSeriesLookupStatus.Pending:
+                            case ProgramRefreshStatus.Pending:
                                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Pending">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="12 6 12 12 16 14" />
                                 </svg>
                                 break;
-                            case TvdbSeriesLookupStatus.Processing:
+                            case ProgramRefreshStatus.Processing:
                                 <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Processing">
                                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                                 </svg>
@@ -52,7 +53,7 @@ else
 }
 
 @code {
-    private IReadOnlyList<TvdbSeriesLookupQueueItemSummary>? _items;
+    private IReadOnlyList<ProgramRefreshQueueItemSummary>? _items;
     private readonly CancellationTokenSource _cts = new();
 
     protected override Task OnInitializedAsync()
@@ -63,12 +64,12 @@ else
 
     private async Task WatchAsync()
     {
-        _items = LookupNotifier.Items;
+        _items = RefreshNotifier.Items;
         await InvokeAsync(StateHasChanged);
 
-        await foreach (byte _ in LookupNotifier.WatchAsync(_cts.Token))
+        await foreach (byte _ in RefreshNotifier.WatchAsync(_cts.Token))
         {
-            _items = LookupNotifier.Items;
+            _items = RefreshNotifier.Items;
             await InvokeAsync(StateHasChanged);
         }
     }

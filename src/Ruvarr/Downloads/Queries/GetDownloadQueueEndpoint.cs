@@ -4,7 +4,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
 
-namespace Ruvarr.Programs.Queries;
+namespace Ruvarr.Downloads.Queries;
 
 internal static class GetDownloadQueueEndpoint
 {

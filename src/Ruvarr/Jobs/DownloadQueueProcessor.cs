@@ -5,8 +5,8 @@ using Microsoft.Extensions.Options;
 using Quartz;
 
 using Ruvarr.Contracts;
-using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;

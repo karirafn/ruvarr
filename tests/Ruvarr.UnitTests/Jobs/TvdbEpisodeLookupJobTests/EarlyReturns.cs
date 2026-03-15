@@ -6,8 +6,8 @@ using NSubstitute;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
-using Ruvarr.Jobs;
-using Ruvarr.Programs;
+using Ruvarr.TvdbEpisodeLookup.Jobs;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 

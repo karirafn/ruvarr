@@ -1,4 +1,4 @@
-using Ruvarr.Programs;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
 
 using Shouldly;
 

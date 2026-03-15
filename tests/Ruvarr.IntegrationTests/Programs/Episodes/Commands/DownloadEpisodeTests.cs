@@ -3,8 +3,8 @@ using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Downloads.Extensions;
 using Ruvarr.Programs.Domain;
 
 using Shouldly;

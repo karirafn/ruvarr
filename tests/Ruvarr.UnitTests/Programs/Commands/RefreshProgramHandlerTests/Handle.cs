@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 
 using Ruvarr.Abstractions;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs;
 using Ruvarr.Programs.Commands.RefreshProgram;
 using Ruvarr.Programs.Domain;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;

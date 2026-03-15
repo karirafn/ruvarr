@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -7,10 +7,11 @@ using Quartz;
 using Ruvarr.Extensions;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
-using Ruvarr.Programs;
 using Ruvarr.Programs.Domain;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
+using Ruvarr.TvdbSeriesLookup.Notifiers;
 
-namespace Ruvarr.Jobs;
+namespace Ruvarr.TvdbSeriesLookup.Jobs;
 
 [DisallowConcurrentExecution]
 internal sealed class TvdbSeriesLookupJob(

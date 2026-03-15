@@ -8,8 +8,9 @@ using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
-using Ruvarr.Programs;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
 
 namespace Ruvarr.Jobs;
 

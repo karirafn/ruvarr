@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
-namespace Ruvarr.Downloads;
+namespace Ruvarr.Downloads.Notifiers;
 
 public sealed class DownloadQueueNotifier
 {

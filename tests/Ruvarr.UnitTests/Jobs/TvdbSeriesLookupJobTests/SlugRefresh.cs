@@ -7,8 +7,9 @@ using Quartz;
 
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
-using Ruvarr.Jobs;
-using Ruvarr.Programs;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
+using Ruvarr.TvdbSeriesLookup.Jobs;
+using Ruvarr.TvdbSeriesLookup.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 

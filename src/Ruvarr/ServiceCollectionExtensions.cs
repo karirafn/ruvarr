@@ -5,11 +5,16 @@ using Quartz;
 
 using Ruvarr.Downloads;
 using Ruvarr.Infrastructure.FFmpeg;
+using Ruvarr.Programs;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Jobs;
-using Ruvarr.Programs;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
+using Ruvarr.TvdbEpisodeLookup.Jobs;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
+using Ruvarr.TvdbSeriesLookup.Jobs;
+using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 using TMDbLib.Client;
 
