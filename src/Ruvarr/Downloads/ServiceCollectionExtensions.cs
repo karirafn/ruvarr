@@ -1,5 +1,6 @@
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
+using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
 using Ruvarr.Programs.Events;
 

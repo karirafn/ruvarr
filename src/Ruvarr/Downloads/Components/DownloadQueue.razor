@@ -1,8 +1,9 @@
 @page "/download-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@namespace Ruvarr.Downloads.Components
 @using Ruvarr.Abstractions
 @using Ruvarr.Contracts
-@using Ruvarr.Downloads
+@using Ruvarr.Downloads.Notifiers
 @using Ruvarr.Downloads.Queries.GetDownloadQueue
 @inject IServiceScopeFactory ScopeFactory
 @inject DownloadQueueNotifier DownloadNotifier

@@ -1,9 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Programs.Domain;
 
-namespace Ruvarr.Downloads;
+namespace Ruvarr.Downloads.Extensions;
 
 internal static class DbContextExtensions
 {

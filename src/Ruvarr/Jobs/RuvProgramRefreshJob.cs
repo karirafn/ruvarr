@@ -5,8 +5,9 @@ using Quartz;
 
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
-using Ruvarr.Programs;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 namespace Ruvarr.Jobs;
 

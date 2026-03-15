@@ -6,10 +6,10 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
-using Ruvarr.Programs;
 using Ruvarr.Programs.Domain;
+using Ruvarr.TvdbEpisodeLookup.Notifiers;
 
-namespace Ruvarr.Jobs;
+namespace Ruvarr.TvdbEpisodeLookup.Jobs;
 
 [DisallowConcurrentExecution]
 internal sealed class TvdbEpisodeLookupJob(

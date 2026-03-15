@@ -1,7 +1,7 @@
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 
-namespace Ruvarr.Programs;
+namespace Ruvarr.TvdbSeriesLookup.Notifiers;
 
 public sealed class TvdbSeriesLookupNotifier : QueueNotifier<TvdbSeriesLookupQueueItemSummary>
 {

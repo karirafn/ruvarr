@@ -1,3 +1,4 @@
+using Ruvarr.Downloads.Queries;
 using Ruvarr.Programs.Commands;
 using Ruvarr.Programs.Queries;
 

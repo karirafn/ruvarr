@@ -1,7 +1,8 @@
 @page "/tvdb-episode-lookup-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
+@namespace Ruvarr.TvdbEpisodeLookup.Components
 @using Ruvarr.Contracts
-@using Ruvarr.Programs
+@using Ruvarr.TvdbEpisodeLookup.Notifiers
 @inject TvdbEpisodeLookupNotifier LookupNotifier
 @implements IAsyncDisposable
 

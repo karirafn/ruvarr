@@ -1,7 +1,7 @@
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 
-namespace Ruvarr.Programs;
+namespace Ruvarr.ProgramRefreshQueue.Notifiers;
 
 public sealed class ProgramRefreshNotifier : QueueNotifier<ProgramRefreshQueueItemSummary>
 {

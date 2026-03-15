@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Downloads;
+using Ruvarr.Downloads.Extensions;
 using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Programs.Commands.DownloadEpisode;

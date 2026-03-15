@@ -1,5 +1,5 @@
 using Ruvarr.Contracts;
-using Ruvarr.Programs;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
 
 using Shouldly;
 
