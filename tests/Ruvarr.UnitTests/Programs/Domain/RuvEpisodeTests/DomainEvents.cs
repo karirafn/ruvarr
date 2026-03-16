@@ -65,21 +65,7 @@ public sealed class DomainEvents
     }
 
     [Fact]
-    public void Match_WhenIsMissingTrue_RaisesEpisodeMissingEvent()
-    {
-        // Arrange
-        RuvEpisode sut = new RuvEpisodeBuilder().Build();
-
-        // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
-
-        // Assert
-        EpisodeMissingEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMissingEvent>();
-        @event.Episode.ShouldBe(sut);
-    }
-
-    [Fact]
-    public void Match_WhenIsMissingFalse_DoesNotRaiseEvent()
+    public void Match_RaisesEpisodeMatchedEvent()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
@@ -88,6 +74,38 @@ public sealed class DomainEvents
         sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
 
         // Assert
-        sut.DomainEvents.ShouldBeEmpty();
+        EpisodeMatchedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
+        @event.Episode.ShouldBe(sut);
+    }
+
+    [Fact]
+    public void Match_WhenIsMissingTrue_RaisesBothEvents()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
+
+        // Assert
+        sut.DomainEvents.Count.ShouldBe(2);
+        sut.DomainEvents[0].ShouldBeOfType<EpisodeMatchedEvent>().Episode.ShouldBe(sut);
+        sut.DomainEvents[1].ShouldBeOfType<EpisodeMissingEvent>().Episode.ShouldBe(sut);
+    }
+
+    [Fact]
+    public void Match_OnRematch_RaisesEpisodeMatchedEvent()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.Match(tvdbId: 2, season: 2, episode: 5, isMissing: false);
+
+        // Assert
+        EpisodeMatchedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
+        @event.Episode.ShouldBe(sut);
     }
 }

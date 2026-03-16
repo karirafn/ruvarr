@@ -125,6 +125,7 @@ internal sealed partial class RuvEpisode
 
     public void Match(int tvdbId, int season, int episode, bool isMissing)
     {
+        _domainEvents.Add(new EpisodeMatchedEvent(this));
         Matched = DateTime.UtcNow;
         NextLookup = null;
         TvdbId = tvdbId;
