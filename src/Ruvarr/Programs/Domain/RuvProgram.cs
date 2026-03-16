@@ -111,7 +111,16 @@ internal sealed class RuvProgram
         _domainEvents.Add(new ProgramMonitoredStatusChangedEvent(RuvId, monitored));
     }
 
-    public void SetHasMissingEpisodes(bool hasMissingEpisodes) => HasMissingEpisodes = hasMissingEpisodes;
+    public void SetHasMissingEpisodes(bool hasMissingEpisodes)
+    {
+        if (HasMissingEpisodes == hasMissingEpisodes)
+        {
+            return;
+        }
+
+        HasMissingEpisodes = hasMissingEpisodes;
+        _domainEvents.Add(new ProgramMissingEpisodesChangedEvent(RuvId, hasMissingEpisodes));
+    }
 
     public void MatchTvdb(TvdbSeries series)
     {

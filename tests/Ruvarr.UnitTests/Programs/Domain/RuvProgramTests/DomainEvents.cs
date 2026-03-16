@@ -79,4 +79,52 @@ public sealed class DomainEvents
         // Assert
         sut.DomainEvents.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void SetHasMissingEpisodes_FromFalseToTrue_RaisesProgramMissingEpisodesChangedEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.SetHasMissingEpisodes(true);
+
+        // Assert
+        ProgramMissingEpisodesChangedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<ProgramMissingEpisodesChangedEvent>();
+        @event.RuvId.ShouldBe(sut.RuvId);
+        @event.HasMissingEpisodes.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void SetHasMissingEpisodes_FromTrueToFalse_RaisesProgramMissingEpisodesChangedEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.ClearDomainEvents();
+        sut.SetHasMissingEpisodes(true);
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.SetHasMissingEpisodes(false);
+
+        // Assert
+        ProgramMissingEpisodesChangedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<ProgramMissingEpisodesChangedEvent>();
+        @event.RuvId.ShouldBe(sut.RuvId);
+        @event.HasMissingEpisodes.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void SetHasMissingEpisodes_SameValue_DoesNotRaiseEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.SetHasMissingEpisodes(false);
+
+        // Assert
+        sut.DomainEvents.ShouldBeEmpty();
+    }
 }
