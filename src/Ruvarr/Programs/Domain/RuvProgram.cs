@@ -155,6 +155,11 @@ internal sealed class RuvProgram
         RuvEpisode episode = RuvEpisode.Create(this, id, uri, title, description, firstRun);
         _episodes.Add(episode);
 
+        if (Series is not null)
+        {
+            _domainEvents.Add(new EpisodeAddedToMatchedProgramEvent(RuvId, Name));
+        }
+
         return true;
     }
 

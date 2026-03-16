@@ -82,6 +82,14 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
 
+            JobKey tvdbEpisodeLookupRetry = new(nameof(TvdbEpisodeLookupRetryJob));
+            options.AddJob<TvdbEpisodeLookupRetryJob>(x => x.WithIdentity(tvdbEpisodeLookupRetry))
+                .AddTrigger(trigger => trigger
+                    .ForJob(tvdbEpisodeLookupRetry)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithIntervalInMinutes(10)
+                    .RepeatForever()));
+
             JobKey downloadQueue = new(nameof(DownloadQueueProcessor));
             options.AddJob<DownloadQueueProcessor>(x => x.WithIdentity(downloadQueue))
                 .AddTrigger(trigger => trigger

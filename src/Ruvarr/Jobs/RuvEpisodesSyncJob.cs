@@ -10,8 +10,6 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
-using Ruvarr.TvdbEpisodeLookup.Notifiers;
-
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
@@ -20,8 +18,7 @@ internal sealed class RuvEpisodesSyncJob(
     IRuvClient ruv,
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
-    ProgramRefreshNotifier syncQueue,
-    TvdbEpisodeLookupNotifier tvdbEpisodeLookupQueue) : IJob
+    ProgramRefreshNotifier syncQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -111,11 +108,6 @@ internal sealed class RuvEpisodesSyncJob(
 
             await dbContext.SaveChangesAsync();
             syncQueue.MarkComplete(program.RuvId);
-
-            if (program.Series is not null && program.Episodes.Any(x => x.TvdbId is null && (x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)))
-            {
-                tvdbEpisodeLookupQueue.Enqueue(program.RuvId, program.Name);
-            }
         }
 
         foreach (int ruvId in ruvIds.Where(id => !loadedIds.Contains(id)))
