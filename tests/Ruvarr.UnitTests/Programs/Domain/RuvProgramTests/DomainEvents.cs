@@ -31,4 +31,52 @@ public sealed class DomainEvents
         // Assert
         sut.DomainEvents.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void SetMonitoredStatus_FromFalseToTrue_RaisesProgramMonitoredStatusChangedEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.SetMonitoredStatus(true);
+
+        // Assert
+        ProgramMonitoredStatusChangedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<ProgramMonitoredStatusChangedEvent>();
+        @event.RuvId.ShouldBe(sut.RuvId);
+        @event.IsMonitored.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void SetMonitoredStatus_FromTrueToFalse_RaisesProgramMonitoredStatusChangedEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.ClearDomainEvents();
+        sut.SetMonitoredStatus(true);
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.SetMonitoredStatus(false);
+
+        // Assert
+        ProgramMonitoredStatusChangedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<ProgramMonitoredStatusChangedEvent>();
+        @event.RuvId.ShouldBe(sut.RuvId);
+        @event.IsMonitored.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void SetMonitoredStatus_SameValue_DoesNotRaiseEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.SetMonitoredStatus(false);
+
+        // Assert
+        sut.DomainEvents.ShouldBeEmpty();
+    }
 }

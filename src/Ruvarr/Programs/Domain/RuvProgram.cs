@@ -100,7 +100,16 @@ internal sealed class RuvProgram
     private static string? SanitizeSlug(string? slug) =>
         slug is not null && SlugPattern.IsMatch(slug) ? slug : null;
 
-    public void SetMonitoredStatus(bool monitored) => IsMonitored = monitored;
+    public void SetMonitoredStatus(bool monitored)
+    {
+        if (IsMonitored == monitored)
+        {
+            return;
+        }
+
+        IsMonitored = monitored;
+        _domainEvents.Add(new ProgramMonitoredStatusChangedEvent(RuvId, monitored));
+    }
 
     public void SetHasMissingEpisodes(bool hasMissingEpisodes) => HasMissingEpisodes = hasMissingEpisodes;
 
