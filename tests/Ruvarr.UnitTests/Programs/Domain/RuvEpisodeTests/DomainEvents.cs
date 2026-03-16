@@ -108,4 +108,49 @@ public sealed class DomainEvents
         EpisodeMatchedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
         @event.Episode.ShouldBe(sut);
     }
+
+    [Fact]
+    public void ScheduleLookup_RaisesEpisodeLookupScheduledEvent()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.ScheduleLookup();
+
+        // Assert
+        EpisodeLookupScheduledEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeLookupScheduledEvent>();
+        @event.Episode.ShouldBe(sut);
+    }
+
+    [Fact]
+    public void ScheduleLookup_WhenAlreadyMatched_DoesNotRaiseEvent()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.ScheduleLookup();
+
+        // Assert
+        sut.DomainEvents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void ScheduleLookup_OnSuccessiveCalls_RaisesEventEachTime()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.ScheduleLookup();
+        sut.ScheduleLookup();
+        sut.ScheduleLookup();
+
+        // Assert
+        sut.DomainEvents.Count.ShouldBe(3);
+        sut.DomainEvents.ShouldAllBe(e => e is EpisodeLookupScheduledEvent);
+    }
 }
