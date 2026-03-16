@@ -7,9 +7,11 @@
 @using Ruvarr.ProgramRefreshQueue.Notifiers
 @using Ruvarr.Programs.Commands.MatchProgram
 @using Ruvarr.Programs.Commands.RefreshProgram
+@using Ruvarr.Programs.Notifiers
 @using Ruvarr.Programs.Queries.GetPrograms
 @inject IServiceScopeFactory ScopeFactory
 @inject ProgramRefreshNotifier RefreshNotifier
+@inject ProgramCreatedNotifier CreatedNotifier
 
 <h1>Programs</h1>
 
@@ -199,6 +201,7 @@ else
     protected override Task OnInitializedAsync()
     {
         _ = WatchAsync();
+        _ = WatchCreatedAsync();
         _ = LoadProgramsAsync();
         return Task.CompletedTask;
     }
@@ -213,6 +216,14 @@ else
                 _pendingRefresh.Remove(ruvId);
             }
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task WatchCreatedAsync()
+    {
+        await foreach (byte _ in CreatedNotifier.WatchAsync(_cts.Token))
+        {
+            await LoadProgramsAsync();
         }
     }
 

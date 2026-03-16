@@ -2,6 +2,7 @@
 
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Tvdb.Models;
+using Ruvarr.Programs.Events;
 using Ruvarr.RomanNumerals;
 
 namespace Ruvarr.Programs.Domain;
@@ -10,11 +11,16 @@ internal sealed class RuvProgram
 {
     private static readonly Regex SlugPattern = new(@"^[a-z0-9\-]{1,128}$", RegexOptions.Compiled);
 
+    private readonly List<IDomainEvent> _domainEvents = [];
     private readonly List<RuvEpisode> _episodes = [];
 
     private RuvProgram()
     {
     }
+
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents;
+
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     public required int RuvId { get; init; }
 
@@ -71,16 +77,23 @@ internal sealed class RuvProgram
         }
     }
 
-    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null) => new()
+    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null)
     {
-        RuvId = id,
-        Channel = channel,
-        Name = name,
-        ForeignName = foreignName,
-        HasMultipleEpisodes = multipleEpisodes,
-        Created = DateTime.UtcNow,
-        Slug = SanitizeSlug(slug),
-    };
+        RuvProgram program = new()
+        {
+            RuvId = id,
+            Channel = channel,
+            Name = name,
+            ForeignName = foreignName,
+            HasMultipleEpisodes = multipleEpisodes,
+            Created = DateTime.UtcNow,
+            Slug = SanitizeSlug(slug),
+        };
+
+        program._domainEvents.Add(new ProgramCreatedEvent(program));
+
+        return program;
+    }
 
     public void UpdateSlug(string? slug) => Slug = SanitizeSlug(slug);
 
