@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Downloads.Domain;
 using Ruvarr.Programs.Domain;
 
 namespace Ruvarr;
@@ -21,6 +22,7 @@ public sealed class RuvarrDbContext(DbContextOptions<RuvarrDbContext> options, I
         List<IDomainEvent> events = [
             .. ChangeTracker.Entries<RuvEpisode>().SelectMany(e => e.Entity.DomainEvents),
             .. ChangeTracker.Entries<RuvProgram>().SelectMany(e => e.Entity.DomainEvents),
+            .. ChangeTracker.Entries<DownloadQueueItem>().SelectMany(e => e.Entity.DomainEvents),
         ];
 
         foreach (EntityEntry<RuvEpisode> entry in ChangeTracker.Entries<RuvEpisode>().ToList())
@@ -29,6 +31,11 @@ public sealed class RuvarrDbContext(DbContextOptions<RuvarrDbContext> options, I
         }
 
         foreach (EntityEntry<RuvProgram> entry in ChangeTracker.Entries<RuvProgram>().ToList())
+        {
+            entry.Entity.ClearDomainEvents();
+        }
+
+        foreach (EntityEntry<DownloadQueueItem> entry in ChangeTracker.Entries<DownloadQueueItem>().ToList())
         {
             entry.Entity.ClearDomainEvents();
         }

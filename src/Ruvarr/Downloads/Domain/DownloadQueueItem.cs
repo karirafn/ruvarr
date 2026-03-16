@@ -1,13 +1,21 @@
-﻿using Ruvarr.Contracts;
+﻿using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
+using Ruvarr.Downloads.Events;
 using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Downloads.Domain;
 
 internal sealed class DownloadQueueItem
 {
+    private readonly List<IDomainEvent> _domainEvents = [];
+
     private DownloadQueueItem()
     {
     }
+
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents;
+
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     public required RuvEpisode Episode { get; init; }
 
@@ -23,11 +31,16 @@ internal sealed class DownloadQueueItem
         Created = DateTime.UtcNow,
     };
 
-    public void MarkDownloading() => Status = DownloadQueueStatus.Downloading;
+    public void MarkDownloading()
+    {
+        Status = DownloadQueueStatus.Downloading;
+        _domainEvents.Add(new DownloadStartedEvent(this));
+    }
 
     public void MarkDownloaded()
     {
         Downloaded = DateTime.UtcNow;
         Status = DownloadQueueStatus.Complete;
+        _domainEvents.Add(new DownloadCompletedEvent(this));
     }
 }
