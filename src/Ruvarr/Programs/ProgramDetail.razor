@@ -73,13 +73,20 @@ else
             }
         </div>
         <h1>@_program.ProgramName</h1>
-        @if (_program.SeriesName is not null)
+        @if (_program.SeriesName is not null || _program.RuvUrl is not null)
         {
             <div class="series-meta">
-                <span class="series-name">@_program.SeriesName</span>
+                @if (_program.SeriesName is not null)
+                {
+                    <span class="series-name">@_program.SeriesName</span>
+                }
                 @if (_program.TvdbUrl is not null)
                 {
                     <a class="badge--tvdb" href="@_program.TvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
+                }
+                @if (_program.RuvUrl is not null)
+                {
+                    <a class="badge--ruv" href="@_program.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
                 }
             </div>
         }

@@ -8,4 +8,5 @@ public sealed record ProgramSummary(
     bool HasMissingEpisodes,
     string? SeriesName,
     Uri? TvdbUrl,
-    int? TvdbSeriesId);
+    int? TvdbSeriesId,
+    Uri? RuvUrl);
