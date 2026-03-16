@@ -6,7 +6,6 @@ using Quartz;
 
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
-using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
@@ -19,8 +18,7 @@ internal class DownloadQueueProcessor(
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
     IFfmpegService ffmpeg,
-    IOptions<RuvarrOptions> options,
-    DownloadQueueNotifier notifier) : IJob
+    IOptions<RuvarrOptions> options) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -50,7 +48,6 @@ internal class DownloadQueueProcessor(
 
         item.MarkDownloading();
         await dbContext.SaveChangesAsync();
-        notifier.Notify();
 
         logger.LogInformation("Downloading {Program} - {Title}", item.Episode.Program.Name, item.Episode.Title);
         string tentativePath = item.Episode.ToFilePath(
@@ -76,7 +73,6 @@ internal class DownloadQueueProcessor(
         item.MarkDownloaded();
 
         await dbContext.SaveChangesAsync();
-        notifier.Notify();
 
         if (item.Episode.TvdbId == null)
         {
