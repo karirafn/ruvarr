@@ -153,6 +153,7 @@ internal sealed partial class RuvEpisode
             return;
         }
 
+        _domainEvents.Add(new EpisodeLookupScheduledEvent(this));
         LookupCount++;
         NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
     }
