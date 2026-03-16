@@ -18,10 +18,17 @@ public sealed class RuvarrDbContext(DbContextOptions<RuvarrDbContext> options, I
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        List<IDomainEvent> events = [.. ChangeTracker.Entries<RuvEpisode>()
-            .SelectMany(e => e.Entity.DomainEvents)];
+        List<IDomainEvent> events = [
+            .. ChangeTracker.Entries<RuvEpisode>().SelectMany(e => e.Entity.DomainEvents),
+            .. ChangeTracker.Entries<RuvProgram>().SelectMany(e => e.Entity.DomainEvents),
+        ];
 
         foreach (EntityEntry<RuvEpisode> entry in ChangeTracker.Entries<RuvEpisode>().ToList())
+        {
+            entry.Entity.ClearDomainEvents();
+        }
+
+        foreach (EntityEntry<RuvProgram> entry in ChangeTracker.Entries<RuvProgram>().ToList())
         {
             entry.Entity.ClearDomainEvents();
         }
