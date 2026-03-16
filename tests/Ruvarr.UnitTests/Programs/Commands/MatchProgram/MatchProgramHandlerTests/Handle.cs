@@ -8,6 +8,7 @@ using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs;
 using Ruvarr.Programs.Commands.MatchProgram;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Events;
 using Ruvarr.Testing.Builders;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
 
@@ -33,7 +34,15 @@ public sealed class Handle
         _serviceProvider);
 
     private MatchProgramHandler CreateHandler(RuvarrDbContext dbContext) => new(
-        dbContext, _tvdb, _episodeLookupNotifier);
+        dbContext, _tvdb);
+
+    private void RegisterEventHandler()
+    {
+        ProgramMatchedTvdbEventHandler handler = new(_episodeLookupNotifier);
+        _serviceProvider
+            .GetService(typeof(IEnumerable<IDomainEventHandler<ProgramMatchedTvdbEvent>>))
+            .Returns(new IDomainEventHandler<ProgramMatchedTvdbEvent>[] { handler });
+    }
 
     [Fact]
     public async Task ReturnsValidationErrorWhenTvdbSeriesIdExceedsMaximumAllowed()
@@ -139,6 +148,7 @@ public sealed class Handle
     public async Task EnqueuesTvdbEpisodeLookupOnSuccess()
     {
         // Arrange
+        RegisterEventHandler();
         using RuvarrDbContext dbContext = CreateDbContext();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Test Program").Build();
         dbContext.Set<RuvProgram>().Add(program);
@@ -162,6 +172,7 @@ public sealed class Handle
     public async Task EnqueuesTvdbEpisodeLookupOnReMatch()
     {
         // Arrange
+        RegisterEventHandler();
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries oldSeries = new TvdbSeriesBuilder().WithId(99999).WithName("Old Series").Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Test Program").Build();

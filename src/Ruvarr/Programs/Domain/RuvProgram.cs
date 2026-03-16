@@ -110,6 +110,7 @@ internal sealed class RuvProgram
         NextLookup = null;
         Matched = DateTime.UtcNow;
         Series = series;
+        _domainEvents.Add(new ProgramMatchedTvdbEvent(RuvId, Name));
     }
 
     public void MatchTmdb(TmdbMovie movie)

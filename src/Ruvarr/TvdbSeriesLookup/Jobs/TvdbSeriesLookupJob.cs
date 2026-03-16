@@ -8,7 +8,6 @@ using Ruvarr.Extensions;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
-using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 namespace Ruvarr.TvdbSeriesLookup.Jobs;
@@ -18,8 +17,7 @@ internal sealed class TvdbSeriesLookupJob(
     ILogger<TvdbSeriesLookupJob> logger,
     RuvarrDbContext dbContext,
     ITvdbClient tvdb,
-    TvdbSeriesLookupNotifier lookupQueue,
-    TvdbEpisodeLookupNotifier episodeLookupQueue) : IJob
+    TvdbSeriesLookupNotifier lookupQueue) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -95,15 +93,11 @@ internal sealed class TvdbSeriesLookupJob(
 
         program.MatchTvdb(entity);
 
-        int added = await dbContext.SaveChangesAsync(context.CancellationToken);
+        await dbContext.SaveChangesAsync(context.CancellationToken);
 
         lookupQueue.MarkComplete(ruvId);
 
-        if (added > 0)
-        {
-            logger.LogInformation("Matched RÚV program '{Program}' with TVDB series '{Series}'", program.Name, entity.Name);
-            episodeLookupQueue.Enqueue(program.RuvId, program.Name);
-        }
+        logger.LogInformation("Matched RÚV program '{Program}' with TVDB series '{Series}'", program.Name, entity.Name);
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program, CancellationToken cancellationToken)

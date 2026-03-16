@@ -4,14 +4,12 @@ using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
-using Ruvarr.TvdbEpisodeLookup.Notifiers;
 
 namespace Ruvarr.Programs.Commands.MatchProgram;
 
 internal sealed class MatchProgramHandler(
     RuvarrDbContext dbContext,
-    ITvdbClient tvdb,
-    TvdbEpisodeLookupNotifier episodeLookupNotifier) : IRequestHandler<MatchProgramCommand>
+    ITvdbClient tvdb) : IRequestHandler<MatchProgramCommand>
 {
     public async Task<RuvarrResult> Handle(MatchProgramCommand command, CancellationToken cancellationToken)
     {
@@ -49,8 +47,6 @@ internal sealed class MatchProgramHandler(
         program.MatchTvdb(entity);
 
         await dbContext.SaveChangesAsync(cancellationToken);
-
-        episodeLookupNotifier.Enqueue(program.RuvId, program.Name);
 
         return RuvarrResult.Success;
     }

@@ -7,7 +7,6 @@ using Quartz;
 
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
-using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.TvdbSeriesLookup.Jobs;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 using Ruvarr.Programs.Domain;
@@ -21,7 +20,6 @@ public sealed class SlugRefresh
 {
     private readonly ITvdbClient _tvdb = Substitute.For<ITvdbClient>();
     private readonly TvdbSeriesLookupNotifier _lookupQueue = new();
-    private readonly TvdbEpisodeLookupNotifier _episodeLookupQueue = new();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
 
@@ -41,8 +39,7 @@ public sealed class SlugRefresh
         NullLogger<TvdbSeriesLookupJob>.Instance,
         dbContext,
         _tvdb,
-        _lookupQueue,
-        _episodeLookupQueue);
+        _lookupQueue);
 
     [Fact]
     public async Task CallsGetSeriesAsync_WithParsedTvdbId_WhenSeriesIsNotNull()
@@ -151,29 +148,6 @@ public sealed class SlugRefresh
     }
 
     [Fact]
-    public async Task DoesNotEnqueueEpisodeLookup_WhenSeriesIsNotNull()
-    {
-        // Arrange
-        using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).WithSlug(null).Build();
-        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
-        program.MatchTvdb(series);
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).Build();
-        _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
-        _lookupQueue.Enqueue(1, program.Name);
-        TvdbSeriesLookupJob sut = CreateJob(dbContext);
-
-        // Act
-        await sut.Execute(_context);
-
-        // Assert
-        _episodeLookupQueue.Items.ShouldBeEmpty();
-    }
-
-    [Fact]
     public async Task NoSideEffects_WhenGetSeriesAsyncReturnsNull()
     {
         // Arrange
@@ -194,6 +168,5 @@ public sealed class SlugRefresh
         // Assert
         program.NextLookup.ShouldBeNull();
         program.Series!.Slug.ShouldBeNull();
-        _episodeLookupQueue.Items.ShouldBeEmpty();
     }
 }
