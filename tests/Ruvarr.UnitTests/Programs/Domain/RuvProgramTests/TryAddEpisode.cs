@@ -1,4 +1,5 @@
 using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Events;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -34,5 +35,54 @@ public sealed class TryAddEpisode
         // Assert
         result.ShouldBeFalse();
         sut.Episodes.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void RaisesEpisodeAddedToMatchedProgramEventWhenSeriesIsMatched()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.MatchTvdb(TvdbSeries.Create(1, "Test Series"));
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+
+        // Assert
+        sut.DomainEvents.ShouldContain(e => e is EpisodeAddedToMatchedProgramEvent);
+        EpisodeAddedToMatchedProgramEvent raised = (EpisodeAddedToMatchedProgramEvent)sut.DomainEvents
+            .Single(e => e is EpisodeAddedToMatchedProgramEvent);
+        raised.RuvId.ShouldBe(sut.RuvId);
+        raised.Name.ShouldBe(sut.Name);
+    }
+
+    [Fact]
+    public void DoesNotRaiseEpisodeAddedToMatchedProgramEventWhenSeriesIsNotMatched()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+
+        // Assert
+        sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
+    }
+
+    [Fact]
+    public void DoesNotRaiseEpisodeAddedToMatchedProgramEventForDuplicateEpisode()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.MatchTvdb(TvdbSeries.Create(1, "Test Series"));
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+
+        // Assert
+        sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
     }
 }
