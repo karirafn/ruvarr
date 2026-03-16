@@ -255,6 +255,58 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
     }
 
     [Fact]
+    public async Task ReturnsRuvUrlWhenProgramHasSlug()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(20040, "RÚV1", "Program With Slug", null, multipleEpisodes: true, slug: "test-slug");
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20040);
+        found.ShouldNotBeNull();
+        found.RuvUrl.ShouldBe(new Uri("https://www.ruv.is/sjonvarp/spila/test-slug/20040"));
+    }
+
+    [Fact]
+    public async Task ReturnsRuvUrlAsNullWhenProgramHasNoSlug()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(20041, "RÚV1", "Program Without Slug", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20041);
+        found.ShouldNotBeNull();
+        found.RuvUrl.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ReturnsTvdbUrlAsNullWhenSlugIsMalformed()
     {
         // Arrange

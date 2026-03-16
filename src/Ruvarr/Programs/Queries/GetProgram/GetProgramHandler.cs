@@ -16,6 +16,7 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
                 x.Channel,
                 x.Name,
                 x.RuvId,
+                x.Slug,
                 x.IsMonitored,
                 x.HasMissingEpisodes,
                 SeriesName = x.Series!.Name,
@@ -30,6 +31,7 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
                 x.HasMissingEpisodes,
                 x.SeriesName,
                 x.SeriesSlug != null ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(x.SeriesSlug)}") : null,
-                x.SeriesTvdbId))
+                x.SeriesTvdbId,
+                x.Slug != null ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(x.Slug)}/{x.RuvId}") : null))
             .FirstOrDefaultAsync(cancellationToken);
 }

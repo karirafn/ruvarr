@@ -673,6 +673,7 @@ dialog input[type="number"]:focus {
     border: 1px solid #e8314a;
     color: #e8314a;
     text-decoration: none;
+    margin-bottom: 0.5rem;
 }
 
 .badge--ruv:hover {
