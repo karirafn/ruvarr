@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
+using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
@@ -17,7 +19,8 @@ internal sealed class TvdbEpisodeLookupJob(
     RuvarrDbContext dbContext,
     ITvdbClient tvdb,
     ISonarrClient sonarr,
-    TvdbEpisodeLookupNotifier lookupQueue) : IJob
+    TvdbEpisodeLookupNotifier lookupQueue,
+    IDomainEventBroadcaster broadcaster) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -30,6 +33,7 @@ internal sealed class TvdbEpisodeLookupJob(
         }
 
         lookupQueue.MarkProcessing(ruvId);
+        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Include(x => x.Series)
@@ -40,6 +44,7 @@ internal sealed class TvdbEpisodeLookupJob(
         {
             logger.LogDebug("No RÚV program pending TVDB episode lookup");
             lookupQueue.MarkComplete(ruvId);
+        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
             return;
         }
 
@@ -50,6 +55,7 @@ internal sealed class TvdbEpisodeLookupJob(
         {
             await ScheduleLookupAsync(program);
             lookupQueue.MarkComplete(ruvId);
+        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
             return;
         }
 
@@ -142,6 +148,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
         await ScheduleLookupAsync(program);
         lookupQueue.MarkComplete(ruvId);
+        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program)

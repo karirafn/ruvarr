@@ -18,6 +18,7 @@ public sealed class Handle
 {
     private readonly TvdbEpisodeLookupNotifier _tvdbEpisodeLookupNotifier = new();
     private readonly ProgramRefreshNotifier _programRefreshNotifier = new();
+    private readonly DomainEventBroadcaster _broadcaster = new();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
 
     public Handle()
@@ -32,7 +33,7 @@ public sealed class Handle
         _serviceProvider);
 
     private RefreshProgramHandler CreateHandler(RuvarrDbContext dbContext) => new(
-        dbContext, _programRefreshNotifier, _tvdbEpisodeLookupNotifier);
+        dbContext, _programRefreshNotifier, _tvdbEpisodeLookupNotifier, _broadcaster);
 
     [Fact]
     public async Task ReturnsProgramNotFoundWhenProgramDoesNotExist()

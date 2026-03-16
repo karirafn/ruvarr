@@ -1,13 +1,18 @@
 using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
 
 namespace Ruvarr.Programs.Commands.RefreshProgram;
 
-internal sealed class RefreshProgramHandler(RuvarrDbContext dbContext, ProgramRefreshNotifier syncQueue, TvdbEpisodeLookupNotifier tvdbEpisodeLookupNotifier)
+internal sealed class RefreshProgramHandler(
+    RuvarrDbContext dbContext,
+    ProgramRefreshNotifier syncQueue,
+    TvdbEpisodeLookupNotifier tvdbEpisodeLookupNotifier,
+    IDomainEventBroadcaster broadcaster)
     : IRequestHandler<RefreshProgramCommand>
 {
     public async Task<RuvarrResult> Handle(RefreshProgramCommand command, CancellationToken cancellationToken)
@@ -23,10 +28,12 @@ internal sealed class RefreshProgramHandler(RuvarrDbContext dbContext, ProgramRe
         }
 
         syncQueue.Enqueue(program.RuvId, program.Name);
+        broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
 
         if (program.Series is not null && program.HasMultipleEpisodes)
         {
             tvdbEpisodeLookupNotifier.Enqueue(program.RuvId, program.Name);
+            broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
         }
 
         return RuvarrResult.Success;

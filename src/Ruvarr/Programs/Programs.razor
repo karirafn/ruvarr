@@ -7,11 +7,11 @@
 @using Ruvarr.ProgramRefreshQueue.Notifiers
 @using Ruvarr.Programs.Commands.MatchProgram
 @using Ruvarr.Programs.Commands.RefreshProgram
-@using Ruvarr.Programs.Notifiers
+@using Ruvarr.Programs.Events
 @using Ruvarr.Programs.Queries.GetPrograms
 @inject IServiceScopeFactory ScopeFactory
 @inject ProgramRefreshNotifier RefreshNotifier
-@inject ProgramCreatedNotifier CreatedNotifier
+@inject IDomainEventBroadcaster Broadcaster
 
 <h1>Programs</h1>
 
@@ -220,7 +220,7 @@ else
 
     private async Task WatchAsync()
     {
-        await foreach (byte _ in RefreshNotifier.WatchAsync(_cts.Token))
+        await foreach (QueueChangedEvent<ProgramRefreshQueueItemSummary> _ in Broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(_cts.Token))
         {
             _refreshQueue = RefreshNotifier.Items.ToDictionary(x => x.RuvId, x => x.Status);
             foreach (int ruvId in _pendingRefresh.Where(id => _refreshQueue.ContainsKey(id)).ToList())
@@ -233,7 +233,7 @@ else
 
     private async Task WatchCreatedAsync()
     {
-        await foreach (byte _ in CreatedNotifier.WatchAsync(_cts.Token))
+        await foreach (ProgramCreatedEvent _ in Broadcaster.Subscribe<ProgramCreatedEvent>(_cts.Token))
         {
             await LoadProgramsAsync();
         }

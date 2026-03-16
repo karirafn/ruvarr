@@ -3,10 +3,10 @@
 @namespace Ruvarr.Downloads.Components
 @using Ruvarr.Abstractions
 @using Ruvarr.Contracts
-@using Ruvarr.Downloads.Notifiers
+@using Ruvarr.Downloads.Events
 @using Ruvarr.Downloads.Queries.GetDownloadQueue
 @inject IServiceScopeFactory ScopeFactory
-@inject DownloadQueueNotifier DownloadNotifier
+@inject IDomainEventBroadcaster Broadcaster
 @implements IAsyncDisposable
 
 <h1>Download Queue</h1>
@@ -70,16 +70,30 @@ else
 
     protected override Task OnInitializedAsync()
     {
-        _ = WatchAsync();
+        _ = WatchStartedAsync();
+        _ = WatchCompletedAsync();
+        _ = LoadAsync();
         return Task.CompletedTask;
     }
 
-    private async Task WatchAsync()
+    private async Task LoadAsync()
     {
         _items = await QueryAsync();
         await InvokeAsync(StateHasChanged);
+    }
 
-        await foreach (byte _ in DownloadNotifier.WatchAsync(_cts.Token))
+    private async Task WatchStartedAsync()
+    {
+        await foreach (DownloadStartedEvent _ in Broadcaster.Subscribe<DownloadStartedEvent>(_cts.Token))
+        {
+            _items = await QueryAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task WatchCompletedAsync()
+    {
+        await foreach (DownloadCompletedEvent _ in Broadcaster.Subscribe<DownloadCompletedEvent>(_cts.Token))
         {
             _items = await QueryAsync();
             await InvokeAsync(StateHasChanged);

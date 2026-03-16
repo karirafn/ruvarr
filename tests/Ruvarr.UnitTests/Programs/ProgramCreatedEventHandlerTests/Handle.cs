@@ -1,6 +1,6 @@
+using Ruvarr.Abstractions;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Programs.Events;
-using Ruvarr.Programs.Notifiers;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -10,22 +10,22 @@ namespace Ruvarr.UnitTests.Programs.ProgramCreatedEventHandlerTests;
 public sealed class Handle
 {
     [Fact]
-    public async Task Handle_NotifiesSubscribers()
+    public async Task PublishesEventViaBroadcaster()
     {
         // Arrange
-        ProgramCreatedNotifier notifier = new();
-        ProgramCreatedEventHandler sut = new(notifier);
+        DomainEventBroadcaster broadcaster = new();
+        ProgramCreatedEventHandler sut = new(broadcaster);
         RuvProgram program = new RuvProgramBuilder().Build();
         ProgramCreatedEvent @event = new(program);
 
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
 
-        byte? received = null;
+        ProgramCreatedEvent? received = null;
         Task watchTask = Task.Run(async () =>
         {
-            await foreach (byte b in notifier.WatchAsync(cts.Token))
+            await foreach (ProgramCreatedEvent e in broadcaster.Subscribe<ProgramCreatedEvent>(cts.Token))
             {
-                received = b;
+                received = e;
                 await cts.CancelAsync();
             }
         }, TestContext.Current.CancellationToken);
@@ -38,5 +38,6 @@ public sealed class Handle
         // Assert
         await Task.WhenAny(watchTask, Task.Delay(1000, TestContext.Current.CancellationToken));
         received.ShouldNotBeNull();
+        received.ShouldBe(@event);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 
 using Quartz;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Downloads;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Programs;
@@ -28,6 +29,7 @@ public static class ServiceCollectionExtensions
             .Configure<IConfiguration>((options, configuration)
                 => configuration.GetRequiredSection(RuvarrOptions.SectionName).Bind(options));
 
+        services.AddSingleton<IDomainEventBroadcaster, DomainEventBroadcaster>();
         services.AddSingleton<ProgramRefreshNotifier>();
         services.AddSingleton<TvdbSeriesLookupNotifier>();
         services.AddSingleton<TvdbEpisodeLookupNotifier>();

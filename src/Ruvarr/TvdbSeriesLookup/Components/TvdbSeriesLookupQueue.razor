@@ -1,9 +1,11 @@
 @page "/tvdb-series-lookup-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @namespace Ruvarr.TvdbSeriesLookup.Components
+@using Ruvarr.Abstractions
 @using Ruvarr.Contracts
 @using Ruvarr.TvdbSeriesLookup.Notifiers
 @inject TvdbSeriesLookupNotifier LookupNotifier
+@inject IDomainEventBroadcaster Broadcaster
 @implements IAsyncDisposable
 
 <h1>TVDB Series Lookup Queue</h1>
@@ -67,7 +69,7 @@ else
         _items = LookupNotifier.Items;
         await InvokeAsync(StateHasChanged);
 
-        await foreach (byte _ in LookupNotifier.WatchAsync(_cts.Token))
+        await foreach (QueueChangedEvent<TvdbSeriesLookupQueueItemSummary> _ in Broadcaster.Subscribe<QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>>(_cts.Token))
         {
             _items = LookupNotifier.Items;
             await InvokeAsync(StateHasChanged);

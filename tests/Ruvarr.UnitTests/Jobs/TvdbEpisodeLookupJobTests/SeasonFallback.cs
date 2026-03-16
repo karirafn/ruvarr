@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
@@ -36,7 +37,7 @@ public sealed class SeasonFallback
 
     private TvdbEpisodeLookupJob CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<TvdbEpisodeLookupJob>.Instance,
-        dbContext, _tvdb, _sonarr, _notifier);
+        dbContext, _tvdb, _sonarr, _notifier, new DomainEventBroadcaster());
 
     [Fact]
     public async Task MatchesEpisodeViaFallbackWhenTitleMatchFails()

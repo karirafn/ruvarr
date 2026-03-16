@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
+using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Extensions;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
@@ -17,7 +19,8 @@ internal sealed class TvdbSeriesLookupJob(
     ILogger<TvdbSeriesLookupJob> logger,
     RuvarrDbContext dbContext,
     ITvdbClient tvdb,
-    TvdbSeriesLookupNotifier lookupQueue) : IJob
+    TvdbSeriesLookupNotifier lookupQueue,
+    IDomainEventBroadcaster broadcaster) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -30,6 +33,7 @@ internal sealed class TvdbSeriesLookupJob(
         }
 
         lookupQueue.MarkProcessing(ruvId);
+        broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Include(x => x.Series)
@@ -40,6 +44,7 @@ internal sealed class TvdbSeriesLookupJob(
         {
             logger.LogDebug("No RÚV program pending TVDB series lookup");
             lookupQueue.MarkComplete(ruvId);
+            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
             return;
         }
 
@@ -51,6 +56,7 @@ internal sealed class TvdbSeriesLookupJob(
             {
                 logger.LogWarning("TVDB returned no series data for TvdbId '{TvdbId}'", program.Series.TvdbId);
                 lookupQueue.MarkComplete(ruvId);
+            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
                 return;
             }
 
@@ -59,6 +65,7 @@ internal sealed class TvdbSeriesLookupJob(
             await dbContext.SaveChangesAsync(context.CancellationToken);
 
             lookupQueue.MarkComplete(ruvId);
+            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
             return;
         }
 
@@ -71,6 +78,7 @@ internal sealed class TvdbSeriesLookupJob(
         {
             await ScheduleLookupAsync(program, context.CancellationToken);
             lookupQueue.MarkComplete(ruvId);
+            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
             return;
         }
 
@@ -80,6 +88,7 @@ internal sealed class TvdbSeriesLookupJob(
             program.ScheduleLookup();
             await dbContext.SaveChangesAsync(context.CancellationToken);
             lookupQueue.MarkComplete(ruvId);
+            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
             return;
         }
 
@@ -96,6 +105,7 @@ internal sealed class TvdbSeriesLookupJob(
         await dbContext.SaveChangesAsync(context.CancellationToken);
 
         lookupQueue.MarkComplete(ruvId);
+        broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
 
         logger.LogInformation("Matched RÚV program '{Program}' with TVDB series '{Series}'", program.Name, entity.Name);
     }

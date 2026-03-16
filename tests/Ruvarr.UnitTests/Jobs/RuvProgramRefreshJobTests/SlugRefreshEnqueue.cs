@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 
 using NSubstitute;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
 using Ruvarr.Jobs;
@@ -51,7 +52,8 @@ public sealed class SlugRefreshEnqueue
         dbContext,
         _options,
         _syncQueue,
-        _tvdbLookupQueue);
+        _tvdbLookupQueue,
+        new DomainEventBroadcaster());
 
     private static RuvTvProgram CreateRuvTvProgram(int id, bool multipleEpisodes = true) => new(
         LastUpdated: DateTimeOffset.UtcNow,

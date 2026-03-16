@@ -1,9 +1,11 @@
 @page "/program-refresh-queue"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @namespace Ruvarr.ProgramRefreshQueue.Components
+@using Ruvarr.Abstractions
 @using Ruvarr.Contracts
 @using Ruvarr.ProgramRefreshQueue.Notifiers
 @inject ProgramRefreshNotifier RefreshNotifier
+@inject IDomainEventBroadcaster Broadcaster
 @implements IAsyncDisposable
 
 <h1>Program Refresh Queue</h1>
@@ -67,7 +69,7 @@ else
         _items = RefreshNotifier.Items;
         await InvokeAsync(StateHasChanged);
 
-        await foreach (byte _ in RefreshNotifier.WatchAsync(_cts.Token))
+        await foreach (QueueChangedEvent<ProgramRefreshQueueItemSummary> _ in Broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(_cts.Token))
         {
             _items = RefreshNotifier.Items;
             await InvokeAsync(StateHasChanged);
