@@ -1,4 +1,5 @@
 using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Events;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -62,5 +63,21 @@ public sealed class MatchTvdb
 
         // Assert
         sut.LookupCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void RaisesProgramMatchedTvdbEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().WithRuvId(42).WithName("Test Program").Build();
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.MatchTvdb(new TvdbSeriesBuilder().Build());
+
+        // Assert
+        ProgramMatchedTvdbEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<ProgramMatchedTvdbEvent>();
+        @event.RuvId.ShouldBe(42);
+        @event.Name.ShouldBe("Test Program");
     }
 }
