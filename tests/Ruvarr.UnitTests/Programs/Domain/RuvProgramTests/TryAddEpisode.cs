@@ -99,4 +99,36 @@ public sealed class TryAddEpisode
         // Assert
         sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
     }
+
+    [Fact]
+    public void BackfillsDurationWhenExistingEpisodeHasNullDuration()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: null);
+
+        // Act
+        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 2700);
+
+        // Assert
+        result.ShouldBeFalse();
+        sut.Episodes.ShouldHaveSingleItem();
+        sut.Episodes[0].DurationSeconds.ShouldBe(2700);
+    }
+
+    [Fact]
+    public void DoesNotOverwriteDurationWhenExistingEpisodeAlreadyHasDuration()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 1800);
+
+        // Act
+        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 2700);
+
+        // Assert
+        result.ShouldBeFalse();
+        sut.Episodes.ShouldHaveSingleItem();
+        sut.Episodes[0].DurationSeconds.ShouldBe(1800);
+    }
 }

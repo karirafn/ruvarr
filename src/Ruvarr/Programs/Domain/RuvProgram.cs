@@ -147,8 +147,10 @@ internal sealed class RuvProgram
 
     public bool TryAddEpisode(string id, Uri uri, string title, string description, DateTime firstRun, int? durationSeconds = null)
     {
-        if (_episodes.Any(x => x.RuvId == id))
+        RuvEpisode? existing = _episodes.FirstOrDefault(x => x.RuvId == id);
+        if (existing is not null)
         {
+            existing.UpdateDuration(durationSeconds);
             return false;
         }
 
