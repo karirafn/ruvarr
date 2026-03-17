@@ -5,6 +5,7 @@ using NSubstitute;
 
 using Quartz;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.TvdbSeriesLookup.Jobs;
@@ -39,7 +40,8 @@ public sealed class SlugRefresh
         NullLogger<TvdbSeriesLookupJob>.Instance,
         dbContext,
         _tvdb,
-        _lookupQueue);
+        _lookupQueue,
+        new DomainEventBroadcaster());
 
     [Fact]
     public async Task CallsGetSeriesAsync_WithParsedTvdbId_WhenSeriesIsNotNull()

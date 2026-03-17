@@ -38,7 +38,7 @@ public sealed class Handle
 
     private void RegisterEventHandler()
     {
-        ProgramMatchedTvdbEventHandler handler = new(_episodeLookupNotifier);
+        ProgramMatchedTvdbEventHandler handler = new(_episodeLookupNotifier, new DomainEventBroadcaster());
         _serviceProvider
             .GetService(typeof(IEnumerable<IDomainEventHandler<ProgramMatchedTvdbEvent>>))
             .Returns(new IDomainEventHandler<ProgramMatchedTvdbEvent>[] { handler });

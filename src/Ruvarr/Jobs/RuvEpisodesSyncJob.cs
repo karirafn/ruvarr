@@ -4,12 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
+using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
@@ -18,7 +21,8 @@ internal sealed class RuvEpisodesSyncJob(
     IRuvClient ruv,
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
-    ProgramRefreshNotifier syncQueue) : IJob
+    ProgramRefreshNotifier syncQueue,
+    IDomainEventBroadcaster broadcaster) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -114,5 +118,7 @@ internal sealed class RuvEpisodesSyncJob(
         {
             syncQueue.MarkComplete(ruvId);
         }
+
+        broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
     }
 }

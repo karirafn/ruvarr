@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 
 using Quartz;
 
+using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
@@ -17,7 +19,8 @@ internal sealed class RuvProgramRefreshJob(
     RuvarrDbContext dbContext,
     IOptions<RuvarrOptions> options,
     ProgramRefreshNotifier syncQueue,
-    TvdbSeriesLookupNotifier tvdbLookupQueue) : IJob
+    TvdbSeriesLookupNotifier tvdbLookupQueue,
+    IDomainEventBroadcaster broadcaster) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -94,6 +97,7 @@ internal sealed class RuvProgramRefreshJob(
         {
             syncQueue.Enqueue(program.Id, program.Title);
         }
+        broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
 
         List<RuvProgram> unmatchedPrograms = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
@@ -124,5 +128,6 @@ internal sealed class RuvProgramRefreshJob(
 
             tvdbLookupQueue.Enqueue(program.RuvId, program.Name);
         }
+        broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
     }
 }

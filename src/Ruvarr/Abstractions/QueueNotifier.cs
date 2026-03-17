@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
 using Ruvarr.Contracts;
@@ -9,7 +8,6 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
 {
     private readonly Lock _lock = new();
     private readonly Dictionary<int, (TItem Item, int Sequence)> _items = [];
-    private readonly List<Channel<byte>> _subscribers = [];
     private readonly Channel<int> _channel = Channel.CreateUnbounded<int>();
     private int _nextSequence;
 
@@ -26,7 +24,6 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
         }
 
         _channel.Writer.TryWrite(ruvId);
-        Notify();
     }
 
     public void MarkProcessing(int ruvId)
@@ -38,8 +35,6 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
                 _items[ruvId] = (WithProcessingStatus(entry.Item), entry.Sequence);
             }
         }
-
-        Notify();
     }
 
     public void MarkComplete(int ruvId)
@@ -48,8 +43,6 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
         {
             _items.Remove(ruvId);
         }
-
-        Notify();
     }
 
     public IReadOnlyList<TItem> Items
@@ -66,50 +59,9 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
         }
     }
 
-    public async IAsyncEnumerable<byte> WatchAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        Channel<byte> channel = Channel.CreateUnbounded<byte>();
-        lock (_lock)
-        {
-            _subscribers.Add(channel);
-        }
-
-        await using CancellationTokenRegistration registration = cancellationToken.Register(
-            () => channel.Writer.TryComplete());
-
-        try
-        {
-            while (await channel.Reader.WaitToReadAsync(CancellationToken.None))
-            {
-                while (channel.Reader.TryRead(out byte item))
-                {
-                    yield return item;
-                }
-            }
-        }
-        finally
-        {
-            lock (_lock)
-            {
-                _subscribers.Remove(channel);
-            }
-        }
-    }
-
     protected abstract TItem CreatePending(int ruvId, string programName);
 
     protected abstract TItem WithProcessingStatus(TItem item);
 
     protected bool TryReadNext(out int ruvId) => _channel.Reader.TryRead(out ruvId);
-
-    private void Notify()
-    {
-        lock (_lock)
-        {
-            foreach (Channel<byte> subscriber in _subscribers)
-            {
-                subscriber.Writer.TryWrite(0);
-            }
-        }
-    }
 }

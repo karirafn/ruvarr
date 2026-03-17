@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
@@ -37,7 +38,7 @@ public sealed class TitleMatching
 
     private TvdbEpisodeLookupJob CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<TvdbEpisodeLookupJob>.Instance,
-        dbContext, _tvdb, _sonarr, _notifier);
+        dbContext, _tvdb, _sonarr, _notifier, new DomainEventBroadcaster());
 
     [Fact]
     public async Task MatchesEpisodeWhenTranslationMatchesTitle()

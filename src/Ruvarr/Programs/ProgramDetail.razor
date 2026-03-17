@@ -3,7 +3,7 @@
 @implements IAsyncDisposable
 @using Ruvarr.Abstractions
 @using Ruvarr.Contracts
-@using Ruvarr.Downloads.Notifiers
+@using Ruvarr.Downloads.Events
 @using Ruvarr.Downloads.Queries.GetDownloadQueue
 @using Ruvarr.ProgramRefreshQueue.Notifiers
 @using Ruvarr.Programs.Commands.DownloadEpisode
@@ -12,7 +12,7 @@
 @using Ruvarr.Programs.Queries.GetProgramEpisodes
 @inject IServiceScopeFactory ScopeFactory
 @inject ProgramRefreshNotifier RefreshNotifier
-@inject DownloadQueueNotifier DownloadNotifier
+@inject IDomainEventBroadcaster Broadcaster
 
 <a class="detail-back" href="/">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
@@ -226,7 +226,7 @@ else
 
     private async Task WatchDownloadQueueAsync()
     {
-        await foreach (byte _ in DownloadNotifier.WatchAsync(_cts.Token))
+        await foreach (DownloadCompletedEvent _ in Broadcaster.Subscribe<DownloadCompletedEvent>(_cts.Token))
         {
             await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
             IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>> handler =
@@ -244,7 +244,7 @@ else
 
     private async Task WatchRefreshQueueAsync()
     {
-        await foreach (byte _ in RefreshNotifier.WatchAsync(_cts.Token))
+        await foreach (QueueChangedEvent<ProgramRefreshQueueItemSummary> _ in Broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(_cts.Token))
         {
             _refreshQueue = RefreshNotifier.Items.ToDictionary(x => x.RuvId, x => x.Status);
             foreach (int ruvId in _pendingRefresh.Where(id => _refreshQueue.ContainsKey(id)).ToList())

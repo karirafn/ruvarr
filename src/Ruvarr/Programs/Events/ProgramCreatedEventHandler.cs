@@ -1,13 +1,12 @@
 using Ruvarr.Abstractions;
-using Ruvarr.Programs.Notifiers;
 
 namespace Ruvarr.Programs.Events;
 
-internal sealed class ProgramCreatedEventHandler(ProgramCreatedNotifier notifier) : IDomainEventHandler<ProgramCreatedEvent>
+internal sealed class ProgramCreatedEventHandler(IDomainEventBroadcaster broadcaster) : IDomainEventHandler<ProgramCreatedEvent>
 {
     public Task Handle(ProgramCreatedEvent @event, CancellationToken cancellationToken)
     {
-        notifier.Notify();
+        broadcaster.Publish(@event);
         return Task.CompletedTask;
     }
 }

@@ -6,7 +6,6 @@ using Ruvarr.Programs.Commands.MatchProgram;
 using Ruvarr.Programs.Commands.MatchProgramEpisodes;
 using Ruvarr.Programs.Commands.RefreshProgram;
 using Ruvarr.Programs.Events;
-using Ruvarr.Programs.Notifiers;
 using Ruvarr.Programs.Queries.GetProgram;
 using Ruvarr.Programs.Queries.GetProgramEpisodes;
 using Ruvarr.Programs.Queries.GetPrograms;
@@ -17,7 +16,6 @@ internal static class ServiceCollectionExtensions
 {
     internal static IServiceCollection AddPrograms(this IServiceCollection services)
     {
-        services.AddSingleton<ProgramCreatedNotifier>();
         services.AddTransient<IDomainEventHandler<ProgramCreatedEvent>, ProgramCreatedEventHandler>();
         services.AddTransient<IDomainEventHandler<ProgramMatchedTvdbEvent>, ProgramMatchedTvdbEventHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeAddedToMatchedProgramEvent>, EpisodeAddedToMatchedProgramEventHandler>();
