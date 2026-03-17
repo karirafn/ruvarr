@@ -6,6 +6,7 @@
 @using Ruvarr.Downloads.Events
 @using Ruvarr.Downloads.Queries.GetDownloadQueue
 @using Ruvarr.ProgramRefreshQueue.Notifiers
+@using Ruvarr.Programs.Events
 @using Ruvarr.Programs.Commands.DownloadEpisode
 @using Ruvarr.Programs.Commands.RefreshProgram
 @using Ruvarr.Programs.Queries.GetProgram
@@ -202,11 +203,13 @@ else
     private readonly CancellationTokenSource _cts = new();
 
     private MatchEpisodeDialog? _matchDialog;
+    private DateTime _lastEpisodeReloadTime;
 
     protected override async Task OnInitializedAsync()
     {
         _ = WatchDownloadQueueAsync();
         _ = WatchRefreshQueueAsync();
+        _ = WatchEpisodeMatchesAsync();
 
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<GetProgramQuery, ProgramSummary?> programHandler =
@@ -252,6 +255,32 @@ else
                 _pendingRefresh.Remove(ruvId);
             }
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task WatchEpisodeMatchesAsync()
+    {
+        await foreach (EpisodeMatchedEvent @event in Broadcaster.Subscribe<EpisodeMatchedEvent>(_cts.Token))
+        {
+            if (@event.Episode.Program.RuvId != RuvId)
+            {
+                continue;
+            }
+
+            if (DateTime.UtcNow - _lastEpisodeReloadTime < TimeSpan.FromMilliseconds(200))
+            {
+                continue;
+            }
+
+            await Task.Delay(200, _cts.Token);
+
+            if (DateTime.UtcNow - _lastEpisodeReloadTime < TimeSpan.FromMilliseconds(200))
+            {
+                continue;
+            }
+
+            _lastEpisodeReloadTime = DateTime.UtcNow;
+            await ReloadEpisodesAsync();
         }
     }
 
