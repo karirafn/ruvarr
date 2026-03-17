@@ -532,6 +532,11 @@ dialog input[type="number"]:focus {
     opacity: 1;
 }
 
+.copy-button--copied {
+    opacity: 1;
+    color: #4ade80;
+}
+
 .col-duration {
     white-space: nowrap;
     width: 5rem;

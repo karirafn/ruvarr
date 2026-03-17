@@ -134,28 +134,56 @@ else
                             @episode.EpisodeTitle
                             @if (!string.IsNullOrWhiteSpace(episode.EpisodeTitle))
                             {
-                                <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeTitle)" title="Copy title">
-                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         aria-label="Copy">
-                                        <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-                                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                                    </svg>
-                                </button>
+                                string titleKey = $"{episode.EpisodeRuvId}-title";
+                                @if (_copied.Contains(titleKey))
+                                {
+                                    <span class="icon-button copy-button copy-button--copied">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             aria-label="Copied">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeTitle, titleKey)" title="Copy title">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             aria-label="Copy">
+                                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+                                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                        </svg>
+                                    </button>
+                                }
                             }
                         </td>
                         <td class="col-description col-copyable">
                             @episode.EpisodeDescription
                             @if (!string.IsNullOrWhiteSpace(episode.EpisodeDescription))
                             {
-                                <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeDescription)" title="Copy description">
-                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         aria-label="Copy">
-                                        <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-                                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                                    </svg>
-                                </button>
+                                string descKey = $"{episode.EpisodeRuvId}-desc";
+                                @if (_copied.Contains(descKey))
+                                {
+                                    <span class="icon-button copy-button copy-button--copied">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             aria-label="Copied">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeDescription, descKey)" title="Copy description">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                             aria-label="Copy">
+                                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+                                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                                        </svg>
+                                    </button>
+                                }
                             }
                         </td>
                         <td>
@@ -234,6 +262,7 @@ else
     private readonly HashSet<string> _queued = [];
     private readonly HashSet<string> _failed = [];
     private readonly HashSet<int> _pendingRefresh = [];
+    private readonly HashSet<string> _copied = [];
     private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();
 
@@ -375,7 +404,7 @@ else
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task CopyToClipboard(string text)
+    private async Task CopyToClipboard(string text, string key)
     {
         try
         {
@@ -383,7 +412,12 @@ else
         }
         catch (JSException)
         {
-            // Silently ignore — clipboard may be unavailable in non-secure contexts or disconnected circuits
+            return;
         }
+
+        _copied.Add(key);
+        StateHasChanged();
+        await Task.Delay(1500);
+        _copied.Remove(key);
     }
 }
