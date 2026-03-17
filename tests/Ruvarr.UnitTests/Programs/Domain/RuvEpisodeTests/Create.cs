@@ -77,6 +77,26 @@ public sealed class Create
     }
 
     [Fact]
+    public void SetsDurationSeconds()
+    {
+        // Arrange / Act
+        RuvEpisode result = new RuvEpisodeBuilder().WithDurationSeconds(1800).Build();
+
+        // Assert
+        result.DurationSeconds.ShouldBe(1800);
+    }
+
+    [Fact]
+    public void DurationSecondsDefaultsToNull()
+    {
+        // Arrange / Act
+        RuvEpisode result = new RuvEpisodeBuilder().Build();
+
+        // Assert
+        result.DurationSeconds.ShouldBeNull();
+    }
+
+    [Fact]
     public void TvdbIdIsNull()
     {
         // Arrange / Act

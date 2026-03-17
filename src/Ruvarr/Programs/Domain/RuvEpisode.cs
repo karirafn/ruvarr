@@ -47,6 +47,8 @@ internal sealed partial class RuvEpisode
 
     public bool IsMissing { get; private set; }
 
+    public int? DurationSeconds { get; private set; }
+
     public DownloadQueueItem? DownloadQueueItem { get; private set; }
 
     public Uri? RuvUrl =>
@@ -54,7 +56,7 @@ internal sealed partial class RuvEpisode
             ? null
             : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(Program.Slug!)}/{Program.RuvId}/{RuvId}");
 
-    public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, string description, DateTime firstRun)
+    public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, string description, DateTime firstRun, int? durationSeconds = null)
     {
         return new RuvEpisode()
         {
@@ -64,6 +66,7 @@ internal sealed partial class RuvEpisode
             Title = title,
             Description = description,
             FirstRun = firstRun,
+            DurationSeconds = durationSeconds,
         };
     }
 

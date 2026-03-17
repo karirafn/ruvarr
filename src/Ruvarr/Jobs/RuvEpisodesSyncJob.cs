@@ -83,7 +83,8 @@ internal sealed class RuvEpisodesSyncJob(
                     uri: e.File,
                     title: e.Title,
                     description: e.Description.Count > 0 ? e.Description[0] : string.Empty,
-                    firstRun: e.FirstRun))
+                    firstRun: e.FirstRun,
+                    durationSeconds: e.Duration))
                 .ToList()
                 .ForEach(e => logger.LogInformation("Added RÚV episode '{EpisodeName}' to program '{Name}'", e.Title, program.Name));
 

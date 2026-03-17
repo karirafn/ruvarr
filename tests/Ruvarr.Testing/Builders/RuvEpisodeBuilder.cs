@@ -10,6 +10,7 @@ internal sealed class RuvEpisodeBuilder
     private string _title = "Test Episode";
     private string _description = "Description";
     private DateTime _firstRun = DateTime.UtcNow;
+    private int? _durationSeconds;
 
     public RuvEpisodeBuilder WithProgram(RuvProgram program)
     {
@@ -47,11 +48,18 @@ internal sealed class RuvEpisodeBuilder
         return this;
     }
 
+    public RuvEpisodeBuilder WithDurationSeconds(int? durationSeconds)
+    {
+        _durationSeconds = durationSeconds;
+        return this;
+    }
+
     public RuvEpisode Build() => RuvEpisode.Create(
         program: _program,
         id: _ruvId,
         uri: _uri,
         title: _title,
         description: _description,
-        firstRun: _firstRun);
+        firstRun: _firstRun,
+        durationSeconds: _durationSeconds);
 }
