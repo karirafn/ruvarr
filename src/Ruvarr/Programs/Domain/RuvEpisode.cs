@@ -149,6 +149,14 @@ internal sealed partial class RuvEpisode
 
     public void Download() => DownloadQueueItem = DownloadQueueItem.Create(this);
 
+    public void UpdateDuration(int? durationSeconds)
+    {
+        if (DurationSeconds is null && durationSeconds is not null)
+        {
+            DurationSeconds = durationSeconds;
+        }
+    }
+
     public void ScheduleLookup()
     {
         if (TvdbId is not null)
