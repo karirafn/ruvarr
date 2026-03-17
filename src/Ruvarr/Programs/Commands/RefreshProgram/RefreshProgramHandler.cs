@@ -5,6 +5,7 @@ using Ruvarr.Contracts;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
+using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 namespace Ruvarr.Programs.Commands.RefreshProgram;
 
@@ -12,6 +13,7 @@ internal sealed class RefreshProgramHandler(
     RuvarrDbContext dbContext,
     ProgramRefreshNotifier syncQueue,
     TvdbEpisodeLookupNotifier tvdbEpisodeLookupNotifier,
+    TvdbSeriesLookupNotifier tvdbSeriesLookupNotifier,
     IDomainEventBroadcaster broadcaster)
     : IRequestHandler<RefreshProgramCommand>
 {
@@ -27,12 +29,18 @@ internal sealed class RefreshProgramHandler(
             return ProgramErrors.ProgramNotFound;
         }
 
-        syncQueue.Enqueue(program.RuvId, program.Name);
+        syncQueue.PriorityEnqueue(program.RuvId, program.Name);
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+
+        if (program.Series is null)
+        {
+            tvdbSeriesLookupNotifier.PriorityEnqueue(program.RuvId, program.Name);
+            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
+        }
 
         if (program.Series is not null && program.HasMultipleEpisodes)
         {
-            tvdbEpisodeLookupNotifier.Enqueue(program.RuvId, program.Name);
+            tvdbEpisodeLookupNotifier.PriorityEnqueue(program.RuvId, program.Name);
             broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
         }
 

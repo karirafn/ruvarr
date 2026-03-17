@@ -1,5 +1,3 @@
-using System.Threading.Channels;
-
 using Ruvarr.Contracts;
 
 namespace Ruvarr.Abstractions;
@@ -7,9 +5,9 @@ namespace Ruvarr.Abstractions;
 public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSummary
 {
     private readonly Lock _lock = new();
-    private readonly Dictionary<int, (TItem Item, int Sequence)> _items = [];
-    private readonly Channel<int> _channel = Channel.CreateUnbounded<int>();
-    private int _nextSequence;
+    private readonly Dictionary<int, (TItem Item, LinkedListNode<int> Node)> _items = [];
+    private readonly LinkedList<int> _order = new();
+    private readonly HashSet<int> _read = [];
 
     public void Enqueue(int ruvId, string programName)
     {
@@ -20,19 +18,41 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
                 return;
             }
 
-            _items[ruvId] = (CreatePending(ruvId, programName), _nextSequence++);
+            LinkedListNode<int> node = _order.AddLast(ruvId);
+            _items[ruvId] = (CreatePending(ruvId, programName), node);
         }
+    }
 
-        _channel.Writer.TryWrite(ruvId);
+    public void PriorityEnqueue(int ruvId, string programName)
+    {
+        lock (_lock)
+        {
+            if (_items.TryGetValue(ruvId, out (TItem Item, LinkedListNode<int> Node) entry))
+            {
+                if (entry.Item.IsProcessing)
+                {
+                    return;
+                }
+
+                _order.Remove(entry.Node);
+                LinkedListNode<int> node = _order.AddFirst(ruvId);
+                _items[ruvId] = (entry.Item, node);
+                _read.Remove(ruvId);
+                return;
+            }
+
+            LinkedListNode<int> newNode = _order.AddFirst(ruvId);
+            _items[ruvId] = (CreatePending(ruvId, programName), newNode);
+        }
     }
 
     public void MarkProcessing(int ruvId)
     {
         lock (_lock)
         {
-            if (_items.TryGetValue(ruvId, out (TItem Item, int Sequence) entry))
+            if (_items.TryGetValue(ruvId, out (TItem Item, LinkedListNode<int> Node) entry))
             {
-                _items[ruvId] = (WithProcessingStatus(entry.Item), entry.Sequence);
+                _items[ruvId] = (WithProcessingStatus(entry.Item), entry.Node);
             }
         }
     }
@@ -41,7 +61,12 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
     {
         lock (_lock)
         {
-            _items.Remove(ruvId);
+            if (_items.Remove(ruvId, out (TItem Item, LinkedListNode<int> Node) entry))
+            {
+                _order.Remove(entry.Node);
+            }
+
+            _read.Remove(ruvId);
         }
     }
 
@@ -51,10 +76,29 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
         {
             lock (_lock)
             {
-                return [.. _items.Values
-                    .OrderBy(x => !x.Item.IsProcessing)
-                    .ThenBy(x => x.Sequence)
-                    .Select(x => x.Item)];
+                List<TItem> processing = [];
+                List<TItem> pending = [];
+
+                LinkedListNode<int>? current = _order.First;
+                while (current is not null)
+                {
+                    if (_items.TryGetValue(current.Value, out (TItem Item, LinkedListNode<int> Node) entry))
+                    {
+                        if (entry.Item.IsProcessing)
+                        {
+                            processing.Add(entry.Item);
+                        }
+                        else
+                        {
+                            pending.Add(entry.Item);
+                        }
+                    }
+
+                    current = current.Next;
+                }
+
+                processing.AddRange(pending);
+                return processing;
             }
         }
     }
@@ -63,5 +107,24 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
 
     protected abstract TItem WithProcessingStatus(TItem item);
 
-    protected bool TryReadNext(out int ruvId) => _channel.Reader.TryRead(out ruvId);
+    protected bool TryReadNext(out int ruvId)
+    {
+        lock (_lock)
+        {
+            LinkedListNode<int>? current = _order.First;
+            while (current is not null)
+            {
+                if (_items.ContainsKey(current.Value) && _read.Add(current.Value))
+                {
+                    ruvId = current.Value;
+                    return true;
+                }
+
+                current = current.Next;
+            }
+
+            ruvId = default;
+            return false;
+        }
+    }
 }
