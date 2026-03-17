@@ -510,6 +510,33 @@ dialog input[type="number"]:focus {
 .col-date { white-space: nowrap; }
 .col-description { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; }
 
+.col-copyable {
+    position: relative;
+    padding-right: 2rem;
+}
+
+.copy-button {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.3rem;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.copy-button .icon {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+.col-copyable:hover .copy-button {
+    opacity: 1;
+}
+
+.copy-button--copied {
+    opacity: 1;
+    color: #4ade80;
+}
+
 .col-duration {
     white-space: nowrap;
     width: 5rem;
