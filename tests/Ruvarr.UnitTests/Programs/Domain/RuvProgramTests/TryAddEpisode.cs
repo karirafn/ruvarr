@@ -71,6 +71,20 @@ public sealed class TryAddEpisode
     }
 
     [Fact]
+    public void PassesDurationSecondsToEpisode()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 2700);
+
+        // Assert
+        sut.Episodes.ShouldHaveSingleItem();
+        sut.Episodes[0].DurationSeconds.ShouldBe(2700);
+    }
+
+    [Fact]
     public void DoesNotRaiseEpisodeAddedToMatchedProgramEventForDuplicateEpisode()
     {
         // Arrange

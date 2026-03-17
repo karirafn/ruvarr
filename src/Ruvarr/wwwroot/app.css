@@ -153,7 +153,8 @@ table {
 th:nth-child(1), td:nth-child(1) { width: 7%; }
 th:nth-child(2), td:nth-child(2) { width: 7%; }
 th:nth-child(3), td:nth-child(3) { white-space: nowrap; width: 8rem; }
-th:nth-child(4), td:nth-child(4) { width: 20rem; }
+th:nth-child(4), td:nth-child(4) { white-space: nowrap; width: 5rem; }
+th:nth-child(5), td:nth-child(5) { width: 20rem; }
 
 thead {
     background-color: rgba(255, 255, 255, 0.08);
@@ -507,6 +508,20 @@ dialog input[type="number"]:focus {
 .col-number { width: 5rem; }
 .col-date { white-space: nowrap; }
 .col-description { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; }
+
+.col-duration {
+    white-space: nowrap;
+    width: 5rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-variant-numeric: tabular-nums;
+}
+
+.duration-unit {
+    margin-left: 0.2rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.02em;
+}
 
 /* Program name link */
 .program-link {

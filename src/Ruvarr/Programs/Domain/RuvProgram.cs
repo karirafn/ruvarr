@@ -145,14 +145,14 @@ internal sealed class RuvProgram
         NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
     }
 
-    public bool TryAddEpisode(string id, Uri uri, string title, string description, DateTime firstRun)
+    public bool TryAddEpisode(string id, Uri uri, string title, string description, DateTime firstRun, int? durationSeconds = null)
     {
         if (_episodes.Any(x => x.RuvId == id))
         {
             return false;
         }
 
-        RuvEpisode episode = RuvEpisode.Create(this, id, uri, title, description, firstRun);
+        RuvEpisode episode = RuvEpisode.Create(this, id, uri, title, description, firstRun, durationSeconds);
         _episodes.Add(episode);
 
         if (Series is not null)
