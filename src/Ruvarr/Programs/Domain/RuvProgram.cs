@@ -142,6 +142,7 @@ internal sealed class RuvProgram
         NextLookup = null;
         Matched = DateTime.UtcNow;
         Movie = movie;
+        _domainEvents.Add(new ProgramMatchedTmdbEvent(RuvId, Name));
     }
 
     public void ScheduleLookup()
