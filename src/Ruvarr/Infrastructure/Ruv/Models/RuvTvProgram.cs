@@ -9,7 +9,7 @@ public sealed record class RuvTvProgram(
     [property: JsonPropertyName("foreign_title")] string ForeignTitle,
     [property: JsonPropertyName("slug")] string Slug,
     [property: JsonPropertyName("image_renditions")] RuvImageRenditions ImageRenditions,
-    [property: JsonPropertyName("image")] Uri Image,
+    [property: JsonPropertyName("image")] Uri? Image,
     [property: JsonPropertyName("image_og")] Uri ImageOg,
     [property: JsonPropertyName("portrait_image_renditions")] RuvPortraitImageRenditions PortraitImageRenditions,
     [property: JsonPropertyName("portrait_image")] Uri PortraitImage,

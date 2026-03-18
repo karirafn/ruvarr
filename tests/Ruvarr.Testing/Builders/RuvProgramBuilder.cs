@@ -12,6 +12,7 @@ internal sealed class RuvProgramBuilder
     private string? _foreignName = "fleh";
     private bool _hasMultipleEpisodes;
     private string? _slug;
+    private Uri? _imageUrl;
 
     public RuvProgramBuilder WithRuvId(int ruvId)
     {
@@ -49,11 +50,18 @@ internal sealed class RuvProgramBuilder
         return this;
     }
 
+    public RuvProgramBuilder WithImageUrl(Uri? imageUrl)
+    {
+        _imageUrl = imageUrl;
+        return this;
+    }
+
     public RuvProgram Build() => RuvProgram.Create(
         id: _ruvId,
         channel: _channel,
         name: _name,
         foreignName: _foreignName,
         multipleEpisodes: _hasMultipleEpisodes,
-        slug: _slug);
+        slug: _slug,
+        imageUrl: _imageUrl);
 }

@@ -114,6 +114,59 @@ public sealed class GetProgramHandlerTests(IntegrationTestFactory factory) : ICl
     }
 
     [Fact]
+    public async Task ReturnsImageUrlWhenProgramHasImageUrl()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(40020)
+            .WithMultipleEpisodes()
+            .WithImageUrl(new Uri("https://example.com/hero.jpg"))
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40020), cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ImageUrl.ShouldBe(new Uri("https://example.com/hero.jpg"));
+    }
+
+    [Fact]
+    public async Task ReturnsImageUrlAsNullWhenProgramHasNoImageUrl()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(40021)
+            .WithMultipleEpisodes()
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40021), cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ImageUrl.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ReturnsNullForUnknownRuvId()
     {
         // Arrange

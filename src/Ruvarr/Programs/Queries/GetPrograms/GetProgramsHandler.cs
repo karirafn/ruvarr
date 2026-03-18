@@ -64,6 +64,7 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 SeriesSlug = x.Series!.Slug,
                 SeriesTvdbId = (int?)x.Series!.TvdbId,
                 HasSeries = x.Series != null,
+                x.ImageUrl,
                 HasAnyEpisodes = x.Episodes.Any(),
                 AllEpisodesMatched = x.Episodes.All(e => e.TvdbId != null),
                 AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbId != null),
@@ -79,7 +80,8 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 x.SeriesSlug is { } seriesSlug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(seriesSlug)}") : null,
                 x.SeriesTvdbId,
                 x.Slug is { } programSlug ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(programSlug)}/{x.RuvId}") : null,
-                DeriveEpisodeMatchStatus(x.HasSeries, x.HasAnyEpisodes, x.AllEpisodesMatched, x.AnyEpisodeMatched)));
+                DeriveEpisodeMatchStatus(x.HasSeries, x.HasAnyEpisodes, x.AllEpisodesMatched, x.AnyEpisodeMatched),
+                x.ImageUrl));
 
         await foreach (ProgramSummary summary in results.WithCancellation(cancellationToken))
         {

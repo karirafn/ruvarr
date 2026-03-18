@@ -109,4 +109,27 @@ public sealed class Create
         // Assert
         result.Slug.ShouldBeNull();
     }
+
+    [Fact]
+    public void SetsImageUrl()
+    {
+        // Arrange
+        Uri imageUrl = new("https://example.com/image.jpg");
+
+        // Act
+        RuvProgram result = new RuvProgramBuilder().WithImageUrl(imageUrl).Build();
+
+        // Assert
+        result.ImageUrl.ShouldBe(imageUrl);
+    }
+
+    [Fact]
+    public void ImageUrlIsNullByDefault()
+    {
+        // Arrange / Act
+        RuvProgram result = new RuvProgramBuilder().Build();
+
+        // Assert
+        result.ImageUrl.ShouldBeNull();
+    }
 }

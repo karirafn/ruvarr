@@ -46,6 +46,8 @@ internal sealed class RuvProgram
 
     public string? Slug { get; private set; }
 
+    public Uri? ImageUrl { get; private set; }
+
     public TvdbSeries? Series { get; private set; }
 
     public TmdbMovie? Movie { get; private set; }
@@ -77,7 +79,7 @@ internal sealed class RuvProgram
         }
     }
 
-    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null)
+    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null, Uri? imageUrl = null)
     {
         RuvProgram program = new()
         {
@@ -88,6 +90,7 @@ internal sealed class RuvProgram
             HasMultipleEpisodes = multipleEpisodes,
             Created = DateTime.UtcNow,
             Slug = SanitizeSlug(slug),
+            ImageUrl = imageUrl,
         };
 
         program._domainEvents.Add(new ProgramCreatedEvent(program));
@@ -96,6 +99,8 @@ internal sealed class RuvProgram
     }
 
     public void UpdateSlug(string? slug) => Slug = SanitizeSlug(slug);
+
+    public void UpdateImageUrl(Uri? imageUrl) => ImageUrl = imageUrl;
 
     private static string? SanitizeSlug(string? slug) =>
         slug is not null && SlugPattern.IsMatch(slug) ? slug : null;
