@@ -47,6 +47,22 @@ internal static partial class StringExtensions
     // https://en.wikipedia.org/wiki/Soft_hyphen
     private static string RemoveSoftHyphens(this string input) => input.Replace("\u00AD", string.Empty, StringComparison.OrdinalIgnoreCase);
 
+    internal static bool HasYearSuffix(this string? input) =>
+        !string.IsNullOrWhiteSpace(input) && YearSuffixRegex().IsMatch(input);
+
+    internal static string? WithoutYearSuffix(this string? input)
+    {
+        if (!input.HasYearSuffix())
+        {
+            return input;
+        }
+
+        return YearSuffixRegex().Replace(input!, string.Empty).Trim();
+    }
+
+    [GeneratedRegex(@"\(\d{4}\)\s*$")]
+    private static partial Regex YearSuffixRegex();
+
     [GeneratedRegex(@"[^\p{L}\p{N}]")]
     private static partial Regex NonUnicodeCharactersRegex();
 

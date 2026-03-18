@@ -120,6 +120,10 @@ internal sealed class TvdbSeriesLookupJob(
         _ = await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    private static bool HasYearSuffixedVariant(List<Datum> data, string searchText) => data.Any(d =>
+        (d.Name.HasYearSuffix() && d.Name.WithoutYearSuffix()!.EqualsSanitized(searchText))
+        || (d.Translations.TryGetValue("isl", out string? islName) && islName.HasYearSuffix() && islName.WithoutYearSuffix()!.EqualsSanitized(searchText)));
+
     private Task<Datum?> TryRemovingNumeralEnding(string? searchText, bool checkTranslations)
     {
         string? trimmed = searchText.WithoutNumeralEnding();
@@ -161,6 +165,12 @@ internal sealed class TvdbSeriesLookupJob(
         }
 
         logger.LogDebug("Tvdb returned '{Count}' exact match(es) for series {Name}", matches.Count, searchText);
+
+        if (matches.Count == 1 && HasYearSuffixedVariant(data, searchText))
+        {
+            logger.LogDebug("Skipping ambiguous match for '{Name}' — year-suffixed variant exists in TVDB results", searchText);
+            return null;
+        }
 
         return matches.Count == 1 ? matches[0] : null;
     }
