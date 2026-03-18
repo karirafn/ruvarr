@@ -12,39 +12,40 @@
 @inject IServiceScopeFactory ScopeFactory
 @inject ProgramRefreshNotifier RefreshNotifier
 @inject IDomainEventBroadcaster Broadcaster
+@inject ProgramsFilterState FilterState
 
 <h1>Programs</h1>
 
 <div class="filter-panel">
-    <label class="filter-chip @(_filterUnmatchedPrograms ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="_filterUnmatchedPrograms" @bind:after="LoadProgramsAsync" />
+    <label class="filter-chip @(FilterState.FilterUnmatchedPrograms ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="FilterState.FilterUnmatchedPrograms" @bind:after="LoadProgramsAsync" />
         Unmatched Programs
     </label>
-    <label class="filter-chip @(_filterUnmatchedEpisodes ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="_filterUnmatchedEpisodes" @bind:after="LoadProgramsAsync" />
+    <label class="filter-chip @(FilterState.FilterUnmatchedEpisodes ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="FilterState.FilterUnmatchedEpisodes" @bind:after="LoadProgramsAsync" />
         Unmatched Episodes
     </label>
-    <label class="filter-chip @(_filterMissingFromSonarr ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="_filterMissingFromSonarr" @bind:after="LoadProgramsAsync" />
+    <label class="filter-chip @(FilterState.FilterMissingFromSonarr ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="FilterState.FilterMissingFromSonarr" @bind:after="LoadProgramsAsync" />
         Missing from Sonarr
     </label>
-    <label class="filter-chip @(_filterPartiallyMatched ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="_filterPartiallyMatched" @bind:after="LoadProgramsAsync" />
+    <label class="filter-chip @(FilterState.FilterPartiallyMatched ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="FilterState.FilterPartiallyMatched" @bind:after="LoadProgramsAsync" />
         Partially Matched
     </label>
-    <label class="filter-chip @(_filterMonitored ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="_filterMonitored" @bind:after="LoadProgramsAsync" />
+    <label class="filter-chip @(FilterState.FilterMonitored ? "filter-chip--active" : "")">
+        <input type="checkbox" @bind="FilterState.FilterMonitored" @bind:after="LoadProgramsAsync" />
         Monitored
     </label>
     <span class="filter-divider"></span>
-    <select class="filter-select" @bind="_filterChannel">
+    <select class="filter-select" @bind="FilterState.FilterChannel">
         <option value="">All channels</option>
         @foreach (string channel in _channels)
         {
             <option value="@channel">@channel</option>
         }
     </select>
-    <button class="filter-clear" @onclick="ClearFilters" disabled="@(!HasActiveFilters)">Clear filters</button>
+    <button class="filter-clear" @onclick="ClearFilters" disabled="@(!FilterState.HasActiveFilters)">Clear filters</button>
 </div>
 
 <div class="search-bar">
@@ -59,11 +60,11 @@ else
 {
     List<ProgramSummary> visibleList = [.. _programs
         .Where(p => string.IsNullOrWhiteSpace(_searchText) || p.ProgramName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
-        .Where(p => string.IsNullOrEmpty(_filterChannel) || p.Channel == _filterChannel)];
+        .Where(p => string.IsNullOrEmpty(FilterState.FilterChannel) || p.Channel == FilterState.FilterChannel)];
 
     if (visibleList.Count == 0)
     {
-        <p class="empty-message">@(HasActiveFilters ? "No programs match the selected filters." : "No programs found.")</p>
+        <p class="empty-message">@(FilterState.HasActiveFilters ? "No programs match the selected filters." : "No programs found.")</p>
     }
     else
     {
@@ -204,21 +205,7 @@ else
 }
 
 @code {
-    private bool _filterUnmatchedPrograms;
-    private bool _filterUnmatchedEpisodes;
-    private bool _filterMissingFromSonarr;
-    private bool _filterPartiallyMatched;
-    private bool _filterMonitored;
-    private string _filterChannel = string.Empty;
     private List<string> _channels = [];
-
-    private bool HasActiveFilters =>
-        _filterUnmatchedPrograms ||
-        _filterUnmatchedEpisodes ||
-        _filterMissingFromSonarr ||
-        _filterPartiallyMatched ||
-        _filterMonitored ||
-        !string.IsNullOrEmpty(_filterChannel);
 
     private MatchProgramDialog? _matchProgramDialog;
     private List<ProgramSummary>? _programs;
@@ -264,12 +251,7 @@ else
 
     private async Task ClearFilters()
     {
-        _filterUnmatchedPrograms = false;
-        _filterUnmatchedEpisodes = false;
-        _filterMissingFromSonarr = false;
-        _filterPartiallyMatched = false;
-        _filterMonitored = false;
-        _filterChannel = string.Empty;
+        FilterState.Clear();
         await LoadProgramsAsync();
     }
 
@@ -278,20 +260,20 @@ else
         _programs = null;
         await InvokeAsync(StateHasChanged);
 
-        bool? isProgramMatched = (_filterUnmatchedPrograms, _filterUnmatchedEpisodes) switch
+        bool? isProgramMatched = (FilterState.FilterUnmatchedPrograms, FilterState.FilterUnmatchedEpisodes) switch
         {
             (true, false) => false,
             (false, true) => true,
             _ => null
         };
 
-        bool? isEpisodeMatched = _filterUnmatchedEpisodes ? false : null;
+        bool? isEpisodeMatched = FilterState.FilterUnmatchedEpisodes ? false : null;
 
-        bool? isProgramMonitored = (_filterMonitored || _filterMissingFromSonarr) ? true : null;
+        bool? isProgramMonitored = (FilterState.FilterMonitored || FilterState.FilterMissingFromSonarr) ? true : null;
 
-        bool? isProgramMissingEpisodes = _filterMissingFromSonarr ? true : null;
+        bool? isProgramMissingEpisodes = FilterState.FilterMissingFromSonarr ? true : null;
 
-        bool? isProgramPartiallyMatched = _filterPartiallyMatched ? true : null;
+        bool? isProgramPartiallyMatched = FilterState.FilterPartiallyMatched ? true : null;
 
         GetProgramsQuery query = new(
             null,
@@ -315,9 +297,9 @@ else
         _programs = loaded;
         _channels = [.. _programs.Select(p => p.Channel).Distinct().Order()];
 
-        if (!string.IsNullOrEmpty(_filterChannel) && !_channels.Contains(_filterChannel))
+        if (!string.IsNullOrEmpty(FilterState.FilterChannel) && !_channels.Contains(FilterState.FilterChannel))
         {
-            _filterChannel = string.Empty;
+            FilterState.FilterChannel = string.Empty;
         }
 
         await InvokeAsync(StateHasChanged);
