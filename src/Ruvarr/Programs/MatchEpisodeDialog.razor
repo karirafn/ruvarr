@@ -1,24 +1,83 @@
 @namespace Ruvarr.Programs
 @using Ruvarr.Abstractions
+@using Ruvarr.Contracts
 @using Ruvarr.Programs.Commands.MatchEpisode
+@using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes
 @implements IAsyncDisposable
 @inject IServiceScopeFactory ScopeFactory
 @inject IJSRuntime Js
 
 <dialog @ref="_dialog" @onclose="OnDialogClose">
     <h2>Match to TVDB</h2>
-    <label>
-        TVDB Episode ID
-        <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" @onkeydown="HandleKeyDown" />
-    </label>
+    @if (_isLoading)
+    {
+        <div class="dialog-spinner-container" role="status" aria-label="Loading episodes">
+            <span class="dialog-spinner"></span>
+        </div>
+    }
+    else if (_errorMessage is not null)
+    {
+        <p class="dialog-error">@_errorMessage</p>
+    }
+    else if (_seasons.Count == 0)
+    {
+        <p class="dialog-error">No episodes found for this series.</p>
+    }
+    else
+    {
+        <label>
+            Season
+            <select class="dialog-select" value="@_selectedSeason" @onchange="OnSeasonChanged">
+                @if (_selectedSeason is null)
+                {
+                    <option value="">Select a season</option>
+                }
+                @foreach (int season in _seasons)
+                {
+                    <option value="@season">Season @season</option>
+                }
+            </select>
+        </label>
+        <label>
+            Episode
+            <select class="dialog-select"
+                    disabled="@(_selectedSeason is null || _seasonEpisodes.Count == 0)"
+                    @bind="_selectedEpisodeId"
+                    @bind:event="onchange"
+                    @onkeydown="HandleKeyDown">
+                @if (_selectedSeason is null)
+                {
+                    <option value="">Select a season first</option>
+                }
+                else if (_seasonEpisodes.Count == 0)
+                {
+                    <option value="">No episodes found</option>
+                }
+                else
+                {
+                    @if (_selectedEpisodeId is null)
+                    {
+                        <option value="">Select an episode</option>
+                    }
+                    @foreach (TvdbSeriesEpisode episode in _seasonEpisodes)
+                    {
+                        <option value="@episode.TvdbId">E@(episode.EpisodeNumber.ToString("D2")) - @episode.Name</option>
+                    }
+                }
+            </select>
+        </label>
+    }
     <div class="dialog-actions">
-        <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@IsMatchDisabled(_tvdbIdInput, _currentTvdbId, _isSubmitting)">
-            @if (_isSubmitting)
-            {
-                <span class="button-spinner"></span>
-            }
-            Match
-        </button>
+        @if (!_isLoading)
+        {
+            <button class="dialog-button dialog-button--primary" @onclick="SubmitMatch" disabled="@IsMatchDisabled(_selectedEpisodeId, _currentTvdbId, _isSubmitting)">
+                @if (_isSubmitting)
+                {
+                    <span class="button-spinner"></span>
+                }
+                Match
+            </button>
+        }
         <button class="dialog-button" @onclick="CloseAsync" disabled="@_isSubmitting">Cancel</button>
     </div>
 </dialog>
@@ -29,17 +88,135 @@
 
     private ElementReference _dialog;
     private string? _ruvId;
-    private string _tvdbIdInput = string.Empty;
     private int? _currentTvdbId;
+    private bool _isLoading;
     private bool _isSubmitting;
+    private string? _errorMessage;
     private readonly CancellationTokenSource _cts = new();
 
-    public async Task OpenAsync(string ruvId, int? currentTvdbId)
+    private IReadOnlyList<TvdbSeriesEpisode> _allEpisodes = [];
+    private List<int> _seasons = [];
+    private List<TvdbSeriesEpisode> _seasonEpisodes = [];
+    private int? _selectedSeason;
+    private int? _selectedEpisodeId;
+    private int _tvdbSeriesId;
+    private string _episodeTitle = string.Empty;
+    private List<EpisodeSummary> _siblingEpisodes = [];
+
+    public async Task OpenAsync(string ruvId, int? currentTvdbId, int tvdbSeriesId, string episodeTitle, List<EpisodeSummary> siblingEpisodes)
     {
         _ruvId = ruvId;
         _currentTvdbId = currentTvdbId;
-        _tvdbIdInput = currentTvdbId?.ToString() ?? string.Empty;
+        _tvdbSeriesId = tvdbSeriesId;
+        _episodeTitle = episodeTitle;
+        _siblingEpisodes = siblingEpisodes;
+        _isLoading = true;
+        _errorMessage = null;
+        _allEpisodes = [];
+        _seasons = [];
+        _seasonEpisodes = [];
+        _selectedSeason = null;
+        _selectedEpisodeId = null;
+
+        await InvokeAsync(StateHasChanged);
         await Js.InvokeVoidAsync("showDialog", _dialog);
+
+        await LoadEpisodesAsync();
+    }
+
+    private async Task LoadEpisodesAsync()
+    {
+        try
+        {
+            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+            IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>> handler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>>();
+            _allEpisodes = await handler.Handle(new GetTvdbSeriesEpisodesQuery(_tvdbSeriesId), _cts.Token);
+            _seasons = [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)];
+
+            int? autoSeason = ResolveAutoSelectedSeason(_siblingEpisodes, _seasons);
+            if (autoSeason is not null)
+            {
+                _selectedSeason = autoSeason;
+                _seasonEpisodes = [.. _allEpisodes.Where(e => e.SeasonNumber == _selectedSeason)];
+                TryAutoSelectEpisode();
+            }
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Failed to load episodes. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnSeasonChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int season))
+        {
+            _selectedSeason = season;
+            _seasonEpisodes = [.. _allEpisodes.Where(ep => ep.SeasonNumber == season)];
+        }
+        else
+        {
+            _selectedSeason = null;
+            _seasonEpisodes = [];
+        }
+        _selectedEpisodeId = null;
+        TryAutoSelectEpisode();
+    }
+
+    private void TryAutoSelectEpisode()
+    {
+        if (_seasonEpisodes.Count == 0)
+        {
+            return;
+        }
+
+        if (TryGetEpisodeNumber(_episodeTitle, out int episodeNumber))
+        {
+            TvdbSeriesEpisode? match = _seasonEpisodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
+            if (match is not null)
+            {
+                _selectedEpisodeId = match.TvdbId;
+            }
+        }
+    }
+
+    internal static bool TryGetEpisodeNumber(string title, out int number)
+    {
+        string[] parts = title.Split(' ');
+
+        if (parts.Length < 2 || !parts[0].Equals("þáttur", StringComparison.OrdinalIgnoreCase))
+        {
+            number = 0;
+            return false;
+        }
+
+        return int.TryParse(parts[1], out number);
+    }
+
+    internal static int? ResolveAutoSelectedSeason(List<EpisodeSummary> siblingEpisodes, List<int> availableSeasons)
+    {
+        List<int> matchedSeasons = [.. siblingEpisodes
+            .Where(e => e.SeasonNumber is not null && e.SeasonNumber > 0)
+            .Select(e => e.SeasonNumber!.Value)
+            .Distinct()
+            .OrderBy(s => s)];
+
+        if (matchedSeasons.Count > 0)
+        {
+            int lowest = matchedSeasons[0];
+            if (availableSeasons.Contains(lowest))
+            {
+                return lowest;
+            }
+        }
+
+        return availableSeasons.Count > 0 ? availableSeasons[0] : null;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
@@ -52,7 +229,14 @@
     {
         _ruvId = null;
         _currentTvdbId = null;
-        _tvdbIdInput = string.Empty;
+        _allEpisodes = [];
+        _seasons = [];
+        _seasonEpisodes = [];
+        _selectedSeason = null;
+        _selectedEpisodeId = null;
+        _errorMessage = null;
+        _episodeTitle = string.Empty;
+        _siblingEpisodes = [];
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
@@ -65,7 +249,7 @@
 
         _isSubmitting = true;
 
-        if (_ruvId is null || !int.TryParse(_tvdbIdInput, out int tvdbId) || tvdbId <= 0)
+        if (_ruvId is null || _selectedEpisodeId is null)
         {
             _isSubmitting = false;
             return;
@@ -76,7 +260,7 @@
             await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
             IRequestHandler<MatchEpisodeCommand> handler =
                 scope.ServiceProvider.GetRequiredService<IRequestHandler<MatchEpisodeCommand>>();
-            await handler.Handle(new MatchEpisodeCommand(_ruvId, tvdbId), _cts.Token);
+            await handler.Handle(new MatchEpisodeCommand(_ruvId, _selectedEpisodeId.Value), _cts.Token);
         }
         finally
         {
@@ -89,7 +273,7 @@
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onkeydown")]
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !IsMatchDisabled(_tvdbIdInput, _currentTvdbId, _isSubmitting))
+        if (e.Key == "Enter" && !IsMatchDisabled(_selectedEpisodeId, _currentTvdbId, _isSubmitting))
         {
             await SubmitMatch();
         }
@@ -101,18 +285,18 @@
         _cts.Dispose();
     }
 
-    internal static bool IsMatchDisabled(string input, int? currentTvdbId, bool isSubmitting)
+    internal static bool IsMatchDisabled(int? selectedEpisodeId, int? currentTvdbId, bool isSubmitting)
     {
         if (isSubmitting)
         {
             return true;
         }
 
-        if (!int.TryParse(input, out int parsed) || parsed <= 0)
+        if (selectedEpisodeId is null)
         {
             return true;
         }
 
-        return parsed == currentTvdbId;
+        return selectedEpisodeId == currentTvdbId;
     }
 }

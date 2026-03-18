@@ -175,7 +175,7 @@ else
                                 }
                                 @if (_program.SeriesName is not null)
                                 {
-                                    <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbId)" title="Match to TVDB">
+                                    <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbId, episode.EpisodeTitle)" title="Match to TVDB">
                                         <Icon Type="IconType.LinkDiagonal" Class="icon" AriaLabel="Match to TVDB" />
                                     </button>
                                 }
@@ -357,9 +357,9 @@ else
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task OpenMatchDialog(string ruvId, int? currentTvdbId)
+    private async Task OpenMatchDialog(string ruvId, int? currentTvdbId, string episodeTitle)
     {
-        await _matchDialog!.OpenAsync(ruvId, currentTvdbId);
+        await _matchDialog!.OpenAsync(ruvId, currentTvdbId, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
