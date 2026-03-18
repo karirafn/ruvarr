@@ -38,6 +38,10 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
             .IsFixedLength(false)
             .IsRequired();
 
+        builder.Property<int>("program_id");
+
+        builder.HasIndex("program_id", nameof(RuvEpisode.TvdbId));
+
         builder.Ignore(x => x.RuvUrl);
 
         builder.HasOne(x => x.DownloadQueueItem)

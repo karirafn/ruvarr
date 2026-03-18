@@ -76,6 +76,7 @@ else
                     <th class="col-center">Monitored</th>
                     <th class="col-center">Missing</th>
                     <th>TVDB Series</th>
+                    <th class="col-center">Matched</th>
                     <th></th>
                 </tr>
             </thead>
@@ -124,6 +125,22 @@ else
                             {
                                 <span class="unmatched-dash">—</span>
                             }
+                        </td>
+                        <td class="col-center">
+                            @{
+                                (string cssClass, string ariaLabel) = program.EpisodeMatchStatus switch
+                                {
+                                    EpisodeMatchStatus.FullyMatched => ("icon--matched-all", "All episodes matched"),
+                                    EpisodeMatchStatus.PartiallyMatched => ("icon--matched-partial", "Some episodes matched"),
+                                    _ => ("icon--matched-none", "No episodes matched"),
+                                };
+                            }
+                            <svg class="icon @cssClass" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                 aria-label="@ariaLabel">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg>
                         </td>
                         <td>
                             <div class="row-actions">

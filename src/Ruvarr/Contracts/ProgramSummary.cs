@@ -9,4 +9,5 @@ public sealed record ProgramSummary(
     string? SeriesName,
     Uri? TvdbUrl,
     int? TvdbSeriesId,
-    Uri? RuvUrl);
+    Uri? RuvUrl,
+    EpisodeMatchStatus EpisodeMatchStatus);
