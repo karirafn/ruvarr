@@ -32,4 +32,17 @@ public sealed class Clear
         sut.FilterMonitored.ShouldBeFalse();
         sut.FilterChannel.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void DoesNotResetSearchText()
+    {
+        // Arrange
+        ProgramsFilterState sut = new() { SearchText = "test query" };
+
+        // Act
+        sut.Clear();
+
+        // Assert
+        sut.SearchText.ShouldBe("test query");
+    }
 }
