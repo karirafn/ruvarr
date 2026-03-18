@@ -19,6 +19,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IDomainEventHandler<ProgramCreatedEvent>, ProgramCreatedEventHandler>();
         services.AddTransient<IDomainEventHandler<ProgramMatchedTvdbEvent>, ProgramMatchedTvdbEventHandler>();
         services.AddTransient<IDomainEventHandler<ProgramMatchedTmdbEvent>, ProgramMatchedTmdbEventHandler>();
+        services.AddTransient<IDomainEventHandler<ProgramRefreshRequestedEvent>, ProgramRefreshRequestedEventHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeAddedToMatchedProgramEvent>, EpisodeAddedToMatchedProgramEventHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeMatchedEvent>, EpisodeMatchedEventHandler>();
         services.AddTransient<IRequestHandler<GetProgramQuery, ProgramSummary?>, GetProgramHandler>();
