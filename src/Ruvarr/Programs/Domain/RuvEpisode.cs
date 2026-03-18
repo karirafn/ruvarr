@@ -49,7 +49,9 @@ internal sealed partial class RuvEpisode
 
     public int? DurationSeconds { get; private set; }
 
+#pragma warning disable S1144 // EF Core sets this via the private setter
     public DownloadQueueItem? DownloadQueueItem { get; private set; }
+#pragma warning restore S1144
 
     public Uri? RuvUrl =>
         string.IsNullOrEmpty(Program.Slug)
@@ -147,7 +149,7 @@ internal sealed partial class RuvEpisode
         IsMissing = isMissing;
     }
 
-    public void Download() => DownloadQueueItem = DownloadQueueItem.Create(this);
+    public void RequestDownload() => _domainEvents.Add(new EpisodeDownloadRequestedEvent(this));
 
     public void UpdateDuration(int? durationSeconds)
     {

@@ -12,6 +12,7 @@ internal static class ServiceCollectionExtensions
     {
         services.AddTransient<IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>>, GetDownloadQueueHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeMissingEvent>, EpisodeMissingEventHandler>();
+        services.AddTransient<IDomainEventHandler<EpisodeDownloadRequestedEvent>, EpisodeDownloadRequestedEventHandler>();
         services.AddTransient<IDomainEventHandler<DownloadStartedEvent>, DownloadStartedEventHandler>();
         services.AddTransient<IDomainEventHandler<DownloadCompletedEvent>, DownloadCompletedEventHandler>();
 
