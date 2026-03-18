@@ -14,6 +14,8 @@
         window.showDialog = (el) => el.showModal();
         window.closeDialog = (el) => el.close();
         window.copyToClipboard = async (text) => { try { await navigator.clipboard.writeText(text); } catch {} };
+        window.getScrollY = () => window.scrollY;
+        window.setScrollY = (y) => window.scrollTo(0, y);
     </script>
 </body>
 </html>
