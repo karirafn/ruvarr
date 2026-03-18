@@ -18,9 +18,7 @@
 @inject IDomainEventBroadcaster Broadcaster
 
 <a class="detail-back" href="/">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
-        <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
-    </svg>
+    <Icon Type="IconType.BackArrow" Width="14" Height="14" />
     Programs
 </a>
 
@@ -58,27 +56,19 @@ else
             @if (_refreshQueue.TryGetValue(_program.ProgramRuvId, out ProgramRefreshStatus status) && status == ProgramRefreshStatus.Processing)
             {
                 <span class="icon-button">
-                    <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refreshing">
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                    </svg>
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Refreshing" />
                 </span>
             }
             else if (_refreshQueue.ContainsKey(_program.ProgramRuvId) || _pendingRefresh.Contains(_program.ProgramRuvId))
             {
                 <span class="icon-button">
-                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Pending">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                    </svg>
+                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Pending" />
                 </span>
             }
             else
             {
                 <button class="icon-button" @onclick="() => RefreshProgram(_program.ProgramRuvId)" title="Refresh program">
-                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Refresh">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                        <path d="M3 3v5h5" />
-                    </svg>
+                    <Icon Type="IconType.Refresh" Class="icon" AriaLabel="Refresh" />
                 </button>
             }
         </div>
@@ -145,22 +135,13 @@ else
                                 @if (_copied.Contains(titleKey))
                                 {
                                     <span class="icon-button copy-button copy-button--copied">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             aria-label="Copied">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
+                                        <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
                                     </span>
                                 }
                                 else
                                 {
                                     <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeTitle, titleKey)" title="Copy title">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             aria-label="Copy">
-                                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-                                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                                        </svg>
+                                        <Icon Type="IconType.Copy" Class="icon" AriaLabel="Copy" />
                                     </button>
                                 }
                             }
@@ -173,22 +154,13 @@ else
                                 @if (_copied.Contains(descKey))
                                 {
                                     <span class="icon-button copy-button copy-button--copied">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             aria-label="Copied">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
+                                        <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
                                     </span>
                                 }
                                 else
                                 {
                                     <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeDescription, descKey)" title="Copy description">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             aria-label="Copy">
-                                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-                                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                                        </svg>
+                                        <Icon Type="IconType.Copy" Class="icon" AriaLabel="Copy" />
                                     </button>
                                 }
                             }
@@ -198,53 +170,33 @@ else
                                 @if (episode.RuvUrl is not null)
                                 {
                                     <a class="icon-button" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer" title="View on RÚV">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                             aria-label="View on RÚV">
-                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                            <polyline points="15 3 21 3 21 9" />
-                                            <line x1="10" y1="14" x2="21" y2="3" />
-                                        </svg>
+                                        <Icon Type="IconType.ExternalLink" Class="icon" AriaLabel="View on RÚV" />
                                     </a>
                                 }
                                 @if (_program.SeriesName is not null)
                                 {
                                     <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbId)" title="Match to TVDB">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Match to TVDB">
-                                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                                        </svg>
+                                        <Icon Type="IconType.LinkDiagonal" Class="icon" AriaLabel="Match to TVDB" />
                                     </button>
                                 }
                                 @if (_downloading.Contains(episode.EpisodeRuvId))
                                 {
-                                    <svg class="icon icon--spinning" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queuing">
-                                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                    </svg>
+                                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Queuing" />
                                 }
                                 else if (_queued.Contains(episode.EpisodeRuvId))
                                 {
-                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Queued">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
+                                    <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Queued" />
                                 }
                                 else if (_failed.Contains(episode.EpisodeRuvId))
                                 {
                                     <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Retry">
-                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                            <path d="M3 3v5h5" />
-                                        </svg>
+                                        <Icon Type="IconType.Refresh" Class="icon" AriaLabel="Retry" />
                                     </button>
                                 }
                                 else
                                 {
                                     <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Download">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                            <polyline points="7 10 12 15 17 10" />
-                                            <line x1="12" y1="15" x2="12" y2="3" />
-                                        </svg>
+                                        <Icon Type="IconType.Download" Class="icon" AriaLabel="Download" />
                                     </button>
                                 }
                             </div>
