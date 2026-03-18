@@ -437,7 +437,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
     }
 
     [Fact]
-    public async Task ReturnsImageUrlWhenProgramHasImageUrl()
+    public async Task ReturnsImageUrlAsNullToAvoidProjectingUnusedData()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -459,32 +459,6 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Assert
         ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30010);
-        found.ShouldNotBeNull();
-        found.ImageUrl.ShouldBe(new Uri("https://example.com/hero.jpg"));
-    }
-
-    [Fact]
-    public async Task ReturnsImageUrlAsNullWhenProgramHasNoImageUrl()
-    {
-        // Arrange
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-
-        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
-        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
-            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
-
-        RuvProgram program = RuvProgram.Create(30011, "RUV1", "Program Without Image", null, multipleEpisodes: true);
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Act
-        List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
-            .ToListAsync(cancellationToken);
-
-        // Assert
-        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30011);
         found.ShouldNotBeNull();
         found.ImageUrl.ShouldBeNull();
     }
