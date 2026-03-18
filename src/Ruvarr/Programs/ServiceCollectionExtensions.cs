@@ -28,6 +28,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IRequestHandler<DownloadEpisodeCommand>, DownloadEpisodeHandler>();
         services.AddTransient<IRequestHandler<MatchProgramEpisodesCommand>, MatchProgramEpisodesHandler>();
         services.AddTransient<IRequestHandler<RefreshProgramCommand>, RefreshProgramHandler>();
+        services.AddScoped<ProgramsFilterState>();
 
         return services;
     }
