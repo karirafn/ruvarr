@@ -49,7 +49,7 @@
 </div>
 
 <div class="search-bar">
-    <input type="text" placeholder="Search programs..." @bind="_searchText" @bind:event="oninput" />
+    <input type="text" placeholder="Search programs..." @bind="FilterState.SearchText" @bind:event="oninput" />
 </div>
 
 @if (_programs is null)
@@ -59,12 +59,18 @@
 else
 {
     List<ProgramSummary> visibleList = [.. _programs
-        .Where(p => string.IsNullOrWhiteSpace(_searchText) || p.ProgramName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+        .Where(p => string.IsNullOrWhiteSpace(FilterState.SearchText) || p.ProgramName.Contains(FilterState.SearchText, StringComparison.OrdinalIgnoreCase))
         .Where(p => string.IsNullOrEmpty(FilterState.FilterChannel) || p.Channel == FilterState.FilterChannel)];
 
     if (visibleList.Count == 0)
     {
-        <p class="empty-message">@(FilterState.HasActiveFilters ? "No programs match the selected filters." : "No programs found.")</p>
+        <p class="empty-message">@((FilterState.HasActiveFilters, FilterState.HasSearchText) switch
+        {
+            (true, true) => "No programs match the selected filters and search.",
+            (false, true) => "No programs match your search.",
+            (true, false) => "No programs match the selected filters.",
+            _ => "No programs found."
+        })</p>
     }
     else
     {
@@ -209,7 +215,6 @@ else
 
     private MatchProgramDialog? _matchProgramDialog;
     private List<ProgramSummary>? _programs;
-    private string _searchText = string.Empty;
     private readonly HashSet<int> _pendingRefresh = [];
     private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();

@@ -96,4 +96,17 @@ public sealed class HasActiveFilters
         // Assert
         result.ShouldBeTrue();
     }
+
+    [Fact]
+    public void ReturnsFalseWhenOnlySearchTextIsSet()
+    {
+        // Arrange
+        ProgramsFilterState sut = new() { SearchText = "test" };
+
+        // Act
+        bool result = sut.HasActiveFilters;
+
+        // Assert
+        result.ShouldBeFalse();
+    }
 }

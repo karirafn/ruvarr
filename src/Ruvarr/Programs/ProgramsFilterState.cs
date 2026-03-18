@@ -8,6 +8,9 @@ internal sealed class ProgramsFilterState
     public bool FilterPartiallyMatched { get; set; }
     public bool FilterMonitored { get; set; }
     public string FilterChannel { get; set; } = string.Empty;
+    public string SearchText { get; set; } = string.Empty;
+
+    public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
 
     public bool HasActiveFilters =>
         FilterUnmatchedPrograms ||
