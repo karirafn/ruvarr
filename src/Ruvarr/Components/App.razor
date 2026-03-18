@@ -32,16 +32,13 @@
         };
         window.setScrollY = (y) => {
             if (y <= 0) return;
-            let attempts = 0;
-            const tryScroll = () => {
-                window.scrollTo(0, y);
-                attempts++;
-                if (Math.abs(window.scrollY - y) < 2 || attempts >= 20) return;
-                requestAnimationFrame(tryScroll);
-            };
-            requestAnimationFrame(tryScroll);
+            const scroll = () => window.scrollTo(0, y);
+            scroll();
+            requestAnimationFrame(scroll);
+            setTimeout(scroll, 150);
+            setTimeout(scroll, 400);
         };
-        document.addEventListener('click', (e) => {
+        document.addEventListener('mousedown', (e) => {
             if (e.target.closest('a[href]:not([target])') && window._scrollTracker) {
                 window._trackedScrollY = window.scrollY;
                 window.removeEventListener('scroll', window._scrollTracker);
