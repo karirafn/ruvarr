@@ -233,6 +233,11 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("startScrollTracking");
+        }
+
         if (_shouldRestoreScroll && _dataLoaded)
         {
             _shouldRestoreScroll = false;
@@ -265,7 +270,7 @@ else
     {
         try
         {
-            FilterState.ScrollPositionY = await JS.InvokeAsync<double>("getScrollY");
+            FilterState.ScrollPositionY = await JS.InvokeAsync<double>("stopScrollTracking");
         }
         catch (JSDisconnectedException)
         {
