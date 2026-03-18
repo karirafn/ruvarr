@@ -1,28 +1,37 @@
 using Bunit;
 
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
 using NSubstitute;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Programs;
 using Ruvarr.Programs.Commands.MatchEpisode;
+using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes;
 
 namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 
 public sealed class HandleKeyDown : BunitContext
 {
-    private readonly IRequestHandler<MatchEpisodeCommand> _handler;
+    private readonly IRequestHandler<MatchEpisodeCommand> _matchHandler;
+    private readonly IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>> _episodesHandler;
 
     public HandleKeyDown()
     {
-        _handler = Substitute.For<IRequestHandler<MatchEpisodeCommand>>();
-        _handler
+        _matchHandler = Substitute.For<IRequestHandler<MatchEpisodeCommand>>();
+        _matchHandler
             .Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>())
             .Returns(RuvarrResult.Success);
-        Services.AddTransient(_ => _handler);
+
+        _episodesHandler = Substitute.For<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>>();
+        _episodesHandler
+            .Handle(Arg.Any<GetTvdbSeriesEpisodesQuery>(), Arg.Any<CancellationToken>())
+            .Returns([new TvdbSeriesEpisode(99999, "Test Episode", 1, 1)]);
+
+        Services.AddTransient(_ => _matchHandler);
+        Services.AddTransient(_ => _episodesHandler);
         Services.AddSingleton(Substitute.For<IJSRuntime>());
     }
 
@@ -31,64 +40,51 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null);
-        await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "99999" });
+        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 
+        // Season auto-selected, episode auto-selected via title parsing
         // Act
-        await cut.Find("input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
         // Assert
-        await _handler.Received(1).Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
+        await _matchHandler.Received(1).Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task EnterKey_WhenInputIsEmpty_DoesNotInvokeSubmitMatch()
+    public async Task EnterKey_WhenNoEpisodeSelected_DoesNotInvokeSubmitMatch()
     {
         // Arrange
-        IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null);
+        _episodesHandler
+            .Handle(Arg.Any<GetTvdbSeriesEpisodesQuery>(), Arg.Any<CancellationToken>())
+            .Returns([new TvdbSeriesEpisode(99999, "Test Episode", 1, 1)]);
 
+        IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
+        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null, tvdbSeriesId: 42, episodeTitle: "Mynd", siblingEpisodes: []);
+        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
+
+        // Episode not auto-selected because title doesn't match "þáttur N" pattern
         // Act
-        await cut.Find("input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
         // Assert
-        await _handler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
+        await _matchHandler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task EnterKey_WhenInputUnchangedFromCurrentMatch_DoesNotInvokeSubmitMatch()
+    public async Task EnterKey_WhenSelectedMatchesCurrentTvdbId_DoesNotInvokeSubmitMatch()
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: 12345);
+        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: 99999, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 
+        // Episode auto-selected to 99999 which equals currentTvdbId
         // Act
-        await cut.Find("input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
         // Assert
-        await _handler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task TwoRapidEnterKeys_OnlyInvokeSubmitMatchOnce()
-    {
-        // Arrange
-        TaskCompletionSource<RuvarrResult> tcs = new();
-        _handler
-            .Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>())
-            .Returns(tcs.Task);
-        IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null);
-        await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "99999" });
-
-        // Act — fire two Enter presses before the first handler call completes
-        Task first = cut.Find("input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
-        Task second = cut.Find("input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
-        tcs.SetResult(RuvarrResult.Success);
-        await Task.WhenAll(first, second);
-
-        // Assert
-        await _handler.Received(1).Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
+        await _matchHandler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -96,13 +92,13 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null);
-        await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "99999" });
+        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 
         // Act
-        await cut.Find("input").KeyDownAsync(new KeyboardEventArgs { Key = "a" });
+        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "a" });
 
         // Assert
-        await _handler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
+        await _matchHandler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
     }
 }

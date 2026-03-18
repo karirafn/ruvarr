@@ -63,6 +63,22 @@ public sealed class TryGetEpisodeNumber
         number.ShouldBe(0);
     }
 
+    [Theory]
+    [InlineData("Þáttur 3 of 8", 3)]
+    [InlineData("Þáttur 1 of 10", 1)]
+    public void ReturnsTrueAndNumberForTitleWithOfSuffix(string title, int expectedNumber)
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().WithTitle(title).Build();
+
+        // Act
+        bool result = sut.TryGetEpisodeNumber(out int number);
+
+        // Assert
+        result.ShouldBeTrue();
+        number.ShouldBe(expectedNumber);
+    }
+
     [Fact]
     public void ReturnsFalseForEmptyTitle()
     {

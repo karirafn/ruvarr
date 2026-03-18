@@ -7,81 +7,50 @@ namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 public sealed class IsMatchDisabled
 {
     [Fact]
-    public void ReturnsTrueWhenInputIsEmpty()
+    public void ReturnsTrueWhenSelectedEpisodeIdIsNull()
     {
-        // Arrange
-        string input = string.Empty;
-
         // Act
-        bool result = MatchEpisodeDialog.IsMatchDisabled(input, currentTvdbId: null, isSubmitting: false);
-
-        // Assert
-        result.ShouldBeTrue();
-    }
-
-    [Theory]
-    [InlineData("0")]
-    [InlineData("-1")]
-    [InlineData("-100")]
-    public void ReturnsTrueWhenParsedValueIsNotPositive(string input)
-    {
-        // Arrange
-        // (input provided via theory)
-
-        // Act
-        bool result = MatchEpisodeDialog.IsMatchDisabled(input, currentTvdbId: null, isSubmitting: false);
+        bool result = MatchEpisodeDialog.IsMatchDisabled(selectedEpisodeId: null, currentTvdbId: null, isSubmitting: false);
 
         // Assert
         result.ShouldBeTrue();
     }
 
     [Fact]
-    public void ReturnsFalseWhenValidPositiveIntegerAndCurrentTvdbIdIsNull()
+    public void ReturnsFalseWhenSelectedEpisodeIdIsSetAndCurrentTvdbIdIsNull()
     {
-        // Arrange
-        string input = "12345";
-
         // Act
-        bool result = MatchEpisodeDialog.IsMatchDisabled(input, currentTvdbId: null, isSubmitting: false);
+        bool result = MatchEpisodeDialog.IsMatchDisabled(selectedEpisodeId: 12345, currentTvdbId: null, isSubmitting: false);
 
         // Assert
         result.ShouldBeFalse();
     }
 
     [Fact]
-    public void ReturnsTrueWhenParsedValueEqualsCurrentTvdbId()
+    public void ReturnsTrueWhenSelectedEpisodeIdEqualsCurrentTvdbId()
     {
-        // Arrange
-        string input = "12345";
-
         // Act
-        bool result = MatchEpisodeDialog.IsMatchDisabled(input, currentTvdbId: 12345, isSubmitting: false);
+        bool result = MatchEpisodeDialog.IsMatchDisabled(selectedEpisodeId: 12345, currentTvdbId: 12345, isSubmitting: false);
 
         // Assert
         result.ShouldBeTrue();
     }
 
     [Fact]
-    public void ReturnsFalseWhenParsedValueDiffersFromCurrentTvdbId()
+    public void ReturnsFalseWhenSelectedEpisodeIdDiffersFromCurrentTvdbId()
     {
-        // Arrange
-        string input = "12345";
-
         // Act
-        bool result = MatchEpisodeDialog.IsMatchDisabled(input, currentTvdbId: 99999, isSubmitting: false);
+        bool result = MatchEpisodeDialog.IsMatchDisabled(selectedEpisodeId: 12345, currentTvdbId: 99999, isSubmitting: false);
 
         // Assert
         result.ShouldBeFalse();
     }
 
     [Fact]
-    public void ReturnsTrueWhenIsSubmittingRegardlessOfInput()
+    public void ReturnsTrueWhenIsSubmittingRegardlessOfSelection()
     {
-        // Arrange
-        string input = "12345";
-
         // Act
-        bool result = MatchEpisodeDialog.IsMatchDisabled(input, currentTvdbId: null, isSubmitting: true);
+        bool result = MatchEpisodeDialog.IsMatchDisabled(selectedEpisodeId: 12345, currentTvdbId: null, isSubmitting: true);
 
         // Assert
         result.ShouldBeTrue();

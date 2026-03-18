@@ -731,3 +731,56 @@ dialog input[type="number"]:focus {
 .badge--ruv:hover {
     opacity: 0.8;
 }
+
+.dialog-select {
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    padding: 0.5rem 2rem 0.5rem 0.6rem;
+    font-size: 0.95rem;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+}
+
+.dialog-select:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 1px;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.dialog-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dialog-select option {
+    background-color: #1a1a1a;
+}
+
+.dialog-error {
+    color: #fd4646;
+    font-size: 0.85rem;
+    margin: 0.5rem 0 0;
+}
+
+.dialog-spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 0;
+}
+
+.dialog-spinner {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
