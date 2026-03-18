@@ -50,6 +50,7 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
         }
 
         IAsyncEnumerable<ProgramSummary> results = query
+            .IgnoreAutoIncludes()
             .OrderBy(x => x.Name)
             .Select(x => new
             {
@@ -62,6 +63,10 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 SeriesName = x.Series!.Name,
                 SeriesSlug = x.Series!.Slug,
                 SeriesTvdbId = (int?)x.Series!.TvdbId,
+                HasSeries = x.Series != null,
+                HasAnyEpisodes = x.Episodes.Any(),
+                AllEpisodesMatched = x.Episodes.All(e => e.TvdbId != null),
+                AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbId != null),
             })
             .AsAsyncEnumerable()
             .Select(x => new ProgramSummary(
@@ -73,11 +78,22 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 x.SeriesName,
                 x.SeriesSlug is { } seriesSlug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(seriesSlug)}") : null,
                 x.SeriesTvdbId,
-                x.Slug is { } programSlug ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(programSlug)}/{x.RuvId}") : null));
+                x.Slug is { } programSlug ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(programSlug)}/{x.RuvId}") : null,
+                DeriveEpisodeMatchStatus(x.HasSeries, x.HasAnyEpisodes, x.AllEpisodesMatched, x.AnyEpisodeMatched)));
 
         await foreach (ProgramSummary summary in results.WithCancellation(cancellationToken))
         {
             yield return summary;
         }
+    }
+
+    private static EpisodeMatchStatus DeriveEpisodeMatchStatus(bool hasSeries, bool hasAnyEpisodes, bool allEpisodesMatched, bool anyEpisodeMatched)
+    {
+        if (!hasSeries || !hasAnyEpisodes || !anyEpisodeMatched)
+        {
+            return EpisodeMatchStatus.NoneMatched;
+        }
+
+        return allEpisodesMatched ? EpisodeMatchStatus.FullyMatched : EpisodeMatchStatus.PartiallyMatched;
     }
 }

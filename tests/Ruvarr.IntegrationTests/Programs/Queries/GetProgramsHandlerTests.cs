@@ -307,6 +307,165 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
     }
 
     [Fact]
+    public async Task ReturnsFullyMatchedWhenAllEpisodesHaveTvdbId()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(30001, "RÚV1", "Fully Matched Program", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create(6001, "Fully Matched Series"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("FM-EP1", new Uri("https://example.com/fm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("FM-EP2", new Uri("https://example.com/fm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode ep1 = program.Episodes.First(e => e.RuvId == "FM-EP1");
+        RuvEpisode ep2 = program.Episodes.First(e => e.RuvId == "FM-EP2");
+        ep1.Match(tvdbId: 101, season: 1, episode: 1, isMissing: false);
+        ep2.Match(tvdbId: 102, season: 1, episode: 2, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30001);
+        found.ShouldNotBeNull();
+        found.EpisodeMatchStatus.ShouldBe(EpisodeMatchStatus.FullyMatched);
+    }
+
+    [Fact]
+    public async Task ReturnsPartiallyMatchedWhenSomeEpisodesHaveTvdbId()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(30002, "RÚV1", "Partially Matched Program", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create(6002, "Partially Matched Series"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("PM-EP1", new Uri("https://example.com/pm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("PM-EP2", new Uri("https://example.com/pm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode ep1 = program.Episodes.First(e => e.RuvId == "PM-EP1");
+        ep1.Match(tvdbId: 201, season: 1, episode: 1, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30002);
+        found.ShouldNotBeNull();
+        found.EpisodeMatchStatus.ShouldBe(EpisodeMatchStatus.PartiallyMatched);
+    }
+
+    [Fact]
+    public async Task ReturnsNoneMatchedWhenNoEpisodesHaveTvdbId()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(30003, "RÚV1", "None Matched Program", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create(6003, "None Matched Series"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("NM-EP1", new Uri("https://example.com/nm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("NM-EP2", new Uri("https://example.com/nm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30003);
+        found.ShouldNotBeNull();
+        found.EpisodeMatchStatus.ShouldBe(EpisodeMatchStatus.NoneMatched);
+    }
+
+    [Fact]
+    public async Task ReturnsNoneMatchedWhenProgramHasZeroEpisodes()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(30004, "RÚV1", "Zero Episodes Program", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create(6004, "Zero Episodes Series"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30004);
+        found.ShouldNotBeNull();
+        found.EpisodeMatchStatus.ShouldBe(EpisodeMatchStatus.NoneMatched);
+    }
+
+    [Fact]
+    public async Task ReturnsNoneMatchedWhenProgramHasNoSeries()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(30005, "RÚV1", "No Series Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("NS-EP1", new Uri("https://example.com/ns-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30005);
+        found.ShouldNotBeNull();
+        found.EpisodeMatchStatus.ShouldBe(EpisodeMatchStatus.NoneMatched);
+    }
+
+    [Fact]
     public async Task ReturnsTvdbUrlAsNullWhenSlugIsMalformed()
     {
         // Arrange

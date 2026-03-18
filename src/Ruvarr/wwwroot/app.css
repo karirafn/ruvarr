@@ -504,6 +504,9 @@ dialog input[type="number"]:focus {
 .programs-table th:nth-child(5),
 .programs-table td:nth-child(5) { width: 16rem; }
 
+.programs-table th:nth-child(6),
+.programs-table td:nth-child(6) { width: 6rem; text-align: center; }
+
 .col-center { text-align: center; }
 
 .col-number { width: 5rem; }
@@ -598,6 +601,9 @@ dialog input[type="number"]:focus {
 .icon--monitored { color: #2dd4bf; }
 .icon--unmonitored { color: rgba(255, 255, 255, 0.2); }
 .icon--missing { color: #f59e0b; }
+.icon--matched-all { color: #2dd4bf; }
+.icon--matched-partial { color: #f59e0b; }
+.icon--matched-none { color: rgba(255, 255, 255, 0.2); }
 
 /* Status pills (detail page) */
 .status-pill {
