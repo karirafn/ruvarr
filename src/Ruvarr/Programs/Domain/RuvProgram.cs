@@ -145,6 +145,11 @@ internal sealed class RuvProgram
         _domainEvents.Add(new ProgramMatchedTmdbEvent(RuvId, Name));
     }
 
+    public void RequestRefresh()
+    {
+        _domainEvents.Add(new ProgramRefreshRequestedEvent(RuvId, Name, Series is not null, HasMultipleEpisodes));
+    }
+
     public void ScheduleLookup()
     {
         LookupCount++;
