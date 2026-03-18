@@ -14,6 +14,37 @@
         window.showDialog = (el) => el.showModal();
         window.closeDialog = (el) => el.close();
         window.copyToClipboard = async (text) => { try { await navigator.clipboard.writeText(text); } catch {} };
+        window._trackedScrollY = 0;
+        window._scrollTracker = null;
+        window.startScrollTracking = () => {
+            window._trackedScrollY = window.scrollY;
+            if (!window._scrollTracker) {
+                window._scrollTracker = () => { window._trackedScrollY = window.scrollY; };
+                window.addEventListener('scroll', window._scrollTracker, { passive: true });
+            }
+        };
+        window.stopScrollTracking = () => {
+            if (window._scrollTracker) {
+                window.removeEventListener('scroll', window._scrollTracker);
+                window._scrollTracker = null;
+            }
+            return window._trackedScrollY;
+        };
+        window.setScrollY = (y) => {
+            if (y <= 0) return;
+            const scroll = () => window.scrollTo(0, y);
+            scroll();
+            requestAnimationFrame(scroll);
+            setTimeout(scroll, 150);
+            setTimeout(scroll, 400);
+        };
+        document.addEventListener('mousedown', (e) => {
+            if (e.target.closest('a[href]:not([target])') && window._scrollTracker) {
+                window._trackedScrollY = window.scrollY;
+                window.removeEventListener('scroll', window._scrollTracker);
+                window._scrollTracker = null;
+            }
+        }, { capture: true });
     </script>
 </body>
 </html>

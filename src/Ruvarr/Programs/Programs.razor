@@ -13,6 +13,7 @@
 @inject ProgramRefreshNotifier RefreshNotifier
 @inject IDomainEventBroadcaster Broadcaster
 @inject ProgramsFilterState FilterState
+@inject IJSRuntime JS
 
 <h1>Programs</h1>
 
@@ -38,7 +39,7 @@
         Monitored
     </label>
     <span class="filter-divider"></span>
-    <select class="filter-select" @bind="FilterState.FilterChannel">
+    <select class="filter-select" @bind="FilterState.FilterChannel" @bind:after="ResetScrollPosition">
         <option value="">All channels</option>
         @foreach (string channel in _channels)
         {
@@ -49,7 +50,7 @@
 </div>
 
 <div class="search-bar">
-    <input type="text" placeholder="Search programs..." @bind="FilterState.SearchText" @bind:event="oninput" />
+    <input type="text" placeholder="Search programs..." @bind="FilterState.SearchText" @bind:event="oninput" @bind:after="ResetScrollPosition" />
 </div>
 
 @if (_programs is null)
@@ -218,13 +219,30 @@ else
     private readonly HashSet<int> _pendingRefresh = [];
     private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();
+    private bool _shouldRestoreScroll;
+    private bool _dataLoaded;
 
     protected override Task OnInitializedAsync()
     {
+        _shouldRestoreScroll = FilterState.ScrollPositionY > 0;
         _ = WatchAsync();
         _ = WatchCreatedAsync();
-        _ = LoadProgramsAsync();
+        _ = LoadProgramsCoreAsync();
         return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("startScrollTracking");
+        }
+
+        if (_shouldRestoreScroll && _dataLoaded)
+        {
+            _shouldRestoreScroll = false;
+            await JS.InvokeVoidAsync("setScrollY", FilterState.ScrollPositionY);
+        }
     }
 
     private async Task WatchAsync()
@@ -244,14 +262,32 @@ else
     {
         await foreach (ProgramCreatedEvent _ in Broadcaster.Subscribe<ProgramCreatedEvent>(_cts.Token))
         {
-            await LoadProgramsAsync();
+            await LoadProgramsCoreAsync();
         }
     }
 
     public async ValueTask DisposeAsync()
     {
+        try
+        {
+            FilterState.ScrollPositionY = await JS.InvokeAsync<double>("stopScrollTracking");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Expected when the circuit is disconnected during disposal
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when the JS runtime is disposed during disposal
+        }
+
         await _cts.CancelAsync();
         _cts.Dispose();
+    }
+
+    private void ResetScrollPosition()
+    {
+        FilterState.ScrollPositionY = 0;
     }
 
     private async Task ClearFilters()
@@ -261,6 +297,12 @@ else
     }
 
     private async Task LoadProgramsAsync()
+    {
+        FilterState.ScrollPositionY = 0;
+        await LoadProgramsCoreAsync();
+    }
+
+    private async Task LoadProgramsCoreAsync()
     {
         _programs = null;
         await InvokeAsync(StateHasChanged);
@@ -300,6 +342,7 @@ else
         }
 
         _programs = loaded;
+        _dataLoaded = true;
         _channels = [.. _programs.Select(p => p.Channel).Distinct().Order()];
 
         if (!string.IsNullOrEmpty(FilterState.FilterChannel) && !_channels.Contains(FilterState.FilterChannel))

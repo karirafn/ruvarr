@@ -45,4 +45,17 @@ public sealed class Clear
         // Assert
         sut.SearchText.ShouldBe("test query");
     }
+
+    [Fact]
+    public void ResetsScrollPositionYToZero()
+    {
+        // Arrange
+        ProgramsFilterState sut = new() { ScrollPositionY = 500.0 };
+
+        // Act
+        sut.Clear();
+
+        // Assert
+        sut.ScrollPositionY.ShouldBe(0);
+    }
 }

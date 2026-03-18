@@ -488,6 +488,9 @@ dialog input[type="number"]:focus {
     to { transform: rotate(360deg); }
 }
 
+/* Programs table */
+.programs-table tbody tr { height: 48px; }
+
 /* Programs table — override global nth-child column widths */
 .programs-table th:nth-child(1),
 .programs-table td:nth-child(1) { width: auto; }

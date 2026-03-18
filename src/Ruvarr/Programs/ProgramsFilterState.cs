@@ -9,6 +9,7 @@ internal sealed class ProgramsFilterState
     public bool FilterMonitored { get; set; }
     public string FilterChannel { get; set; } = string.Empty;
     public string SearchText { get; set; } = string.Empty;
+    public double ScrollPositionY { get; set; }
 
     public bool HasSearchText => !string.IsNullOrWhiteSpace(SearchText);
 
@@ -28,5 +29,6 @@ internal sealed class ProgramsFilterState
         FilterPartiallyMatched = false;
         FilterMonitored = false;
         FilterChannel = string.Empty;
+        ScrollPositionY = 0;
     }
 }
