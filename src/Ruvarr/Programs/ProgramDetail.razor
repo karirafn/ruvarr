@@ -37,6 +37,13 @@ else if (_program is null)
 }
 else
 {
+    @if (_program.ImageUrl is not null)
+    {
+        <div class="program-hero">
+            <img src="@_program.ImageUrl" alt="@_program.ProgramName" decoding="async" />
+        </div>
+    }
+
     <div class="program-header">
         <div class="program-header-meta">
             <span class="channel-tag">@_program.Channel</span>

@@ -437,6 +437,33 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
     }
 
     [Fact]
+    public async Task ReturnsImageUrlAsNullToAvoidProjectingUnusedData()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(30010, "RUV1", "Program With Image", null, multipleEpisodes: true,
+            imageUrl: new Uri("https://example.com/hero.jpg"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 30010);
+        found.ShouldNotBeNull();
+        found.ImageUrl.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ReturnsNoneMatchedWhenProgramHasNoSeries()
     {
         // Arrange

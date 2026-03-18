@@ -65,7 +65,7 @@ internal sealed class RuvProgramRefreshJob(
 
         List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
-            .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes, x.Slug))];
+            .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes, x.Slug, x.Image))];
 
         if (newPrograms.Count > 0)
         {
@@ -82,12 +82,19 @@ internal sealed class RuvProgramRefreshJob(
             .Where(x => x.Slug is not null)
             .ToDictionary(x => x.Id, x => x.Slug);
 
+        Dictionary<int, Uri?> imageByRuvId = programs.ToDictionary(x => x.Id, x => x.Image);
+
         foreach (RuvProgram existing in existingTvPrograms)
         {
             slugByRuvId.TryGetValue(existing.RuvId, out string? incomingSlug);
             if (existing.Slug != incomingSlug)
             {
                 existing.UpdateSlug(incomingSlug);
+            }
+
+            if (imageByRuvId.TryGetValue(existing.RuvId, out Uri? incomingImage) && existing.ImageUrl != incomingImage)
+            {
+                existing.UpdateImageUrl(incomingImage);
             }
         }
 
