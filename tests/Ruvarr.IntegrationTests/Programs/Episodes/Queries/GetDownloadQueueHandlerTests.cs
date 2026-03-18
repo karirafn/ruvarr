@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
-using Ruvarr.Downloads.Extensions;
+using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
 using Ruvarr.Programs.Domain;
 
@@ -49,9 +49,9 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
 
         RuvEpisode episodeOlder = programA.Episodes[0];
         RuvEpisode episodeNewer = programB.Episodes[0];
-        dbContext.EnqueueDownload(episodeOlder);
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episodeOlder));
         await dbContext.SaveChangesAsync(cancellationToken);
-        dbContext.EnqueueDownload(episodeNewer);
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episodeNewer));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         await dbContext.Database.ExecuteSqlAsync(
@@ -95,8 +95,8 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
 
         RuvEpisode episodePending = programA.Episodes[0];
         RuvEpisode episodeDownloading = programB.Episodes[0];
-        dbContext.EnqueueDownload(episodePending);
-        dbContext.EnqueueDownload(episodeDownloading);
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episodePending));
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episodeDownloading));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         await dbContext.Database.ExecuteSqlAsync(
@@ -133,7 +133,7 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        dbContext.EnqueueDownload(episode);
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Simulate an orphaned item by inserting a second queue item via raw SQL

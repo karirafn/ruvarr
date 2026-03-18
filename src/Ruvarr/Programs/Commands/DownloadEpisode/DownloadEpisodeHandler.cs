@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
-using Ruvarr.Downloads.Extensions;
 using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Programs.Commands.DownloadEpisode;
@@ -11,7 +10,6 @@ internal sealed class DownloadEpisodeHandler(RuvarrDbContext dbContext) : IReque
     public async Task<RuvarrResult> Handle(DownloadEpisodeCommand command, CancellationToken cancellationToken)
     {
         RuvEpisode? episode = await dbContext.Set<RuvEpisode>()
-            .Include(e => e.DownloadQueueItem)
             .Where(e => e.RuvId == command.ruvId)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -20,7 +18,7 @@ internal sealed class DownloadEpisodeHandler(RuvarrDbContext dbContext) : IReque
             return ProgramErrors.EpisodeNotFound;
         }
 
-        dbContext.EnqueueDownload(episode);
+        episode.RequestDownload();
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

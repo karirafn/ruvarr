@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Downloads.Domain;
-using Ruvarr.Downloads.Extensions;
 using Ruvarr.Programs.Commands.DownloadEpisode;
 using Ruvarr.Programs.Domain;
 
@@ -42,7 +41,7 @@ public sealed class DownloadEpisodeHandlerTests(IntegrationTestFactory factory) 
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        dbContext.EnqueueDownload(episode);
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
