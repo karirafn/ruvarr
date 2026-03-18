@@ -1,0 +1,86 @@
+@namespace Ruvarr.Components
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+     class="@Class" width="@Width" height="@Height"
+     aria-label="@AriaLabel" aria-hidden="@(AriaLabel is null ? "true" : null)">
+    @switch (Type)
+    {
+        case IconType.BackArrow:
+            <path d="M19 12H5" />
+            <path d="m12 19-7-7 7-7" />
+            break;
+        case IconType.Checkmark:
+            <polyline points="20 6 9 17 4 12" />
+            break;
+        case IconType.CheckmarkCircle:
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+            break;
+        case IconType.Clock:
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+            break;
+        case IconType.Copy:
+            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            break;
+        case IconType.Download:
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+            break;
+        case IconType.ExternalLink:
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+            break;
+        case IconType.Eye:
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+            break;
+        case IconType.EyeOff:
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+            <line x1="1" y1="1" x2="23" y2="23" />
+            break;
+        case IconType.Link:
+            <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+            <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+            break;
+        case IconType.LinkDiagonal:
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            break;
+        case IconType.Refresh:
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            break;
+        case IconType.Spinner:
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            break;
+        case IconType.Warning:
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired]
+    public IconType Type { get; set; }
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string? Width { get; set; }
+
+    [Parameter]
+    public string? Height { get; set; }
+}
