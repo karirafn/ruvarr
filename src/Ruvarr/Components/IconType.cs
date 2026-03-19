@@ -13,6 +13,7 @@ public enum IconType
     EyeOff,
     Link,
     LinkDiagonal,
+    Plus,
     Refresh,
     Spinner,
     Warning

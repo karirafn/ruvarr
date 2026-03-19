@@ -73,7 +73,7 @@ else
             }
         </div>
         <h1>@_program.ProgramName</h1>
-        @if (_program.SeriesName is not null || _program.RuvUrl is not null)
+        @if (_program.SeriesName is not null || _program.RuvUrl is not null || _program.TvdbSeriesId is null)
         {
             <div class="series-meta">
                 @if (_program.SeriesName is not null)
@@ -87,6 +87,12 @@ else
                 @if (_program.RuvUrl is not null)
                 {
                     <a class="badge--ruv" href="@_program.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
+                }
+                @if (_program.TvdbSeriesId is null)
+                {
+                    <button class="badge--tvdb-create" @onclick="CreateOnTvdb" title="Create series on TVDB">
+                        <Icon Type="IconType.Plus" Width="12" Height="12" /> TVDB
+                    </button>
                 }
             </div>
         }
@@ -360,6 +366,21 @@ else
     private async Task OpenMatchDialog(string ruvId, int? currentTvdbId, string episodeTitle)
     {
         await _matchDialog!.OpenAsync(ruvId, currentTvdbId, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task CreateOnTvdb()
+    {
+        string clipboardText = $"Name: {_program!.ProgramName}\nNetwork: RÚV\nRemote ID: {_program.ProgramRuvId} (RÚV)";
+        try
+        {
+            await Js.InvokeVoidAsync("copyToClipboard", clipboardText);
+        }
+        catch (JSException)
+        {
+            // Clipboard access may be denied; still open the page
+        }
+        await Js.InvokeVoidAsync("open", "https://thetvdb.com/series/create", "_blank");
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
