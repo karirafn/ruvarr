@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 using Quartz;
 
@@ -9,6 +8,7 @@ using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 namespace Ruvarr.Jobs;
@@ -17,7 +17,7 @@ internal sealed class RuvProgramRefreshJob(
     ILogger<RuvProgramRefreshJob> logger,
     IRuvClient ruv,
     RuvarrDbContext dbContext,
-    IOptions<RuvarrOptions> options,
+    ISettingsStore settingsStore,
     ProgramRefreshNotifier syncQueue,
     TvdbSeriesLookupNotifier tvdbLookupQueue,
     IDomainEventBroadcaster broadcaster) : IJob
@@ -38,7 +38,7 @@ internal sealed class RuvProgramRefreshJob(
         logger.LogDebug("Found {Count} total RÚV programs", allPrograms.Count);
 
         List<RuvTvProgram> programs = [.. allPrograms
-            .Where(x => !options.Value.IgnoredChannels.Contains(x.Channel))
+            .Where(x => !settingsStore.Current.IgnoredChannels.Contains(x.Channel))
             .Where(x => x.WebAvailableEpisodes > 0)
             .DistinctBy(x => x.Id)];
         logger.LogDebug("Found {Count} distinct RÚV programs", programs.Count);
