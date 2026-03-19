@@ -9,6 +9,7 @@ using Ruvarr.Downloads.Domain;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
+using Ruvarr.Settings;
 
 namespace Ruvarr.Jobs;
 
@@ -18,7 +19,8 @@ internal class DownloadQueueProcessor(
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
     IFfmpegService ffmpeg,
-    IOptions<RuvarrOptions> options) : IJob
+    IOptions<RuvarrOptions> options,
+    ISettingsStore settingsStore) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -49,15 +51,24 @@ internal class DownloadQueueProcessor(
         item.MarkDownloading();
         await dbContext.SaveChangesAsync();
 
+        string? episodeDownloadDirectory = settingsStore.Current.EpisodeDownloadDirectory
+            ?? options.Value.EpisodeDownloadDirectory;
+
+        if (episodeDownloadDirectory is null)
+        {
+            logger.LogWarning("Episode download directory is not configured. Skipping download");
+            return;
+        }
+
         logger.LogInformation("Downloading {Program} - {Title}", item.Episode.Program.Name, item.Episode.Title);
         string tentativePath = item.Episode.ToFilePath(
             options.Value.DownloadsRootDirectory,
-            options.Value.EpisodeDownloadDirectory,
+            episodeDownloadDirectory,
             fileAlreadyExists: false);
 
         string filepath = item.Episode.ToFilePath(
             options.Value.DownloadsRootDirectory,
-            options.Value.EpisodeDownloadDirectory,
+            episodeDownloadDirectory,
             fileAlreadyExists: File.Exists(tentativePath));
 
         string? directory = Path.GetDirectoryName(filepath);
@@ -95,7 +106,7 @@ internal class DownloadQueueProcessor(
             return;
         }
 
-        IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(options.Value.EpisodeDownloadDirectory);
+        IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(episodeDownloadDirectory);
 
         ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
         ManualImportRequest request = new(

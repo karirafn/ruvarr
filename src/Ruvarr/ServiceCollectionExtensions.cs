@@ -12,6 +12,7 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
+using Ruvarr.Settings;
 using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.TvdbSeriesLookup.Jobs;
@@ -23,12 +24,13 @@ namespace Ruvarr;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddRuvarr(this IServiceCollection services, string dbConnectionString)
+    public static IServiceCollection AddRuvarr(this IServiceCollection services, string dbConnectionString, string settingsFilePath)
     {
         services.AddOptions<RuvarrOptions>()
             .Configure<IConfiguration>((options, configuration)
                 => configuration.GetRequiredSection(RuvarrOptions.SectionName).Bind(options));
 
+        services.AddSettings(settingsFilePath);
         services.AddSingleton<IDomainEventBroadcaster, DomainEventBroadcaster>();
         services.AddSingleton<ProgramRefreshNotifier>();
         services.AddSingleton<TvdbSeriesLookupNotifier>();

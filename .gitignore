@@ -491,3 +491,6 @@ $RECYCLE.BIN/
 # sqlite db files
 *.db
 *.db-*
+
+# Runtime settings
+data/settings.json

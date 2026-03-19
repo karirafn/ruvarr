@@ -9,8 +9,10 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddRuvarr(builder.Configuration.GetConnectionString("Default")
-    ?? throw new ArgumentException("Connection string not found"));
+builder.Services.AddRuvarr(
+    builder.Configuration.GetConnectionString("Default")
+        ?? throw new ArgumentException("Connection string not found"),
+    Path.Combine("data", "settings.json"));
 
 WebApplication app = builder.Build();
 
