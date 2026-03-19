@@ -64,6 +64,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
         await MatchByTranslationAsync(program, seriesData, missingTvdbIds);
         MatchByEpisodeNumber(program, seriesData, missingTvdbIds);
+        MatchByPartOneSibling(program, seriesData, missingTvdbIds);
 
         await ScheduleLookupAsync(program);
         lookupQueue.MarkComplete(ruvId);
@@ -157,6 +158,46 @@ internal sealed class TvdbEpisodeLookupJob(
                     }
                 }
             }
+        }
+    }
+
+    private void MatchByPartOneSibling(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
+    {
+        List<RuvEpisode> unmatchedPartTwoEpisodes = [.. program.Episodes
+            .Where(x => x.TvdbId is null)
+            .Where(x => RuvEpisode.IsPartTwo(x.Title))];
+
+        foreach (RuvEpisode partTwoEpisode in unmatchedPartTwoEpisodes)
+        {
+            string partOneTitle = RuvEpisode.ToPartOneTitle(partTwoEpisode.Title);
+
+            RuvEpisode? partOneSibling = program.Episodes
+                .FirstOrDefault(x => x.TvdbId is not null
+                    && x.Title.Equals(partOneTitle, StringComparison.OrdinalIgnoreCase));
+
+            if (partOneSibling is null)
+            {
+                continue;
+            }
+
+            Episode? tvdbEpisode = seriesData.Episodes
+                .FirstOrDefault(x => x.SeasonNumber == partOneSibling.SeasonNumber
+                    && x.Number == partOneSibling.EpisodeNumber + 1);
+
+            if (tvdbEpisode is null)
+            {
+                continue;
+            }
+
+            logger.LogInformation(
+                "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}' via part-one sibling fallback",
+                partTwoEpisode.Title,
+                program.Name,
+                seriesData.Series.Name,
+                tvdbEpisode.SeasonNumber,
+                tvdbEpisode.Number,
+                tvdbEpisode.Name);
+            partTwoEpisode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id));
         }
     }
 
