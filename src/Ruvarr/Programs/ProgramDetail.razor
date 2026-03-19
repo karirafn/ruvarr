@@ -94,6 +94,12 @@ else
                         <Icon Type="IconType.Plus" Width="12" Height="12" /> TVDB
                     </button>
                 }
+                @if (_program.TvdbSeriesId is not null && !_program.IsMonitored && !_program.IsMovieMatch)
+                {
+                    <button class="action-button" @onclick="OpenAddToSonarrDialog">
+                        <Icon Type="IconType.Plus" Width="12" Height="12" /> Add to Sonarr
+                    </button>
+                }
             </div>
         }
     </div>
@@ -215,6 +221,7 @@ else
 }
 
 <MatchEpisodeDialog @ref="_matchDialog" OnMatchComplete="ReloadEpisodesAsync" />
+<AddToSonarrDialog @ref="_addToSonarrDialog" OnAddComplete="ReloadProgramAsync" />
 
 @code {
     [Parameter]
@@ -232,6 +239,7 @@ else
     private readonly CancellationTokenSource _cts = new();
 
     private MatchEpisodeDialog? _matchDialog;
+    private AddToSonarrDialog? _addToSonarrDialog;
     private DateTime _lastEpisodeReloadTime;
 
     protected override async Task OnInitializedAsync()
@@ -366,6 +374,26 @@ else
     private async Task OpenMatchDialog(string ruvId, int? currentTvdbId, string episodeTitle)
     {
         await _matchDialog!.OpenAsync(ruvId, currentTvdbId, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task OpenAddToSonarrDialog()
+    {
+        await _addToSonarrDialog!.OpenAsync(_program!.ProgramRuvId);
+    }
+
+    private async Task ReloadProgramAsync()
+    {
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+
+        IRequestHandler<RefreshProgramCommand> refreshHandler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<RefreshProgramCommand>>();
+        await refreshHandler.Handle(new RefreshProgramCommand(RuvId), _cts.Token);
+
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+        _program = await handler.Handle(new GetProgramQuery(RuvId), _cts.Token);
+        await InvokeAsync(StateHasChanged);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]

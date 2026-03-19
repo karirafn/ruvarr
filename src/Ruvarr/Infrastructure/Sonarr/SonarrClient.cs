@@ -36,4 +36,13 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
 
         return GetMany<ManualImportFile>(path, cancellationToken: cancellationToken);
     }
+
+    public Task<IReadOnlyList<RootFolder>> GetRootFoldersAsync(CancellationToken cancellationToken = default) =>
+        GetMany<RootFolder>("api/v3/rootfolder", cancellationToken);
+
+    public Task<IReadOnlyList<QualityProfile>> GetQualityProfilesAsync(CancellationToken cancellationToken = default) =>
+        GetMany<QualityProfile>("api/v3/qualityprofile", cancellationToken);
+
+    public Task<Series?> AddSeriesAsync(AddSeriesRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<AddSeriesRequest, Series>("api/v3/series", request, cancellationToken);
 }

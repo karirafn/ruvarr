@@ -39,4 +39,28 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, content);
         }
     }
+
+    protected async Task<TResponse?> PostAsync<TRequest, TResponse>(string path, TRequest body, CancellationToken cancellationToken)
+    {
+        try
+        {
+            HttpResponseMessage message = await httpClient.PostAsJsonAsync(path, body, cancellationToken);
+
+            if (!message.IsSuccessStatusCode)
+            {
+                string content = await message.Content.ReadAsStringAsync(cancellationToken);
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, content);
+                return default;
+            }
+
+            TResponse? response = await message.Content.ReadFromJsonAsync<TResponse>(cancellationToken);
+
+            return response;
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "POST {Path} failed: Reason: {Message}", path, ex.Message);
+            return default;
+        }
+    }
 }

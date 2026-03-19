@@ -29,6 +29,7 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
                 HasAnyEpisodes = x.Episodes.Any(),
                 AllEpisodesMatched = x.Episodes.All(e => e.TvdbId != null),
                 AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbId != null),
+                HasMovie = x.Movie != null,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -51,7 +52,8 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
             projected.SeriesTvdbId,
             projected.Slug != null ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(projected.Slug)}/{projected.RuvId}") : null,
             matchStatus,
-            projected.ImageUrl);
+            projected.ImageUrl,
+            projected.HasMovie);
     }
 
     private static EpisodeMatchStatus DeriveEpisodeMatchStatus(bool hasSeries, bool hasAnyEpisodes, bool allEpisodesMatched, bool anyEpisodeMatched)

@@ -11,4 +11,5 @@ public sealed record ProgramSummary(
     int? TvdbSeriesId,
     Uri? RuvUrl,
     EpisodeMatchStatus EpisodeMatchStatus,
-    Uri? ImageUrl);
+    Uri? ImageUrl,
+    bool IsMovieMatch);
