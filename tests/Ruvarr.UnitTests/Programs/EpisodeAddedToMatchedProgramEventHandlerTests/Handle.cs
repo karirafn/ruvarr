@@ -38,16 +38,16 @@ public sealed class Handle
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
         QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>? received = null;
+        IAsyncEnumerable<QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>> subscription =
+            broadcaster.Subscribe<QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>>(cts.Token);
         Task watchTask = Task.Run(async () =>
         {
-            await foreach (QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary> e in broadcaster.Subscribe<QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>>(cts.Token))
+            await foreach (QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary> e in subscription)
             {
                 received = e;
                 await cts.CancelAsync();
             }
         }, cts.Token);
-
-        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         // Act
         await sut.Handle(@event, TestContext.Current.CancellationToken);

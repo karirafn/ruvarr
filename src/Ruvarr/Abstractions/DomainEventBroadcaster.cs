@@ -25,7 +25,7 @@ internal sealed class DomainEventBroadcaster : IDomainEventBroadcaster
         }
     }
 
-    public async IAsyncEnumerable<TEvent> Subscribe<TEvent>([EnumeratorCancellation] CancellationToken cancellationToken) where TEvent : class
+    public IAsyncEnumerable<TEvent> Subscribe<TEvent>(CancellationToken cancellationToken) where TEvent : class
     {
         Channel<TEvent> channel = Channel.CreateUnbounded<TEvent>();
         List<object> channels = _subscribers.GetOrAdd(typeof(TEvent), _ => []);
@@ -35,6 +35,15 @@ internal sealed class DomainEventBroadcaster : IDomainEventBroadcaster
             channels.Add(channel);
         }
 
+        return ReadChannel(channel, channels, _lock, cancellationToken);
+    }
+
+    private static async IAsyncEnumerable<TEvent> ReadChannel<TEvent>(
+        Channel<TEvent> channel,
+        List<object> channels,
+        Lock @lock,
+        [EnumeratorCancellation] CancellationToken cancellationToken) where TEvent : class
+    {
         await using CancellationTokenRegistration registration = cancellationToken.Register(
             () => channel.Writer.TryComplete());
 
@@ -50,7 +59,7 @@ internal sealed class DomainEventBroadcaster : IDomainEventBroadcaster
         }
         finally
         {
-            lock (_lock)
+            lock (@lock)
             {
                 channels.Remove(channel);
             }
