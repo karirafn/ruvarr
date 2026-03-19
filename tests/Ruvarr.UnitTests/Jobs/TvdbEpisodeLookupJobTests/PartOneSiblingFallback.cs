@@ -54,12 +54,14 @@ public sealed class PartOneSiblingFallback
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501)
+            .WithName("Christmas Lads Part 1")
             .WithSeasonNumber(1)
             .WithNumber(3)
             .WithNameTranslations("isl")
             .Build();
         Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder()
             .WithId(502)
+            .WithName("Christmas Lads Part 2")
             .WithSeasonNumber(1)
             .WithNumber(4)
             .Build();
@@ -100,12 +102,14 @@ public sealed class PartOneSiblingFallback
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(601)
+            .WithName("Christmas Lads (1)")
             .WithSeasonNumber(2)
             .WithNumber(5)
             .WithNameTranslations("isl")
             .Build();
         Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder()
             .WithId(602)
+            .WithName("Christmas Lads (2)")
             .WithSeasonNumber(2)
             .WithNumber(6)
             .Build();
@@ -155,7 +159,7 @@ public sealed class PartOneSiblingFallback
     }
 
     [Fact]
-    public async Task SkipsWhenTvdbEpisodeAtNextNumberDoesNotExist()
+    public async Task SkipsWhenNoCorrespondingTvdbPartTwoEpisodeExists()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -167,16 +171,23 @@ public sealed class PartOneSiblingFallback
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // Only one TVDB episode — no E+1 available
+        // TVDB part 1 episode has "Part 1" suffix but no corresponding "Part 2" episode exists
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501)
+            .WithName("Christmas Lads Part 1")
             .WithSeasonNumber(1)
             .WithNumber(3)
             .WithNameTranslations("isl")
             .Build();
+        Episode tvdbEpisodeUnrelated = new TvdbEpisodeDataBuilder()
+            .WithId(503)
+            .WithName("Something Else")
+            .WithSeasonNumber(1)
+            .WithNumber(4)
+            .Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000)
-            .WithEpisodes(tvdbEpisode1)
+            .WithEpisodes(tvdbEpisode1, tvdbEpisodeUnrelated)
             .Build();
         _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
         _tvdb.GetEpisodeTranslationAsync(501, Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -190,6 +201,97 @@ public sealed class PartOneSiblingFallback
         // Assert
         program.Episodes[0].TvdbId.ShouldBe(501);
         program.Episodes[1].TvdbId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task SkipsWhenTvdbPartOneEpisodeHasNoPartSuffix()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show").Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow);
+        program.MatchTvdb(series);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // TVDB part 1 episode does NOT have a "Part 1" or "(1)" suffix
+        Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
+            .WithId(501)
+            .WithName("Christmas Lads")
+            .WithSeasonNumber(1)
+            .WithNumber(3)
+            .WithNameTranslations("isl")
+            .Build();
+        Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder()
+            .WithId(502)
+            .WithName("Christmas Lads Continued")
+            .WithSeasonNumber(1)
+            .WithNumber(4)
+            .Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder()
+            .WithId(1000)
+            .WithEpisodes(tvdbEpisode1, tvdbEpisode2)
+            .Build();
+        _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
+        _tvdb.GetEpisodeTranslationAsync(501, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Jólasveinar, fyrri hluti", "", "isl", true));
+        _notifier.Enqueue(1, program.Name);
+        TvdbEpisodeLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(null!);
+
+        // Assert
+        program.Episodes[0].TvdbId.ShouldBe(501);
+        program.Episodes[1].TvdbId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task MatchesPartTwoWithSeinniHluti()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show").Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, seinni hluti", "", DateTime.UtcNow);
+        program.MatchTvdb(series);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
+            .WithId(501)
+            .WithName("Christmas Lads Part 1")
+            .WithSeasonNumber(1)
+            .WithNumber(3)
+            .WithNameTranslations("isl")
+            .Build();
+        Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder()
+            .WithId(502)
+            .WithName("Christmas Lads Part 2")
+            .WithSeasonNumber(1)
+            .WithNumber(4)
+            .Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder()
+            .WithId(1000)
+            .WithEpisodes(tvdbEpisode1, tvdbEpisode2)
+            .Build();
+        _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
+        _tvdb.GetEpisodeTranslationAsync(501, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Jólasveinar, fyrri hluti", "", "isl", true));
+        _notifier.Enqueue(1, program.Name);
+        TvdbEpisodeLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(null!);
+
+        // Assert
+        program.Episodes[0].TvdbId.ShouldBe(501);
+        program.Episodes[1].TvdbId.ShouldBe(502);
+        program.Episodes[1].SeasonNumber.ShouldBe(1);
+        program.Episodes[1].EpisodeNumber.ShouldBe(4);
     }
 
     [Fact]

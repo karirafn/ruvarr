@@ -180,11 +180,25 @@ internal sealed class TvdbEpisodeLookupJob(
                 continue;
             }
 
-            Episode? tvdbEpisode = seriesData.Episodes
-                .FirstOrDefault(x => x.SeasonNumber == partOneSibling.SeasonNumber
-                    && x.Number == partOneSibling.EpisodeNumber + 1);
+            Episode? tvdbPartOneEpisode = seriesData.Episodes
+                .FirstOrDefault(x => x.Id == partOneSibling.TvdbId);
 
-            if (tvdbEpisode is null)
+            if (tvdbPartOneEpisode is null)
+            {
+                continue;
+            }
+
+            string? partTwoName = ToPartTwoName(tvdbPartOneEpisode.Name);
+
+            if (partTwoName is null)
+            {
+                continue;
+            }
+
+            Episode? tvdbPartTwoEpisode = seriesData.Episodes
+                .FirstOrDefault(x => x.Name.Equals(partTwoName, StringComparison.OrdinalIgnoreCase));
+
+            if (tvdbPartTwoEpisode is null)
             {
                 continue;
             }
@@ -194,11 +208,26 @@ internal sealed class TvdbEpisodeLookupJob(
                 partTwoEpisode.Title,
                 program.Name,
                 seriesData.Series.Name,
-                tvdbEpisode.SeasonNumber,
-                tvdbEpisode.Number,
-                tvdbEpisode.Name);
-            partTwoEpisode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id));
+                tvdbPartTwoEpisode.SeasonNumber,
+                tvdbPartTwoEpisode.Number,
+                tvdbPartTwoEpisode.Name);
+            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, missingTvdbIds.Contains(tvdbPartTwoEpisode.Id));
         }
+    }
+
+    private static string? ToPartTwoName(string tvdbEpisodeName)
+    {
+        if (tvdbEpisodeName.EndsWith(" Part 1", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Concat(tvdbEpisodeName.AsSpan(0, tvdbEpisodeName.Length - 1), "2");
+        }
+
+        if (tvdbEpisodeName.EndsWith("(1)", StringComparison.Ordinal))
+        {
+            return string.Concat(tvdbEpisodeName.AsSpan(0, tvdbEpisodeName.Length - 2), "2)");
+        }
+
+        return null;
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program)

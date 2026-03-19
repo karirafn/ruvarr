@@ -228,9 +228,9 @@ internal sealed partial class RuvEpisode
     [GeneratedRegex(@"^((\d+. (þ|Þ)áttur: )|((Þ|þ)áttur \d+: )|(\d+. (k|K)afli: )|(\d+.))")]
     private static partial Regex PrefixRegex();
 
-    [GeneratedRegex(@"(, | - )(s|S)íðari hluti$")]
+    [GeneratedRegex(@"(, | - )(s|S)(íðari|einni) hluti$")]
     private static partial Regex PartTwoSuffixRegex();
 
-    [GeneratedRegex(@"(, | - )([fFsS])(yrri|íðari) hluti$")]
+    [GeneratedRegex(@"(, | - )([fFsS])(yrri|íðari|einni) hluti$")]
     private static partial Regex PartSuffixRegex();
 }

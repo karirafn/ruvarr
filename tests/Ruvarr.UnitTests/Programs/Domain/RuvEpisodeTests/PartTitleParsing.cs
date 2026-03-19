@@ -11,6 +11,10 @@ public sealed class PartTitleParsing
     [InlineData("Jólasveinar - síðari hluti")]
     [InlineData("Jólasveinar, Síðari hluti")]
     [InlineData("Jólasveinar - Síðari hluti")]
+    [InlineData("Jólasveinar, seinni hluti")]
+    [InlineData("Jólasveinar - seinni hluti")]
+    [InlineData("Jólasveinar, Seinni hluti")]
+    [InlineData("Jólasveinar - Seinni hluti")]
     public void IsPartTwo_ReturnsTrueForPartTwoTitles(string title)
     {
         // Act
@@ -40,6 +44,8 @@ public sealed class PartTitleParsing
     [InlineData("Jólasveinar - síðari hluti", "Jólasveinar")]
     [InlineData("Draugar á Djúpalæk, síðari hluti", "Draugar á Djúpalæk")]
     [InlineData("Draugar á Djúpalæk - síðari hluti", "Draugar á Djúpalæk")]
+    [InlineData("Jólasveinar, seinni hluti", "Jólasveinar")]
+    [InlineData("Jólasveinar - seinni hluti", "Jólasveinar")]
     [InlineData("Jólasveinar, fyrri hluti", "Jólasveinar")]
     [InlineData("Jólasveinar - fyrri hluti", "Jólasveinar")]
     [InlineData("Jólasveinar", "Jólasveinar")]
@@ -58,6 +64,10 @@ public sealed class PartTitleParsing
     [InlineData("Jólasveinar - síðari hluti", "Jólasveinar - fyrri hluti")]
     [InlineData("Jólasveinar, Síðari hluti", "Jólasveinar, Fyrri hluti")]
     [InlineData("Jólasveinar - Síðari hluti", "Jólasveinar - Fyrri hluti")]
+    [InlineData("Jólasveinar, seinni hluti", "Jólasveinar, fyrri hluti")]
+    [InlineData("Jólasveinar - seinni hluti", "Jólasveinar - fyrri hluti")]
+    [InlineData("Jólasveinar, Seinni hluti", "Jólasveinar, Fyrri hluti")]
+    [InlineData("Jólasveinar - Seinni hluti", "Jólasveinar - Fyrri hluti")]
     public void ToPartOneTitle_ConvertsPartTwoToPartOneTitle(string title, string expectedPartOne)
     {
         // Act
