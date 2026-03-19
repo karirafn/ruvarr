@@ -421,6 +421,9 @@ dialog label + label {
     margin-top: 0.75rem;
 }
 
+dialog input[type="text"],
+dialog input[type="password"],
+dialog input[type="url"],
 dialog input[type="number"] {
     background-color: #1a1a1a;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -431,6 +434,9 @@ dialog input[type="number"] {
     width: 100%;
 }
 
+dialog input[type="text"]:focus,
+dialog input[type="password"]:focus,
+dialog input[type="url"]:focus,
 dialog input[type="number"]:focus {
     outline: none;
     border-color: rgba(255, 255, 255, 0.5);

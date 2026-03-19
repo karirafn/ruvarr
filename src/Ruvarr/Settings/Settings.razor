@@ -1,0 +1,224 @@
+@page "/settings"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using Ruvarr.Abstractions
+@using Ruvarr.Settings.Commands.SaveSettings
+@using Ruvarr.Settings.Queries.GetSettings
+@using Ruvarr.Settings.Queries.TestSonarrConnection
+@inject IServiceScopeFactory ScopeFactory
+@implements IDisposable
+
+<h1>Settings</h1>
+
+@if (_loading)
+{
+    <div class="spinner" role="status" aria-label="Loading settings"></div>
+}
+else
+{
+    <div class="settings">
+        <section class="settings-section">
+            <h2 class="settings-section-title">Sonarr</h2>
+
+            <div class="settings-field">
+                <label for="sonarr-base-url">Base URL</label>
+                <input id="sonarr-base-url" type="url" @bind="_sonarrBaseAddress" aria-describedby="sonarr-base-url-error" />
+                @if (_fieldErrors.TryGetValue(SettingsErrors.InvalidSonarrBaseAddressCode, out string? baseUrlError))
+                {
+                    <span id="sonarr-base-url-error" class="field-error" role="alert">@baseUrlError</span>
+                }
+            </div>
+
+            <div class="settings-field">
+                <label for="sonarr-api-key">API Key</label>
+                <input id="sonarr-api-key" type="password" @bind="_sonarrApiKey" />
+            </div>
+
+            <div class="settings-field">
+                <button class="test-button" @onclick="TestConnection" disabled="@_isTesting" aria-busy="@_isTesting">
+                    @if (_isTesting)
+                    {
+                        <span class="button-spinner"></span>
+                    }
+                    Test Connection
+                </button>
+                @if (_testResult is not null)
+                {
+                    @if (_testResult.IsSuccess)
+                    {
+                        <span class="test-result test-result--success" role="status">Connection successful</span>
+                    }
+                    else
+                    {
+                        <span class="test-result test-result--failure" role="alert">@_testResult.Error.Description</span>
+                    }
+                }
+            </div>
+        </section>
+
+        <section class="settings-section">
+            <h2 class="settings-section-title">Directories</h2>
+
+            <div class="settings-field">
+                <label for="downloads-root">Downloads Root</label>
+                <input id="downloads-root" type="text" @bind="_downloadsRootDirectory" aria-describedby="downloads-root-error" />
+                @if (_fieldErrors.TryGetValue(SettingsErrors.DownloadsRootDirectoryNotFoundCode, out string? downloadsRootError))
+                {
+                    <span id="downloads-root-error" class="field-error" role="alert">@downloadsRootError</span>
+                }
+            </div>
+
+            <div class="settings-field">
+                <label for="episode-download-dir">Episode Download Directory</label>
+                <input id="episode-download-dir" type="text" @bind="_episodeDownloadDirectory" aria-describedby="episode-download-dir-error" />
+                @if (_fieldErrors.TryGetValue(SettingsErrors.EpisodeDownloadDirectoryNotFoundCode, out string? episodeDirError))
+                {
+                    <span id="episode-download-dir-error" class="field-error" role="alert">@episodeDirError</span>
+                }
+            </div>
+
+            <div class="settings-field">
+                <label for="movie-download-dir">Movie Download Directory</label>
+                <input id="movie-download-dir" type="text" @bind="_movieDownloadDirectory" aria-describedby="movie-download-dir-error" />
+                @if (_fieldErrors.TryGetValue(SettingsErrors.MovieDownloadDirectoryNotFoundCode, out string? movieDirError))
+                {
+                    <span id="movie-download-dir-error" class="field-error" role="alert">@movieDirError</span>
+                }
+            </div>
+        </section>
+
+        <div class="settings-actions">
+            <button class="save-button" @onclick="SaveSettings" disabled="@_isSaving" aria-busy="@_isSaving">
+                @if (_isSaving)
+                {
+                    <span class="button-spinner"></span>
+                }
+                Save Settings
+            </button>
+            @if (_showSaveConfirmation)
+            {
+                <span class="save-confirmation" role="status">Settings saved successfully</span>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+    private bool _loading = true;
+    private bool _isSaving;
+    private bool _isTesting;
+    private bool _showSaveConfirmation;
+    private RuvarrResult? _testResult;
+    private Dictionary<string, string> _fieldErrors = [];
+
+    private string _sonarrBaseAddress = string.Empty;
+    private string _sonarrApiKey = string.Empty;
+    private string _downloadsRootDirectory = string.Empty;
+    private string _episodeDownloadDirectory = string.Empty;
+    private string _movieDownloadDirectory = string.Empty;
+    private IReadOnlyList<string> _ignoredChannels = [];
+    private string _ffmpegPath = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>>>();
+
+        Result<RuvarrSettings> result = await handler.Handle(new GetSettingsQuery(), _cts.Token);
+
+        if (result.IsSuccess)
+        {
+            RuvarrSettings settings = result.FromResult();
+            _sonarrBaseAddress = settings.SonarrBaseAddress;
+            _sonarrApiKey = settings.SonarrApiKey;
+            _downloadsRootDirectory = settings.DownloadsRootDirectory;
+            _episodeDownloadDirectory = settings.EpisodeDownloadDirectory;
+            _movieDownloadDirectory = settings.MovieDownloadDirectory;
+            _ignoredChannels = settings.IgnoredChannels;
+            _ffmpegPath = settings.FfmpegPath;
+        }
+
+        _loading = false;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task SaveSettings()
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _fieldErrors = [];
+        _showSaveConfirmation = false;
+
+        Uri sonarrUri = Uri.TryCreate(_sonarrBaseAddress, UriKind.Absolute, out Uri? parsed)
+            ? parsed
+            : new Uri(_sonarrBaseAddress, UriKind.Relative);
+
+        SaveSettingsCommand command = new(
+            sonarrUri,
+            _sonarrApiKey,
+            _downloadsRootDirectory,
+            _episodeDownloadDirectory,
+            _movieDownloadDirectory,
+            _ignoredChannels,
+            _ffmpegPath);
+
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<SaveSettingsCommand> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<SaveSettingsCommand>>();
+        RuvarrResult result = await handler.Handle(command, _cts.Token);
+
+        _isSaving = false;
+
+        if (result.IsFailure)
+        {
+            _fieldErrors[result.Error.Code] = result.Error.Description;
+            return;
+        }
+
+        _showSaveConfirmation = true;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(3000, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        _showSaveConfirmation = false;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task TestConnection()
+    {
+        if (_isTesting)
+        {
+            return;
+        }
+
+        _isTesting = true;
+        _testResult = null;
+
+        TestSonarrConnectionQuery query = new(_sonarrBaseAddress, _sonarrApiKey, UseStoredApiKey: _sonarrApiKey == "****");
+
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<TestSonarrConnectionQuery> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<TestSonarrConnectionQuery>>();
+        _testResult = await handler.Handle(query, _cts.Token);
+
+        _isTesting = false;
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

@@ -4,6 +4,8 @@ namespace Ruvarr.Settings.Commands.SaveSettings;
 
 internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandler<SaveSettingsCommand>
 {
+    private const string ApiKeySentinel = "****";
+
     public async Task<RuvarrResult> Handle(SaveSettingsCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -34,9 +36,13 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
             return SettingsErrors.MovieDownloadDirectoryNotFound;
         }
 
+        string sonarrApiKey = command.SonarrApiKey == ApiKeySentinel
+            ? store.Current.SonarrApiKey
+            : command.SonarrApiKey;
+
         RuvarrSettings settings = new(
             command.SonarrBaseAddress.ToString(),
-            command.SonarrApiKey,
+            sonarrApiKey,
             command.DownloadsRootDirectory,
             command.EpisodeDownloadDirectory,
             command.MovieDownloadDirectory,
