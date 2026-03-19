@@ -12,7 +12,7 @@ public sealed class RemoveEpisode
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         RuvEpisode episode = sut.Episodes[0];
 
         // Act

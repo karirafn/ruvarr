@@ -37,7 +37,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.TryAddEpisode("TP-EP1", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("TP-EP1", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -156,7 +156,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         withUnmatched.MatchTvdb(TvdbSeries.Create(5001, "Some Series"));
         dbContext.Set<RuvProgram>().Add(withUnmatched);
         await dbContext.SaveChangesAsync(cancellationToken);
-        withUnmatched.TryAddEpisode("WU-EP1", new Uri("https://example.com/wu-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        withUnmatched.TryAddEpisode("WU-EP1", new Uri("https://example.com/wu-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvProgram allMatched = RuvProgram.Create(20031, "RÚV1", "Program With All Matched Episodes", null, multipleEpisodes: true);
@@ -322,8 +322,8 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.TryAddEpisode("FM-EP1", new Uri("https://example.com/fm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
-        program.TryAddEpisode("FM-EP2", new Uri("https://example.com/fm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("FM-EP1", new Uri("https://example.com/fm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("FM-EP2", new Uri("https://example.com/fm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode ep1 = program.Episodes.First(e => e.RuvId == "FM-EP1");
@@ -359,8 +359,8 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.TryAddEpisode("PM-EP1", new Uri("https://example.com/pm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
-        program.TryAddEpisode("PM-EP2", new Uri("https://example.com/pm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("PM-EP1", new Uri("https://example.com/pm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("PM-EP2", new Uri("https://example.com/pm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode ep1 = program.Episodes.First(e => e.RuvId == "PM-EP1");
@@ -394,8 +394,8 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.TryAddEpisode("NM-EP1", new Uri("https://example.com/nm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
-        program.TryAddEpisode("NM-EP2", new Uri("https://example.com/nm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("NM-EP1", new Uri("https://example.com/nm-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("NM-EP2", new Uri("https://example.com/nm-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -478,7 +478,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.TryAddEpisode("NS-EP1", new Uri("https://example.com/ns-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
+        program.TryAddEpisode("NS-EP1", new Uri("https://example.com/ns-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act

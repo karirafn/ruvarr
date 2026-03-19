@@ -42,6 +42,12 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
 
         builder.HasIndex("program_id", nameof(RuvEpisode.TvdbId));
 
+        builder.Property(x => x.Duration)
+            .HasConversion(
+                v => (long)v.TotalSeconds,
+                v => TimeSpan.FromSeconds(v))
+            .HasColumnName("duration_seconds");
+
         builder.Ignore(x => x.RuvUrl);
 
         builder.HasOne(x => x.DownloadQueueItem)

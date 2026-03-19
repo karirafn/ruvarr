@@ -40,8 +40,8 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
         dbContext.Set<RuvProgram>().Add(programB);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        programA.TryAddEpisode("EP001", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow);
-        programB.TryAddEpisode("EP002", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow);
+        programA.TryAddEpisode("EP001", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        programB.TryAddEpisode("EP002", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         DateTime olderCreated = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -89,8 +89,8 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
         dbContext.Set<RuvProgram>().Add(programB);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        programA.TryAddEpisode("EP003", new Uri("https://example.com/ep3.mp4"), "Episode 3", "Desc", DateTime.UtcNow);
-        programB.TryAddEpisode("EP004", new Uri("https://example.com/ep4.mp4"), "Episode 4", "Desc", DateTime.UtcNow);
+        programA.TryAddEpisode("EP003", new Uri("https://example.com/ep3.mp4"), "Episode 3", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        programB.TryAddEpisode("EP004", new Uri("https://example.com/ep4.mp4"), "Episode 4", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episodePending = programA.Episodes[0];
@@ -129,7 +129,7 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.TryAddEpisode("DEF456", new Uri("https://example.com/ep.mp4"), "Test Episode", "Description", DateTime.UtcNow);
+        program.TryAddEpisode("DEF456", new Uri("https://example.com/ep.mp4"), "Test Episode", "Description", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];

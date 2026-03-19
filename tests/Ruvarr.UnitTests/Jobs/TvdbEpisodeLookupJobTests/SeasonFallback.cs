@@ -46,7 +46,7 @@ public sealed class SeasonFallback
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show II").Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -72,7 +72,7 @@ public sealed class SeasonFallback
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show").Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -97,7 +97,7 @@ public sealed class SeasonFallback
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show II").Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -126,7 +126,7 @@ public sealed class SeasonFallback
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show II").Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Mynd", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Mynd", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -151,8 +151,8 @@ public sealed class SeasonFallback
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show II").Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow);
-        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "þáttur 2", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "þáttur 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -198,7 +198,7 @@ public sealed class SeasonFallback
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show II").Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -227,7 +227,7 @@ public sealed class SeasonFallback
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show 3").Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

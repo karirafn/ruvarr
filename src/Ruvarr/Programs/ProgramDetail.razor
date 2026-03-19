@@ -134,10 +134,7 @@ else
                         <td class="col-number">@episode.EpisodeNumber</td>
                         <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
                         <td class="col-duration">
-                            @if (episode.DurationSeconds is not null)
-                            {
-                                @((int)Math.Round(episode.DurationSeconds.Value / 60.0, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
-                            }
+                            @((int)Math.Round(episode.Duration.TotalMinutes, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
                         </td>
                         <td class="col-copyable">
                             @episode.EpisodeTitle

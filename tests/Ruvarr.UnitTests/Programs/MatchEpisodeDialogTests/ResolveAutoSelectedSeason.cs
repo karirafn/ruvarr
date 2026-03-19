@@ -134,5 +134,5 @@ public sealed class ResolveAutoSelectedSeason
         FirstRun: DateTime.UtcNow,
         IsMissing: false,
         RuvUrl: null,
-        DurationSeconds: null);
+        Duration: TimeSpan.Zero);
 }
