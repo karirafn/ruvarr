@@ -16,16 +16,15 @@ public sealed class Publish
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
 
         TestEventWithValue? received = null;
+        IAsyncEnumerable<TestEventWithValue> subscription = sut.Subscribe<TestEventWithValue>(cts.Token);
         Task subscribeTask = Task.Run(async () =>
         {
-            await foreach (TestEventWithValue e in sut.Subscribe<TestEventWithValue>(cts.Token))
+            await foreach (TestEventWithValue e in subscription)
             {
                 received = e;
                 await cts.CancelAsync();
             }
         }, cts.Token);
-
-        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         // Act
         sut.Publish(new TestEventWithValue("hello"));
@@ -47,25 +46,25 @@ public sealed class Publish
         TestEventWithValue? received1 = null;
         TestEventWithValue? received2 = null;
 
+        IAsyncEnumerable<TestEventWithValue> subscription1 = sut.Subscribe<TestEventWithValue>(cts1.Token);
         Task sub1 = Task.Run(async () =>
         {
-            await foreach (TestEventWithValue e in sut.Subscribe<TestEventWithValue>(cts1.Token))
+            await foreach (TestEventWithValue e in subscription1)
             {
                 received1 = e;
                 await cts1.CancelAsync();
             }
         }, cts1.Token);
 
+        IAsyncEnumerable<TestEventWithValue> subscription2 = sut.Subscribe<TestEventWithValue>(cts2.Token);
         Task sub2 = Task.Run(async () =>
         {
-            await foreach (TestEventWithValue e in sut.Subscribe<TestEventWithValue>(cts2.Token))
+            await foreach (TestEventWithValue e in subscription2)
             {
                 received2 = e;
                 await cts2.CancelAsync();
             }
         }, cts2.Token);
-
-        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         // Act
         sut.Publish(new TestEventWithValue("multi"));
@@ -97,16 +96,15 @@ public sealed class Publish
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
 
         EventA? received = null;
+        IAsyncEnumerable<EventA> subscription = sut.Subscribe<EventA>(cts.Token);
         _ = Task.Run(async () =>
         {
-            await foreach (EventA e in sut.Subscribe<EventA>(cts.Token))
+            await foreach (EventA e in subscription)
             {
                 received = e;
                 await cts.CancelAsync();
             }
         }, cts.Token);
-
-        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         // Act
         sut.Publish(new EventB(1));
@@ -125,17 +123,16 @@ public sealed class Publish
         using CancellationTokenSource cts = new();
 
         bool completed = false;
+        IAsyncEnumerable<TestEventWithValue> subscription = sut.Subscribe<TestEventWithValue>(cts.Token);
         Task subscribeTask = Task.Run(async () =>
         {
             int count = 0;
-            await foreach (TestEventWithValue _ in sut.Subscribe<TestEventWithValue>(cts.Token))
+            await foreach (TestEventWithValue _ in subscription)
             {
                 count++;
             }
             completed = count == 0;
         }, CancellationToken.None);
-
-        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         // Act
         await cts.CancelAsync();

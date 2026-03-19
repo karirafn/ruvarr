@@ -21,16 +21,15 @@ public sealed class Handle
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
 
         EpisodeMatchedEvent? received = null;
+        IAsyncEnumerable<EpisodeMatchedEvent> subscription = broadcaster.Subscribe<EpisodeMatchedEvent>(cts.Token);
         Task watchTask = Task.Run(async () =>
         {
-            await foreach (EpisodeMatchedEvent e in broadcaster.Subscribe<EpisodeMatchedEvent>(cts.Token))
+            await foreach (EpisodeMatchedEvent e in subscription)
             {
                 received = e;
                 await cts.CancelAsync();
             }
         }, TestContext.Current.CancellationToken);
-
-        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         // Act
         await sut.Handle(@event, TestContext.Current.CancellationToken);

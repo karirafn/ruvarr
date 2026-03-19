@@ -45,16 +45,16 @@ public sealed class Handle
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
         QueueChangedEvent<ProgramRefreshQueueItemSummary>? received = null;
+        IAsyncEnumerable<QueueChangedEvent<ProgramRefreshQueueItemSummary>> subscription =
+            _broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(cts.Token);
         Task watchTask = Task.Run(async () =>
         {
-            await foreach (QueueChangedEvent<ProgramRefreshQueueItemSummary> e in _broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(cts.Token))
+            await foreach (QueueChangedEvent<ProgramRefreshQueueItemSummary> e in subscription)
             {
                 received = e;
                 await cts.CancelAsync();
             }
         }, cts.Token);
-
-        await Task.Delay(50, TestContext.Current.CancellationToken);
 
         // Act
         await sut.Handle(@event, TestContext.Current.CancellationToken);
