@@ -47,7 +47,7 @@ public sealed class TitleMatching
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -79,7 +79,7 @@ public sealed class TitleMatching
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -107,7 +107,7 @@ public sealed class TitleMatching
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -134,7 +134,7 @@ public sealed class TitleMatching
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -162,7 +162,7 @@ public sealed class TitleMatching
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
-        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow);
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

@@ -15,7 +15,7 @@ public sealed class TryAddEpisode
         RuvProgram sut = new RuvProgramBuilder().Build();
 
         // Act
-        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         // Assert
         result.ShouldBeTrue();
@@ -27,10 +27,10 @@ public sealed class TryAddEpisode
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         // Act
-        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Other Title", "Desc", DateTime.UtcNow);
+        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Other Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         // Assert
         result.ShouldBeFalse();
@@ -46,7 +46,7 @@ public sealed class TryAddEpisode
         sut.ClearDomainEvents();
 
         // Act
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         // Assert
         sut.DomainEvents.ShouldContain(e => e is EpisodeAddedToMatchedProgramEvent);
@@ -64,24 +64,24 @@ public sealed class TryAddEpisode
         sut.ClearDomainEvents();
 
         // Act
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         // Assert
         sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
     }
 
     [Fact]
-    public void PassesDurationSecondsToEpisode()
+    public void PassesDurationToEpisode()
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().Build();
 
         // Act
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 2700);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(45));
 
         // Assert
         sut.Episodes.ShouldHaveSingleItem();
-        sut.Episodes[0].DurationSeconds.ShouldBe(2700);
+        sut.Episodes[0].Duration.ShouldBe(TimeSpan.FromMinutes(45));
     }
 
     [Fact]
@@ -90,45 +90,13 @@ public sealed class TryAddEpisode
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().Build();
         sut.MatchTvdb(TvdbSeries.Create(1, "Test Series"));
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         sut.ClearDomainEvents();
 
         // Act
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         // Assert
         sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
-    }
-
-    [Fact]
-    public void BackfillsDurationWhenExistingEpisodeHasNullDuration()
-    {
-        // Arrange
-        RuvProgram sut = new RuvProgramBuilder().Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: null);
-
-        // Act
-        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 2700);
-
-        // Assert
-        result.ShouldBeFalse();
-        sut.Episodes.ShouldHaveSingleItem();
-        sut.Episodes[0].DurationSeconds.ShouldBe(2700);
-    }
-
-    [Fact]
-    public void DoesNotOverwriteDurationWhenExistingEpisodeAlreadyHasDuration()
-    {
-        // Arrange
-        RuvProgram sut = new RuvProgramBuilder().Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 1800);
-
-        // Act
-        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Title", "Desc", DateTime.UtcNow, durationSeconds: 2700);
-
-        // Assert
-        result.ShouldBeFalse();
-        sut.Episodes.ShouldHaveSingleItem();
-        sut.Episodes[0].DurationSeconds.ShouldBe(1800);
     }
 }

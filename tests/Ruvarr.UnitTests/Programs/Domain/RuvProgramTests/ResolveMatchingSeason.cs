@@ -13,8 +13,8 @@ public sealed class ResolveMatchingSeason
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().WithName("Show").Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
-        sut.TryAddEpisode("ep2", new Uri("http://test.com"), "þáttur 2", "", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        sut.TryAddEpisode("ep2", new Uri("http://test.com"), "þáttur 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         Episode s1e1 = new TvdbEpisodeDataBuilder().WithId(101).WithSeasonNumber(1).WithNumber(1).Build();
         Episode s1e2 = new TvdbEpisodeDataBuilder().WithId(102).WithSeasonNumber(1).WithNumber(2).Build();
@@ -34,7 +34,7 @@ public sealed class ResolveMatchingSeason
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().WithName("Show").Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         Episode s1e1 = new TvdbEpisodeDataBuilder().WithId(101).WithSeasonNumber(1).WithNumber(1).Build();
         Episode s1e2 = new TvdbEpisodeDataBuilder().WithId(102).WithSeasonNumber(1).WithNumber(2).Build();
@@ -51,7 +51,7 @@ public sealed class ResolveMatchingSeason
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().WithName("Show").Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         Episode s1e1 = new TvdbEpisodeDataBuilder().WithId(101).WithSeasonNumber(1).WithNumber(1).Build();
         Episode s2e1 = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
@@ -68,7 +68,7 @@ public sealed class ResolveMatchingSeason
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().WithName("Show II").Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         Episode s1e1 = new TvdbEpisodeDataBuilder().WithId(101).WithSeasonNumber(1).WithNumber(1).Build();
         Episode s1e2 = new TvdbEpisodeDataBuilder().WithId(102).WithSeasonNumber(1).WithNumber(2).Build();
@@ -86,7 +86,7 @@ public sealed class ResolveMatchingSeason
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().WithName("Show II").Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         Episode s2e1 = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
         Episode s4e1 = new TvdbEpisodeDataBuilder().WithId(401).WithSeasonNumber(4).WithNumber(1).Build();
@@ -103,7 +103,7 @@ public sealed class ResolveMatchingSeason
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().WithName("Show").Build();
-        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow);
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
 
         Episode special = new TvdbEpisodeDataBuilder().WithId(1).WithSeasonNumber(0).WithNumber(1).Build();
         Episode s1e1 = new TvdbEpisodeDataBuilder().WithId(101).WithSeasonNumber(1).WithNumber(1).Build();

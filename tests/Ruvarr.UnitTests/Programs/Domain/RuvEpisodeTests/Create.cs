@@ -77,23 +77,13 @@ public sealed class Create
     }
 
     [Fact]
-    public void SetsDurationSeconds()
+    public void SetsDuration()
     {
         // Arrange / Act
-        RuvEpisode result = new RuvEpisodeBuilder().WithDurationSeconds(1800).Build();
+        RuvEpisode result = new RuvEpisodeBuilder().WithDuration(TimeSpan.FromMinutes(30)).Build();
 
         // Assert
-        result.DurationSeconds.ShouldBe(1800);
-    }
-
-    [Fact]
-    public void DurationSecondsDefaultsToNull()
-    {
-        // Arrange / Act
-        RuvEpisode result = new RuvEpisodeBuilder().Build();
-
-        // Assert
-        result.DurationSeconds.ShouldBeNull();
+        result.Duration.ShouldBe(TimeSpan.FromMinutes(30));
     }
 
     [Fact]

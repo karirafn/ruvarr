@@ -10,4 +10,4 @@ public sealed record EpisodeSummary(
     DateTime FirstRun,
     bool IsMissing,
     Uri? RuvUrl,
-    int? DurationSeconds);
+    TimeSpan Duration);
