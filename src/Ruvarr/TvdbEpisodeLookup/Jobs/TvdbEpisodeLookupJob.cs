@@ -59,6 +59,19 @@ internal sealed class TvdbEpisodeLookupJob(
             return;
         }
 
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+
+        await MatchByTranslationAsync(program, seriesData, missingTvdbIds);
+        MatchByEpisodeNumber(program, seriesData, missingTvdbIds);
+
+        await ScheduleLookupAsync(program);
+        lookupQueue.MarkComplete(ruvId);
+        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
+    }
+
+    private async Task MatchByTranslationAsync(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
+    {
         List<int> matchedIds = [.. program.Episodes.Select(x => x.TvdbId).OfType<int>()];
 
         logger.LogDebug("Series {Name} has {Count} episodes", seriesData.Series.Name, seriesData.Episodes.Count);
@@ -66,9 +79,6 @@ internal sealed class TvdbEpisodeLookupJob(
             .Where(x => !matchedIds.Contains(x.Id))
             .Where(x => x.NameTranslations.Contains("isl"))];
         logger.LogDebug("Found {Count} episodes with Icelandic titles", translatedEpisodes.Count);
-
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
-        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
 
         foreach (Episode translatedEpisode in translatedEpisodes)
         {
@@ -105,7 +115,10 @@ internal sealed class TvdbEpisodeLookupJob(
                 translatedEpisode.Name);
             episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number, missingTvdbIds.Contains(translatedEpisode.Id));
         }
+    }
 
+    private void MatchByEpisodeNumber(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
+    {
         List<RuvEpisode> unmatchedEpisodes = [.. program.Episodes.Where(x => x.TvdbId is null)];
 
         if (unmatchedEpisodes.Count > 0)
@@ -145,10 +158,6 @@ internal sealed class TvdbEpisodeLookupJob(
                 }
             }
         }
-
-        await ScheduleLookupAsync(program);
-        lookupQueue.MarkComplete(ruvId);
-        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program)
