@@ -1,6 +1,5 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 using Quartz;
 
@@ -19,7 +18,6 @@ internal class DownloadQueueProcessor(
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
     IFfmpegService ffmpeg,
-    IOptions<RuvarrOptions> options,
     ISettingsStore settingsStore) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
@@ -51,10 +49,17 @@ internal class DownloadQueueProcessor(
         item.MarkDownloading();
         await dbContext.SaveChangesAsync();
 
-        string? episodeDownloadDirectory = settingsStore.Current.EpisodeDownloadDirectory
-            ?? options.Value.EpisodeDownloadDirectory;
+        string downloadsRootDirectory = settingsStore.Current.DownloadsRootDirectory;
 
-        if (episodeDownloadDirectory is null)
+        if (string.IsNullOrEmpty(downloadsRootDirectory))
+        {
+            logger.LogWarning("Downloads root directory is not configured. Skipping download");
+            return;
+        }
+
+        string episodeDownloadDirectory = settingsStore.Current.EpisodeDownloadDirectory;
+
+        if (string.IsNullOrEmpty(episodeDownloadDirectory))
         {
             logger.LogWarning("Episode download directory is not configured. Skipping download");
             return;
@@ -62,12 +67,12 @@ internal class DownloadQueueProcessor(
 
         logger.LogInformation("Downloading {Program} - {Title}", item.Episode.Program.Name, item.Episode.Title);
         string tentativePath = item.Episode.ToFilePath(
-            options.Value.DownloadsRootDirectory,
+            downloadsRootDirectory,
             episodeDownloadDirectory,
             fileAlreadyExists: false);
 
         string filepath = item.Episode.ToFilePath(
-            options.Value.DownloadsRootDirectory,
+            downloadsRootDirectory,
             episodeDownloadDirectory,
             fileAlreadyExists: File.Exists(tentativePath));
 

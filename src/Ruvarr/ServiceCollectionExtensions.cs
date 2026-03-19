@@ -26,10 +26,6 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddRuvarr(this IServiceCollection services, string dbConnectionString, string settingsFilePath)
     {
-        services.AddOptions<RuvarrOptions>()
-            .Configure<IConfiguration>((options, configuration)
-                => configuration.GetRequiredSection(RuvarrOptions.SectionName).Bind(options));
-
         services.AddSettings(settingsFilePath);
         services.AddSingleton<IDomainEventBroadcaster, DomainEventBroadcaster>();
         services.AddSingleton<ProgramRefreshNotifier>();

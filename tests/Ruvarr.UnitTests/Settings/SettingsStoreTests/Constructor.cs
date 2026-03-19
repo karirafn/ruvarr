@@ -32,6 +32,7 @@ public sealed class Constructor : IDisposable
 
         // Assert
         store.Current.ShouldBe(RuvarrSettings.Empty);
+        File.Exists(filePath).ShouldBeTrue();
     }
 
     [Fact]
@@ -41,8 +42,9 @@ public sealed class Constructor : IDisposable
         string filePath = Path.Combine(_tempDirectory, "settings.json");
         File.WriteAllText(filePath, """
         {
-            "SonarrBaseUrl": "http://localhost:8989",
+            "SonarrBaseAddress": "http://localhost:8989",
             "SonarrApiKey": "test-key",
+            "DownloadsRootDirectory": "/downloads",
             "EpisodeDownloadDirectory": "/downloads/episodes",
             "MovieDownloadDirectory": "/downloads/movies"
         }
@@ -52,8 +54,9 @@ public sealed class Constructor : IDisposable
         using SettingsStore store = new(filePath);
 
         // Assert
-        store.Current.SonarrBaseUrl.ShouldBe("http://localhost:8989");
+        store.Current.SonarrBaseAddress.ShouldBe("http://localhost:8989");
         store.Current.SonarrApiKey.ShouldBe("test-key");
+        store.Current.DownloadsRootDirectory.ShouldBe("/downloads");
         store.Current.EpisodeDownloadDirectory.ShouldBe("/downloads/episodes");
         store.Current.MovieDownloadDirectory.ShouldBe("/downloads/movies");
     }
@@ -69,9 +72,10 @@ public sealed class Constructor : IDisposable
         using SettingsStore store = new(filePath);
 
         // Assert
-        store.Current.SonarrBaseUrl.ShouldBeNull();
-        store.Current.SonarrApiKey.ShouldBeNull();
-        store.Current.EpisodeDownloadDirectory.ShouldBeNull();
-        store.Current.MovieDownloadDirectory.ShouldBeNull();
+        store.Current.SonarrBaseAddress.ShouldBeEmpty();
+        store.Current.SonarrApiKey.ShouldBeEmpty();
+        store.Current.DownloadsRootDirectory.ShouldBeEmpty();
+        store.Current.EpisodeDownloadDirectory.ShouldBeEmpty();
+        store.Current.MovieDownloadDirectory.ShouldBeEmpty();
     }
 }

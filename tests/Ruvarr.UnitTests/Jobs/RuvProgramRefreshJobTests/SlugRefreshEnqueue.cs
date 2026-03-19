@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 using NSubstitute;
 
@@ -10,6 +9,7 @@ using Ruvarr.Infrastructure.Ruv.Models;
 using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 using Ruvarr.Testing.Builders;
 
@@ -23,17 +23,12 @@ public sealed class SlugRefreshEnqueue
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
     private readonly TvdbSeriesLookupNotifier _tvdbLookupQueue = new();
-    private readonly IOptions<RuvarrOptions> _options = Options.Create(new RuvarrOptions
-    {
-        DownloadsRootDirectory = "/tmp",
-        EpisodeDownloadDirectory = "episodes",
-        MovieDownloadDirectory = "movies",
-        IgnoredChannels = []
-    });
+    private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 
     public SlugRefreshEnqueue()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
+        _settingsStore.Current.Returns(new RuvarrSettings { IgnoredChannels = [] });
 
         RuvFeaturedTv featured = new(DateTimeOffset.UtcNow, [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style", [CreateRuvTvProgram(id: 1)])]);
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
@@ -50,7 +45,7 @@ public sealed class SlugRefreshEnqueue
         NullLogger<RuvProgramRefreshJob>.Instance,
         _ruv,
         dbContext,
-        _options,
+        _settingsStore,
         _syncQueue,
         _tvdbLookupQueue,
         new DomainEventBroadcaster());

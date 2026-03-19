@@ -8,35 +8,42 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        if (command.SonarrBaseUrl is not null && !command.SonarrBaseUrl.IsAbsoluteUri)
+        if (!command.SonarrBaseAddress.IsAbsoluteUri)
         {
-            return SettingsErrors.InvalidSonarrBaseUrl;
+            return SettingsErrors.InvalidSonarrBaseAddress;
         }
 
-        if (command.SonarrBaseUrl is not null &&
-            command.SonarrBaseUrl.Scheme != Uri.UriSchemeHttp &&
-            command.SonarrBaseUrl.Scheme != Uri.UriSchemeHttps)
+        if (command.SonarrBaseAddress.Scheme != Uri.UriSchemeHttp &&
+            command.SonarrBaseAddress.Scheme != Uri.UriSchemeHttps)
         {
-            return SettingsErrors.InvalidSonarrBaseUrl;
+            return SettingsErrors.InvalidSonarrBaseAddress;
         }
 
-        if (command.EpisodeDownloadDirectory is not null &&
-            !Directory.Exists(command.EpisodeDownloadDirectory))
+        if (!Directory.Exists(command.DownloadsRootDirectory))
+        {
+            return SettingsErrors.DownloadsRootDirectoryNotFound;
+        }
+
+        if (!Directory.Exists(command.EpisodeDownloadDirectory))
         {
             return SettingsErrors.EpisodeDownloadDirectoryNotFound;
         }
 
-        if (command.MovieDownloadDirectory is not null &&
-            !Directory.Exists(command.MovieDownloadDirectory))
+        if (!Directory.Exists(command.MovieDownloadDirectory))
         {
             return SettingsErrors.MovieDownloadDirectoryNotFound;
         }
 
         RuvarrSettings settings = new(
-            command.SonarrBaseUrl?.ToString(),
+            command.SonarrBaseAddress.ToString(),
             command.SonarrApiKey,
+            command.DownloadsRootDirectory,
             command.EpisodeDownloadDirectory,
-            command.MovieDownloadDirectory);
+            command.MovieDownloadDirectory,
+            command.FfmpegPath)
+        {
+            IgnoredChannels = command.IgnoredChannels
+        };
 
         await store.SaveAsync(settings, cancellationToken);
 

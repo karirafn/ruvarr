@@ -1,10 +1,10 @@
 using System.Diagnostics;
 
-using Microsoft.Extensions.Options;
+using Ruvarr.Settings;
 
 namespace Ruvarr.Infrastructure.FFmpeg;
 
-internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegService
+internal sealed class FfmpegService(ISettingsStore settingsStore) : IFfmpegService
 {
     public async Task DownloadAsync(Uri uri, string filepath, string title)
     {
@@ -22,7 +22,7 @@ internal sealed class FfmpegService(IOptions<FfmpegOptions> options) : IFfmpegSe
 
         ProcessStartInfo psi = new()
         {
-            FileName = options.Value.ExecutablePath,
+            FileName = settingsStore.Current.FfmpegPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,

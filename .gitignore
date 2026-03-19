@@ -493,4 +493,4 @@ $RECYCLE.BIN/
 *.db-*
 
 # Runtime settings
-data/settings.json
+**/data/settings.json

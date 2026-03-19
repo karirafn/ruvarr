@@ -6,11 +6,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
+using Ruvarr.Settings;
+
 namespace Ruvarr.IntegrationTests;
 
 public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.db");
+    private readonly string _settingsPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}-settings.json");
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -29,6 +32,11 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             services.AddDbContext<RuvarrDbContext>(options =>
                 options.UseSqlite($"Data Source={_dbPath}")
                        .UseSnakeCaseNamingConvention());
+
+            services.RemoveAll<SettingsStore>();
+            services.RemoveAll<ISettingsStore>();
+            services.AddSingleton<SettingsStore>(_ => new SettingsStore(_settingsPath));
+            services.AddSingleton<ISettingsStore>(sp => sp.GetRequiredService<SettingsStore>());
         });
     }
 
@@ -45,6 +53,11 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         if (File.Exists(_dbPath))
         {
             File.Delete(_dbPath);
+        }
+
+        if (File.Exists(_settingsPath))
+        {
+            File.Delete(_settingsPath);
         }
 
         await base.DisposeAsync();

@@ -58,10 +58,19 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
     {
         if (!File.Exists(filePath))
         {
+            string? directory = Path.GetDirectoryName(filePath);
+            if (directory is not null && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            string json = JsonSerializer.Serialize(RuvarrSettings.Empty, SerializerOptions);
+            File.WriteAllText(filePath, json);
+
             return RuvarrSettings.Empty;
         }
 
-        string json = File.ReadAllText(filePath);
-        return JsonSerializer.Deserialize<RuvarrSettings>(json) ?? RuvarrSettings.Empty;
+        string content = File.ReadAllText(filePath);
+        return JsonSerializer.Deserialize<RuvarrSettings>(content) ?? RuvarrSettings.Empty;
     }
 }

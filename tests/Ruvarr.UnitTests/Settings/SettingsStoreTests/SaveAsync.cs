@@ -29,7 +29,7 @@ public sealed class SaveAsync : IDisposable
         // Arrange
         string filePath = Path.Combine(_tempDirectory, "settings.json");
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://localhost:8989", "key", "/episodes", "/movies");
+        RuvarrSettings settings = new("http://localhost:8989", "key", "/downloads", "/episodes", "/movies");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);
@@ -44,7 +44,7 @@ public sealed class SaveAsync : IDisposable
         // Arrange
         string filePath = Path.Combine(_tempDirectory, "settings.json");
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://localhost:8989", "key", "/episodes", "/movies");
+        RuvarrSettings settings = new("http://localhost:8989", "key", "/downloads", "/episodes", "/movies");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);
@@ -53,8 +53,9 @@ public sealed class SaveAsync : IDisposable
         File.Exists(filePath).ShouldBeTrue();
         string json = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
         JsonDocument doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("SonarrBaseUrl").GetString().ShouldBe("http://localhost:8989");
+        doc.RootElement.GetProperty("SonarrBaseAddress").GetString().ShouldBe("http://localhost:8989");
         doc.RootElement.GetProperty("SonarrApiKey").GetString().ShouldBe("key");
+        doc.RootElement.GetProperty("DownloadsRootDirectory").GetString().ShouldBe("/downloads");
         doc.RootElement.GetProperty("EpisodeDownloadDirectory").GetString().ShouldBe("/episodes");
         doc.RootElement.GetProperty("MovieDownloadDirectory").GetString().ShouldBe("/movies");
     }
@@ -65,7 +66,7 @@ public sealed class SaveAsync : IDisposable
         // Arrange
         string filePath = Path.Combine(_tempDirectory, "nested", "dir", "settings.json");
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://localhost:8989", "key", "/episodes", "/movies");
+        RuvarrSettings settings = new("http://localhost:8989", "key", "/downloads", "/episodes", "/movies");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);
@@ -79,9 +80,9 @@ public sealed class SaveAsync : IDisposable
     {
         // Arrange
         string filePath = Path.Combine(_tempDirectory, "settings.json");
-        await File.WriteAllTextAsync(filePath, """{ "SonarrBaseUrl": "http://old:8989" }""", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(filePath, """{ "SonarrBaseAddress": "http://old:8989" }""", TestContext.Current.CancellationToken);
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://new:8989", null, null, null);
+        RuvarrSettings settings = new("http://new:8989", "", "", "", "");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);
@@ -89,6 +90,6 @@ public sealed class SaveAsync : IDisposable
         // Assert
         string json = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
         JsonDocument doc = JsonDocument.Parse(json);
-        doc.RootElement.GetProperty("SonarrBaseUrl").GetString().ShouldBe("http://new:8989");
+        doc.RootElement.GetProperty("SonarrBaseAddress").GetString().ShouldBe("http://new:8989");
     }
 }

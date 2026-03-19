@@ -29,18 +29,18 @@ public sealed class Handle : IDisposable
     private SaveSettingsHandler CreateHandler() => new(_store);
 
     [Fact]
-    public async Task ReturnsErrorWhenSonarrBaseUrlIsRelativeUri()
+    public async Task ReturnsErrorWhenSonarrBaseAddressIsRelativeUri()
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), null, null, null);
+        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, [], "");
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.ShouldBeTrue();
-        result.Error.ShouldBe(SettingsErrors.InvalidSonarrBaseUrl);
+        result.Error.ShouldBe(SettingsErrors.InvalidSonarrBaseAddress);
         await _store.DidNotReceive().SaveAsync(Arg.Any<RuvarrSettings>(), Arg.Any<CancellationToken>());
     }
 
@@ -48,19 +48,34 @@ public sealed class Handle : IDisposable
     [InlineData("file:///etc/passwd")]
     [InlineData("ftp://example.com")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1054:URI-like parameters should not be strings")]
-    public async Task ReturnsErrorWhenSonarrBaseUrlSchemeIsNotHttpOrHttps(string url)
+    public async Task ReturnsErrorWhenSonarrBaseAddressSchemeIsNotHttpOrHttps(string url)
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri(url), null, null, null);
+        SaveSettingsCommand command = new(new Uri(url), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, [], "");
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.ShouldBeTrue();
-        result.Error.ShouldBe(SettingsErrors.InvalidSonarrBaseUrl);
+        result.Error.ShouldBe(SettingsErrors.InvalidSonarrBaseAddress);
         await _store.DidNotReceive().SaveAsync(Arg.Any<RuvarrSettings>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReturnsErrorWhenDownloadsRootDirectoryDoesNotExist()
+    {
+        // Arrange
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "/nonexistent/directory", _tempDirectory, _tempDirectory, [], "");
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(SettingsErrors.DownloadsRootDirectoryNotFound);
     }
 
     [Fact]
@@ -68,7 +83,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(null, null, "/nonexistent/directory", null);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, "/nonexistent/directory", _tempDirectory, [], "");
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -83,7 +98,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(null, null, null, "/nonexistent/directory");
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, _tempDirectory, "/nonexistent/directory", [], "");
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -99,7 +114,7 @@ public sealed class Handle : IDisposable
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
         Uri baseUrl = new("http://localhost:8989");
-        SaveSettingsCommand command = new(baseUrl, "api-key", _tempDirectory, _tempDirectory);
+        SaveSettingsCommand command = new(baseUrl, "api-key", _tempDirectory, _tempDirectory, _tempDirectory, [], "/usr/bin/ffmpeg");
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -108,59 +123,12 @@ public sealed class Handle : IDisposable
         result.IsSuccess.ShouldBeTrue();
         await _store.Received(1).SaveAsync(
             Arg.Is<RuvarrSettings>(s =>
-                s.SonarrBaseUrl == "http://localhost:8989/" &&
+                s.SonarrBaseAddress == "http://localhost:8989/" &&
                 s.SonarrApiKey == "api-key" &&
+                s.DownloadsRootDirectory == _tempDirectory &&
                 s.EpisodeDownloadDirectory == _tempDirectory &&
-                s.MovieDownloadDirectory == _tempDirectory),
+                s.MovieDownloadDirectory == _tempDirectory &&
+                s.FfmpegPath == "/usr/bin/ffmpeg"),
             Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task SavesSettingsWhenAllFieldsAreNull()
-    {
-        // Arrange
-        SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(null, null, null, null);
-
-        // Act
-        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-        await _store.Received(1).SaveAsync(
-            Arg.Is<RuvarrSettings>(s =>
-                s.SonarrBaseUrl == null &&
-                s.SonarrApiKey == null &&
-                s.EpisodeDownloadDirectory == null &&
-                s.MovieDownloadDirectory == null),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task SkipsUrlValidationWhenSonarrBaseUrlIsNull()
-    {
-        // Arrange
-        SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(null, "some-key", null, null);
-
-        // Act
-        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-    }
-
-    [Fact]
-    public async Task SkipsDirectoryValidationWhenDirectoriesAreNull()
-    {
-        // Arrange
-        SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), null, null, null);
-
-        // Act
-        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
     }
 }

@@ -1,10 +1,14 @@
 namespace Ruvarr.Settings;
 
 internal sealed record RuvarrSettings(
-    string? SonarrBaseUrl,
-    string? SonarrApiKey,
-    string? EpisodeDownloadDirectory,
-    string? MovieDownloadDirectory)
+    string SonarrBaseAddress = "",
+    string SonarrApiKey = "",
+    string DownloadsRootDirectory = "",
+    string EpisodeDownloadDirectory = "",
+    string MovieDownloadDirectory = "",
+    string FfmpegPath = "")
 {
-    public static RuvarrSettings Empty => new(null, null, null, null);
+    public IReadOnlyList<string> IgnoredChannels { get; init; } = [];
+
+    public static RuvarrSettings Empty => new();
 }

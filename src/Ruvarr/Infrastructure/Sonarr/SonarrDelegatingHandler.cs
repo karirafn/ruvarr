@@ -10,14 +10,14 @@ internal sealed class SonarrDelegatingHandler(ISettingsStore settingsStore) : De
     {
         RuvarrSettings settings = settingsStore.Current;
 
-        if (settings.SonarrBaseUrl is not null &&
-            Uri.TryCreate(settings.SonarrBaseUrl, UriKind.Absolute, out Uri? baseUri) &&
+        if (!string.IsNullOrEmpty(settings.SonarrBaseAddress) &&
+            Uri.TryCreate(settings.SonarrBaseAddress, UriKind.Absolute, out Uri? baseUri) &&
             request.RequestUri is not null)
         {
-            request.RequestUri = new Uri(baseUri, request.RequestUri.OriginalString);
+            request.RequestUri = new Uri(baseUri, request.RequestUri.PathAndQuery);
         }
 
-        if (settings.SonarrApiKey is not null)
+        if (!string.IsNullOrEmpty(settings.SonarrApiKey))
         {
             request.Headers.Remove("X-Api-Key");
             request.Headers.Add("X-Api-Key", settings.SonarrApiKey);
