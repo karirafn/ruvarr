@@ -1,6 +1,7 @@
 using Ruvarr.Abstractions;
 using Ruvarr.Settings.Commands.SaveSettings;
 using Ruvarr.Settings.Queries.GetSettings;
+using Ruvarr.Settings.Queries.TestSonarrConnection;
 
 namespace Ruvarr.Settings;
 
@@ -12,6 +13,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ISettingsStore>(sp => sp.GetRequiredService<SettingsStore>());
         services.AddTransient<IRequestHandler<SaveSettingsCommand>, SaveSettingsHandler>();
         services.AddTransient<IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>>, GetSettingsHandler>();
+        services.AddTransient<IRequestHandler<TestSonarrConnectionQuery>, TestSonarrConnectionHandler>();
 
         return services;
     }

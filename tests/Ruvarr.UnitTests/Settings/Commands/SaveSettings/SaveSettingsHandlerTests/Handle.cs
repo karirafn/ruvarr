@@ -109,6 +109,24 @@ public sealed class Handle : IDisposable
     }
 
     [Fact]
+    public async Task PreservesExistingApiKeyWhenSentinelIsProvided()
+    {
+        // Arrange
+        _store.Current.Returns(new RuvarrSettings(SonarrApiKey: "real-secret-key"));
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "****", _tempDirectory, _tempDirectory, _tempDirectory, [], "");
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        await _store.Received(1).SaveAsync(
+            Arg.Is<RuvarrSettings>(s => s.SonarrApiKey == "real-secret-key"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task SavesSettingsWhenAllFieldsAreValid()
     {
         // Arrange
