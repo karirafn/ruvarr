@@ -10,22 +10,20 @@
 
 <dialog @ref="_dialog" @onclose="OnDialogClose">
     <h2>Add to Sonarr</h2>
-    @if (_isLoading)
-    {
-        <div class="dialog-spinner-container" role="status" aria-label="Loading Sonarr configuration">
-            <span class="dialog-spinner"></span>
-        </div>
-    }
-    else if (_loadErrorMessage is not null)
+    @if (_loadErrorMessage is not null)
     {
         <p class="dialog-error">@_loadErrorMessage</p>
         <button class="dialog-button" @onclick="RetryLoadAsync">Retry</button>
     }
-    else
-    {
-        <label>
-            Root Folder
-            <select class="dialog-select" disabled="@_isSubmitting" value="@_selectedRootFolderId" @onchange="OnRootFolderChanged">
+    <label>
+        Root Folder
+        <select class="dialog-select" disabled="@(_isLoading || _isSubmitting)" value="@_selectedRootFolderId" @onchange="OnRootFolderChanged">
+            @if (_isLoading)
+            {
+                <option value="">Loading...</option>
+            }
+            else
+            {
                 @if (_selectedRootFolderId is null)
                 {
                     <option value="">-- Select root folder --</option>
@@ -34,11 +32,18 @@
                 {
                     <option value="@folder.Id">@folder.Path</option>
                 }
-            </select>
-        </label>
-        <label>
-            Quality Profile
-            <select class="dialog-select" disabled="@_isSubmitting" @bind="_selectedQualityProfileId" @bind:event="onchange">
+            }
+        </select>
+    </label>
+    <label>
+        Quality Profile
+        <select class="dialog-select" disabled="@(_isLoading || _isSubmitting)" @bind="_selectedQualityProfileId" @bind:event="onchange">
+            @if (_isLoading)
+            {
+                <option value="">Loading...</option>
+            }
+            else
+            {
                 @if (_selectedQualityProfileId is null)
                 {
                     <option value="">-- Select quality profile --</option>
@@ -47,27 +52,24 @@
                 {
                     <option value="@profile.Id">@profile.Name</option>
                 }
-            </select>
-        </label>
-        @if (_submitErrorMessage is not null)
-        {
-            <p class="dialog-error">@_submitErrorMessage</p>
-        }
+            }
+        </select>
+    </label>
+    @if (_submitErrorMessage is not null)
+    {
+        <p class="dialog-error">@_submitErrorMessage</p>
     }
     <div class="dialog-actions">
-        @if (!_isLoading)
-        {
-            <button class="dialog-button dialog-button--primary"
-                    @onclick="Submit"
-                    disabled="@IsConfirmDisabled(_isSubmitting, _selectedRootFolderId, _selectedQualityProfileId, _loadErrorMessage)"
-                    aria-busy="@_isSubmitting">
-                @if (_isSubmitting)
-                {
-                    <span class="button-spinner"></span>
-                }
-                Confirm
-            </button>
-        }
+        <button class="dialog-button dialog-button--primary"
+                @onclick="Submit"
+                disabled="@IsConfirmDisabled(_isLoading, _isSubmitting, _selectedRootFolderId, _selectedQualityProfileId, _loadErrorMessage)"
+                aria-busy="@_isSubmitting">
+            @if (_isSubmitting)
+            {
+                <span class="button-spinner"></span>
+            }
+            Confirm
+        </button>
         <button class="dialog-button" @onclick="CloseAsync" disabled="@_isSubmitting">Cancel</button>
     </div>
 </dialog>
@@ -238,8 +240,13 @@
         _cts.Dispose();
     }
 
-    internal static bool IsConfirmDisabled(bool isSubmitting, int? selectedRootFolderId, int? selectedQualityProfileId, string? loadErrorMessage)
+    internal static bool IsConfirmDisabled(bool isLoading, bool isSubmitting, int? selectedRootFolderId, int? selectedQualityProfileId, string? loadErrorMessage)
     {
+        if (isLoading)
+        {
+            return true;
+        }
+
         if (isSubmitting)
         {
             return true;

@@ -7,11 +7,22 @@ namespace Ruvarr.UnitTests.Programs.AddToSonarrDialogTests;
 public sealed class IsConfirmDisabled
 {
     [Fact]
+    public void ReturnsTrueWhenIsLoadingTrue()
+    {
+        // Act
+        bool result = AddToSonarrDialog.IsConfirmDisabled(
+            isLoading: true, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
     public void ReturnsTrueWhenIsSubmitting()
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isSubmitting: true, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
+            isLoading: false, isSubmitting: true, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
 
         // Assert
         result.ShouldBeTrue();
@@ -22,7 +33,7 @@ public sealed class IsConfirmDisabled
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: "Error");
+            isLoading: false, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: "Error");
 
         // Assert
         result.ShouldBeTrue();
@@ -33,7 +44,7 @@ public sealed class IsConfirmDisabled
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isSubmitting: false, selectedRootFolderId: null, selectedQualityProfileId: 1, loadErrorMessage: null);
+            isLoading: false, isSubmitting: false, selectedRootFolderId: null, selectedQualityProfileId: 1, loadErrorMessage: null);
 
         // Assert
         result.ShouldBeTrue();
@@ -44,7 +55,7 @@ public sealed class IsConfirmDisabled
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: null, loadErrorMessage: null);
+            isLoading: false, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: null, loadErrorMessage: null);
 
         // Assert
         result.ShouldBeTrue();
@@ -55,7 +66,7 @@ public sealed class IsConfirmDisabled
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
+            isLoading: false, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
 
         // Assert
         result.ShouldBeFalse();

@@ -97,7 +97,7 @@ else
                 @if (_program.TvdbSeriesId is not null && !_program.IsMonitored && !_program.IsMovieMatch)
                 {
                     <button class="action-button" @onclick="OpenAddToSonarrDialog">
-                        <Icon Type="IconType.Plus" Width="14" Height="14" /> Add to Sonarr
+                        <Icon Type="IconType.Plus" Width="12" Height="12" /> Add to Sonarr
                     </button>
                 }
             </div>
@@ -385,6 +385,11 @@ else
     private async Task ReloadProgramAsync()
     {
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+
+        IRequestHandler<RefreshProgramCommand> refreshHandler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<RefreshProgramCommand>>();
+        await refreshHandler.Handle(new RefreshProgramCommand(RuvId), _cts.Token);
+
         IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
             scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
         _program = await handler.Handle(new GetProgramQuery(RuvId), _cts.Token);
