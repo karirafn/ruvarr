@@ -9,4 +9,7 @@ internal interface ISonarrClient
     Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<MissingEpisode>> GetMissingEpisodesAsync(int pageSize = int.MaxValue, CancellationToken cancellationToken = default);
     Task ManualImportFilesAsync(IEnumerable<ManualImportRequest> files, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RootFolder>> GetRootFoldersAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<QualityProfile>> GetQualityProfilesAsync(CancellationToken cancellationToken = default);
+    Task<Series?> AddSeriesAsync(AddSeriesRequest request, CancellationToken cancellationToken = default);
 }
