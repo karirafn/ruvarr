@@ -203,6 +203,34 @@ internal sealed partial class RuvEpisode
         return title.EqualsSanitized(value);
     }
 
+    public static bool IsPartTwo(string title)
+    {
+        return PartTwoSuffixRegex().IsMatch(title);
+    }
+
+    public static string GetBaseTitle(string title)
+    {
+        Match match = PartSuffixRegex().Match(title);
+        return match.Success ? title[..match.Index] : title;
+    }
+
+    public static string ToPartOneTitle(string title)
+    {
+        return PartTwoSuffixRegex().Replace(title, m =>
+        {
+            string separator = m.Groups[1].Value;
+            bool isUpperCase = char.IsUpper(m.Groups[2].Value[0]);
+            string fyrri = isUpperCase ? "Fyrri" : "fyrri";
+            return $"{separator}{fyrri} hluti";
+        });
+    }
+
     [GeneratedRegex(@"^((\d+. (þ|Þ)áttur: )|((Þ|þ)áttur \d+: )|(\d+. (k|K)afli: )|(\d+.))")]
     private static partial Regex PrefixRegex();
+
+    [GeneratedRegex(@"(, | - )(s|S)(íðari|einni) hluti$")]
+    private static partial Regex PartTwoSuffixRegex();
+
+    [GeneratedRegex(@"(, | - )([fFsS])(yrri|íðari|einni) hluti$")]
+    private static partial Regex PartSuffixRegex();
 }

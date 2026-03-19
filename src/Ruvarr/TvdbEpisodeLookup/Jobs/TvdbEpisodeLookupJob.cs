@@ -64,6 +64,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
         await MatchByTranslationAsync(program, seriesData, missingTvdbIds);
         MatchByEpisodeNumber(program, seriesData, missingTvdbIds);
+        MatchByPartOneSibling(program, seriesData, missingTvdbIds);
 
         await ScheduleLookupAsync(program);
         lookupQueue.MarkComplete(ruvId);
@@ -158,6 +159,75 @@ internal sealed class TvdbEpisodeLookupJob(
                 }
             }
         }
+    }
+
+    private void MatchByPartOneSibling(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
+    {
+        List<RuvEpisode> unmatchedPartTwoEpisodes = [.. program.Episodes
+            .Where(x => x.TvdbId is null)
+            .Where(x => RuvEpisode.IsPartTwo(x.Title))];
+
+        foreach (RuvEpisode partTwoEpisode in unmatchedPartTwoEpisodes)
+        {
+            string partOneTitle = RuvEpisode.ToPartOneTitle(partTwoEpisode.Title);
+
+            RuvEpisode? partOneSibling = program.Episodes
+                .FirstOrDefault(x => x.TvdbId is not null
+                    && x.Title.Equals(partOneTitle, StringComparison.OrdinalIgnoreCase));
+
+            if (partOneSibling is null)
+            {
+                continue;
+            }
+
+            Episode? tvdbPartOneEpisode = seriesData.Episodes
+                .FirstOrDefault(x => x.Id == partOneSibling.TvdbId);
+
+            if (tvdbPartOneEpisode is null)
+            {
+                continue;
+            }
+
+            string? partTwoName = ToPartTwoName(tvdbPartOneEpisode.Name);
+
+            if (partTwoName is null)
+            {
+                continue;
+            }
+
+            Episode? tvdbPartTwoEpisode = seriesData.Episodes
+                .FirstOrDefault(x => x.Name.Equals(partTwoName, StringComparison.OrdinalIgnoreCase));
+
+            if (tvdbPartTwoEpisode is null)
+            {
+                continue;
+            }
+
+            logger.LogInformation(
+                "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}' via part-one sibling fallback",
+                partTwoEpisode.Title,
+                program.Name,
+                seriesData.Series.Name,
+                tvdbPartTwoEpisode.SeasonNumber,
+                tvdbPartTwoEpisode.Number,
+                tvdbPartTwoEpisode.Name);
+            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, missingTvdbIds.Contains(tvdbPartTwoEpisode.Id));
+        }
+    }
+
+    private static string? ToPartTwoName(string tvdbEpisodeName)
+    {
+        if (tvdbEpisodeName.EndsWith(" Part 1", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Concat(tvdbEpisodeName.AsSpan(0, tvdbEpisodeName.Length - 1), "2");
+        }
+
+        if (tvdbEpisodeName.EndsWith("(1)", StringComparison.Ordinal))
+        {
+            return string.Concat(tvdbEpisodeName.AsSpan(0, tvdbEpisodeName.Length - 2), "2)");
+        }
+
+        return null;
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program)
