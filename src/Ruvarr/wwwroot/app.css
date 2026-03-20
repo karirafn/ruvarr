@@ -509,16 +509,19 @@ dialog input[type="number"]:focus {
 .programs-table td:nth-child(2) { width: 7rem; }
 
 .programs-table th:nth-child(3),
-.programs-table td:nth-child(3) { width: 7rem; white-space: unset; text-align: center; }
+.programs-table td:nth-child(3) { width: 16rem; }
 
 .programs-table th:nth-child(4),
-.programs-table td:nth-child(4) { width: 6rem; text-align: center; }
+.programs-table td:nth-child(4) { width: 1%; white-space: nowrap; text-align: center; }
 
 .programs-table th:nth-child(5),
-.programs-table td:nth-child(5) { width: 16rem; }
+.programs-table td:nth-child(5) { width: 1%; white-space: nowrap; text-align: center; }
 
 .programs-table th:nth-child(6),
-.programs-table td:nth-child(6) { width: 6rem; text-align: center; }
+.programs-table td:nth-child(6) { width: 1%; white-space: nowrap; text-align: center; }
+
+.programs-table th:nth-child(7),
+.programs-table td:nth-child(7) { width: 1%; white-space: nowrap; }
 
 .col-center { text-align: center; }
 .col-center svg { display: block; margin: 0 auto; }
