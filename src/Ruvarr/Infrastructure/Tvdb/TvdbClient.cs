@@ -7,8 +7,11 @@ using Ruvarr.Infrastructure.Tvdb.Models;
 
 namespace Ruvarr.Infrastructure.Tvdb;
 
-internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IOptions<TvdbOptions> options) : ITvdbClient
+internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IOptions<TvdbOptions> options) : ITvdbClient, IDisposable
 {
+    private readonly SemaphoreSlim _loginSemaphore = new(1, 1);
+
+    public void Dispose() => _loginSemaphore.Dispose();
     public async Task<SearchResponse> SearchAsync(
         string? query = null,
         string? type = null,
@@ -37,54 +40,87 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
             .WithLimit(limit)
             .Build();
 
-        await SetAuthorizationHeader(cancellationToken);
+        string token = await GetAccessTokenAsync(cancellationToken);
 
-        SearchResponse response = await client.GetFromJsonAsync<SearchResponse>(path, cancellationToken)
+        using HttpRequestMessage request = new(HttpMethod.Get, path);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<SearchResponse>(cancellationToken)
             ?? throw new InvalidOperationException("Failed to search the TVDB");
-
-        return response;
     }
 
     public async Task<SeriesData?> GetSeriesAsync(int id, CancellationToken cancellationToken = default)
     {
-        await SetAuthorizationHeader(cancellationToken);
+        string token = await GetAccessTokenAsync(cancellationToken);
 
-        SeriesResponse? response = await client.GetFromJsonAsync<SeriesResponse>($"v4/series/{id}/episodes/default", cancellationToken);
+        using HttpRequestMessage request = new(HttpMethod.Get, $"v4/series/{id}/episodes/default");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        return response?.Data;
+        HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        SeriesResponse? seriesResponse = await response.Content.ReadFromJsonAsync<SeriesResponse>(cancellationToken);
+
+        return seriesResponse?.Data;
     }
 
     public async Task<Episode?> GetEpisodeAsync(int id, CancellationToken cancellationToken = default)
     {
-        await SetAuthorizationHeader(cancellationToken);
+        string token = await GetAccessTokenAsync(cancellationToken);
 
-        TvdbResponse<Episode?>? response = await client.GetFromJsonAsync<TvdbResponse<Episode?>>(
-            $"v4/episodes/{id}",
-            cancellationToken);
+        using HttpRequestMessage request = new(HttpMethod.Get, $"v4/episodes/{id}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        return response?.Data;
+        HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        TvdbResponse<Episode?>? episodeResponse = await response.Content.ReadFromJsonAsync<TvdbResponse<Episode?>>(cancellationToken);
+
+        return episodeResponse?.Data;
     }
 
     public async Task<EpisodeTranslation?> GetEpisodeTranslationAsync(int id, string language = "isl", CancellationToken cancellationToken = default)
     {
-        await SetAuthorizationHeader(cancellationToken);
+        string token = await GetAccessTokenAsync(cancellationToken);
 
-        TvdbResponse<EpisodeTranslation?>? response = await client.GetFromJsonAsync<TvdbResponse<EpisodeTranslation?>>(
-            $"v4/episodes/{id}/translations/{language}",
-            cancellationToken);
+        using HttpRequestMessage request = new(HttpMethod.Get, $"v4/episodes/{id}/translations/{language}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        return response?.Data;
+        HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        TvdbResponse<EpisodeTranslation?>? translationResponse = await response.Content.ReadFromJsonAsync<TvdbResponse<EpisodeTranslation?>>(cancellationToken);
+
+        return translationResponse?.Data;
     }
 
-    private async Task SetAuthorizationHeader(CancellationToken cancellationToken)
+    private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
     {
-        if (!memoryCache.TryGetValue(TvdbOptions.AccessTokenCacheKey, out string? accessToken))
+        if (memoryCache.TryGetValue(TvdbOptions.AccessTokenCacheKey, out string? accessToken))
         {
+            return accessToken!;
+        }
+
+        await _loginSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            if (memoryCache.TryGetValue(TvdbOptions.AccessTokenCacheKey, out accessToken))
+            {
+                return accessToken!;
+            }
+
             AuthenticationResponse? response = await LoginAsync(options.Value.ApiKey, null, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(response?.Data.Token))
             {
-                return;
+                throw new InvalidOperationException("Failed to authenticate with the TVDB");
             }
 
             accessToken = response.Data.Token;
@@ -96,10 +132,13 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
                 Size = 1
             };
             memoryCache.Set(TvdbOptions.AccessTokenCacheKey, accessToken, cacheOptions);
+
+            return accessToken;
         }
-
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
+        finally
+        {
+            _loginSemaphore.Release();
+        }
     }
 
     private async Task<AuthenticationResponse?> LoginAsync(string apiKey, string? pin = null, CancellationToken cancellationToken = default)

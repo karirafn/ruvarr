@@ -156,6 +156,48 @@ public sealed class TitleMatching
     }
 
     [Fact]
+    public async Task FetchesAllTranslationsForMultipleEpisodes()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(1000).Build();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Þáttur 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep0003", new Uri("http://test.com"), "Þáttur 3", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.MatchTvdb(series);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
+            .WithId(101).WithSeasonNumber(1).WithNumber(1).WithNameTranslations("isl").Build();
+        Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder()
+            .WithId(102).WithSeasonNumber(1).WithNumber(2).WithNameTranslations("isl").Build();
+        Episode tvdbEpisode3 = new TvdbEpisodeDataBuilder()
+            .WithId(103).WithSeasonNumber(1).WithNumber(3).WithNameTranslations("isl").Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder()
+            .WithId(1000).WithEpisodes(tvdbEpisode1, tvdbEpisode2, tvdbEpisode3).Build();
+        _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
+        _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Þáttur 1", "", "isl", true));
+        _tvdb.GetEpisodeTranslationAsync(102, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Þáttur 2", "", "isl", true));
+        _tvdb.GetEpisodeTranslationAsync(103, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Þáttur 3", "", "isl", true));
+        _notifier.Enqueue(1, program.Name);
+        TvdbEpisodeLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(null!);
+
+        // Assert
+        program.Episodes[0].TvdbId.ShouldBe(101);
+        program.Episodes[1].TvdbId.ShouldBe(102);
+        program.Episodes[2].TvdbId.ShouldBe(103);
+        await _tvdb.Received(3).GetEpisodeTranslationAsync(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task SetsIsMissingWhenTvdbIdIsInSonarrList()
     {
         // Arrange

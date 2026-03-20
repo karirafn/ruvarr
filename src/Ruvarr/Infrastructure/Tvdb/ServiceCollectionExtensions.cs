@@ -13,7 +13,6 @@ internal static class ServiceCollectionExtensions
         IOptions<TvdbOptions> options = services.BuildServiceProvider()
             .GetRequiredService<IOptions<TvdbOptions>>();
 
-        services.AddTransient<ITvdbClient, TvdbClient>();
         services.AddHttpClient<ITvdbClient, TvdbClient>(client => client.BaseAddress = options.Value.BaseAddress);
 
         return services;

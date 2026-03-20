@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 using Microsoft.EntityFrameworkCore;
 
 using Quartz;
@@ -81,16 +83,25 @@ internal sealed class TvdbEpisodeLookupJob(
             .Where(x => x.NameTranslations.Contains("isl"))];
         logger.LogDebug("Found {Count} episodes with Icelandic titles", translatedEpisodes.Count);
 
-        foreach (Episode translatedEpisode in translatedEpisodes)
-        {
-            logger.LogDebug(
-                "Querying TVDB translation for {SeriesName} S{Season:D2}E{Episode:D2} {EpisodeName}",
-                seriesData.Series.Name,
-                translatedEpisode.SeasonNumber,
-                translatedEpisode.Number,
-                translatedEpisode.Name);
-            EpisodeTranslation? translation = await tvdb.GetEpisodeTranslationAsync(translatedEpisode.Id);
+        ConcurrentBag<(Episode Episode, EpisodeTranslation? Translation)> translations = [];
 
+        await Parallel.ForEachAsync(
+            translatedEpisodes,
+            new ParallelOptions { MaxDegreeOfParallelism = 3 },
+            async (translatedEpisode, cancellationToken) =>
+            {
+                logger.LogDebug(
+                    "Querying TVDB translation for {SeriesName} S{Season:D2}E{Episode:D2} {EpisodeName}",
+                    seriesData.Series.Name,
+                    translatedEpisode.SeasonNumber,
+                    translatedEpisode.Number,
+                    translatedEpisode.Name);
+                EpisodeTranslation? translation = await tvdb.GetEpisodeTranslationAsync(translatedEpisode.Id, cancellationToken: cancellationToken);
+                translations.Add((translatedEpisode, translation));
+            });
+
+        foreach ((Episode translatedEpisode, EpisodeTranslation? translation) in translations)
+        {
             if (translation is null)
             {
                 logger.LogDebug("TVDB episode translation not found");
