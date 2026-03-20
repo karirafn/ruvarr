@@ -75,7 +75,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
     private async Task MatchByTranslationAsync(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
     {
-        List<int> matchedIds = [.. program.Episodes.Select(x => x.TvdbId).OfType<int>()];
+        HashSet<int> matchedIds = [.. program.Episodes.Select(x => x.TvdbId).OfType<int>()];
 
         logger.LogDebug("Series {Name} has {Count} episodes", seriesData.Series.Name, seriesData.Episodes.Count);
         List<Episode> translatedEpisodes = [.. seriesData.Episodes
