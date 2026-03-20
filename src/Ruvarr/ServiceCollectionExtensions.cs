@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ProgramRefreshNotifier>();
         services.AddSingleton<TvdbSeriesLookupNotifier>();
         services.AddSingleton<TvdbEpisodeLookupNotifier>();
-        services.AddMemoryCache();
+        services.AddMemoryCache(options => options.SizeLimit = 512);
         services.AddFfmpeg();
         services.AddTmdb();
         services.AddTvdb();

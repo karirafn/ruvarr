@@ -14,6 +14,7 @@ using Ruvarr.Programs.Queries.GetPrograms;
 using Ruvarr.Programs.Queries.GetSonarrQualityProfiles;
 using Ruvarr.Programs.Queries.GetSonarrRootFolders;
 using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes;
+using Ruvarr.Programs.Queries.SearchTvdbSeries;
 
 namespace Ruvarr.Programs;
 
@@ -31,6 +32,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>, GetProgramsHandler>();
         services.AddTransient<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>, GetProgramEpisodesHandler>();
         services.AddTransient<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>, GetTvdbSeriesEpisodesHandler>();
+        services.AddTransient<IRequestHandler<SearchTvdbSeriesQuery, IReadOnlyList<TvdbSeriesSuggestion>>, SearchTvdbSeriesHandler>();
         services.AddTransient<IRequestHandler<MatchEpisodeCommand>, MatchEpisodeHandler>();
         services.AddTransient<IRequestHandler<MatchProgramCommand>, MatchProgramHandler>();
         services.AddTransient<IRequestHandler<DownloadEpisodeCommand>, DownloadEpisodeHandler>();
