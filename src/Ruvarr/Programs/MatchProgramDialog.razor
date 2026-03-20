@@ -9,34 +9,36 @@
 
 <dialog @ref="_dialog" @onclose="OnDialogClose">
     <h2>@(_isFixMatch ? "Fix Match" : "Match to TVDB")</h2>
-    @if (_isLoadingSuggestions)
-    {
-        <div class="dialog-spinner-container" role="status" aria-label="Loading suggestions">
-            <span class="dialog-spinner"></span>
-        </div>
-    }
-    else if (_suggestions.Count > 0)
-    {
-        <p class="suggestion-label" id="suggestion-label">Suggestions</p>
-        <div class="suggestion-list" role="group" aria-labelledby="suggestion-label">
-            @foreach (TvdbSeriesSuggestion suggestion in _suggestions)
-            {
-                <button class="suggestion-item @(IsSuggestionSelected(suggestion.TvdbId, _tvdbIdInput) ? "suggestion-item--selected" : "")"
-                        @onclick="() => SelectSuggestion(suggestion)">
-                    <span class="suggestion-name">@suggestion.Name</span>
-                    <span class="suggestion-meta">@FormatMeta(suggestion)</span>
-                </button>
-            }
-        </div>
-    }
-    else if (_searchFailed)
-    {
-        <p class="suggestion-empty">Could not load suggestions</p>
-    }
-    else if (_suggestions.Count == 0 && !_isLoadingSuggestions && _hasSearched)
-    {
-        <p class="suggestion-empty">No series found. Try a different search or enter a TVDB Series ID manually below.</p>
-    }
+    <div class="suggestion-area">
+        @if (_isLoadingSuggestions)
+        {
+            <div class="dialog-spinner-container" role="status" aria-label="Loading suggestions">
+                <span class="dialog-spinner"></span>
+            </div>
+        }
+        else if (_suggestions.Count > 0)
+        {
+            <p class="suggestion-label" id="suggestion-label">Suggestions</p>
+            <div class="suggestion-list" role="group" aria-labelledby="suggestion-label">
+                @foreach (TvdbSeriesSuggestion suggestion in _suggestions)
+                {
+                    <button class="suggestion-item @(IsSuggestionSelected(suggestion.TvdbId, _tvdbIdInput) ? "suggestion-item--selected" : "")"
+                            @onclick="() => SelectSuggestion(suggestion)">
+                        <span class="suggestion-name">@suggestion.Name</span>
+                        <span class="suggestion-meta">@FormatMeta(suggestion)</span>
+                    </button>
+                }
+            </div>
+        }
+        else if (_searchFailed)
+        {
+            <p class="suggestion-empty">Could not load suggestions</p>
+        }
+        else if (_suggestions.Count == 0 && !_isLoadingSuggestions && _hasSearched)
+        {
+            <p class="suggestion-empty">No suggestions available.</p>
+        }
+    </div>
     <label class="manual-input-label">
         TVDB Series ID
         <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" @onkeydown="HandleKeyDown" />

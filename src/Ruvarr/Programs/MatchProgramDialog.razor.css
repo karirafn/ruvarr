@@ -2,6 +2,10 @@
     min-width: 24rem;
 }
 
+.suggestion-area {
+    min-height: 10rem;
+}
+
 .suggestion-label {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.75);
