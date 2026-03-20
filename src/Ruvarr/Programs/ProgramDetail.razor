@@ -39,7 +39,7 @@ else
     <div class="program-header">
         @if (_program.ImageUrl is not null)
         {
-            <img class="program-thumbnail" src="@_program.ImageUrl" alt="@_program.ProgramName" width="160" height="224" decoding="async" />
+            <img class="program-thumbnail" src="@_program.ImageUrl" alt="@_program.ProgramName" width="288" height="400" decoding="async" />
         }
         <div class="program-header-content">
         <div class="program-header-meta">
@@ -101,18 +101,17 @@ else
                 </button>
             }
         </div>
+        @if (!string.IsNullOrWhiteSpace(_program.Description))
+        {
+            <div class="program-description">
+                @foreach (string paragraph in _program.Description.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
+                {
+                    <p>@paragraph</p>
+                }
+            </div>
+        }
         </div>
     </div>
-
-    @if (!string.IsNullOrWhiteSpace(_program.Description))
-    {
-        <div class="program-description">
-            @foreach (string paragraph in _program.Description.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
-            {
-                <p>@paragraph</p>
-            }
-        </div>
-    }
 
     @if (_episodes is null)
     {
