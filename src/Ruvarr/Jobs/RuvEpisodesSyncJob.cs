@@ -78,24 +78,31 @@ internal sealed class RuvEpisodesSyncJob(
 
             logger.LogDebug("Adding episodes to RÚV program '{Name}'", program.Name);
 
-            ruvProgram.Episodes
-                .Where(e => program.TryAddEpisode(
+            foreach (RuvTvEpisode e in ruvProgram.Episodes)
+            {
+                bool added = program.TryAddEpisode(
                     id: e.Id,
                     uri: e.File,
                     title: e.Title,
                     description: e.Description.Count > 0 ? e.Description[0] : string.Empty,
                     firstRun: e.FirstRun,
-                    duration: TimeSpan.FromSeconds(e.Duration)))
-                .ToList()
-                .ForEach(e => logger.LogInformation("Added RÚV episode '{EpisodeName}' to program '{Name}'", e.Title, program.Name));
+                    duration: TimeSpan.FromSeconds(e.Duration));
+
+                if (added)
+                {
+                    RuvEpisode newEpisode = program.Episodes.First(ep => ep.RuvId == e.Id);
+                    logger.LogInformation("Added RÚV episode {Episode}", newEpisode.ToString());
+                }
+            }
 
             logger.LogDebug("Removing episodes from RÚV program '{Name}'", program.Name);
-            IEnumerable<RuvEpisode> removed = program.Episodes
-                .Where(entity => !ruvProgram.Episodes.Select(episodeDto => episodeDto.Id).Contains(entity.RuvId));
+            List<RuvEpisode> removed = program.Episodes
+                .Where(entity => !ruvProgram.Episodes.Select(episodeDto => episodeDto.Id).Contains(entity.RuvId))
+                .ToList();
 
             foreach (RuvEpisode episode in removed)
             {
-                logger.LogInformation("Removed RÚV episode '{EpisodeName}' from program '{Name}'", episode.Title, program.Name);
+                logger.LogInformation("Removed RÚV episode {Episode}", episode.ToString());
                 program.RemoveEpisode(episode);
             }
 

@@ -70,15 +70,12 @@ internal sealed class MatchProgramEpisodesHandler(
                 return ProgramErrors.EpisodeNotFound;
             }
 
-            logger.LogInformation(
-                "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}'",
-                episode.Title,
-                program.Name,
-                series.Series.Name,
-                tvdbEpisode.SeasonNumber,
-                tvdbEpisode.Number,
-                tvdbEpisode.Name);
             episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id));
+            logger.LogInformation(
+                "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' - '{TvdbEpisodeName}'",
+                episode.ToString(),
+                series.Series.Name,
+                tvdbEpisode.Name);
         }
 
         await dbcontext.SaveChangesAsync(cancellationToken);

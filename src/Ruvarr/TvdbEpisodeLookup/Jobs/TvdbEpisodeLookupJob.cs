@@ -46,7 +46,7 @@ internal sealed class TvdbEpisodeLookupJob(
         {
             logger.LogDebug("No RÚV program pending TVDB episode lookup");
             lookupQueue.MarkComplete(ruvId);
-        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
+            broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
             return;
         }
 
@@ -57,7 +57,7 @@ internal sealed class TvdbEpisodeLookupJob(
         {
             await ScheduleLookupAsync(program);
             lookupQueue.MarkComplete(ruvId);
-        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
+            broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
             return;
         }
 
@@ -117,15 +117,12 @@ internal sealed class TvdbEpisodeLookupJob(
 
             RuvEpisode episode = episodes[0];
 
-            logger.LogInformation(
-                "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}'",
-                episode.Title,
-                program.Name,
-                seriesData.Series.Name,
-                translatedEpisode.SeasonNumber,
-                translatedEpisode.Number,
-                translatedEpisode.Name);
             episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number, missingTvdbIds.Contains(translatedEpisode.Id));
+            logger.LogInformation(
+                "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' - '{TvdbEpisodeName}'",
+                episode.ToString(),
+                seriesData.Series.Name,
+                translatedEpisode.Name);
         }
     }
 
@@ -157,15 +154,14 @@ internal sealed class TvdbEpisodeLookupJob(
                             continue;
                         }
 
+                        unmatchedEpisode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id));
                         logger.LogInformation(
-                            "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}' via season/episode fallback",
-                            unmatchedEpisode.Title,
-                            program.Name,
+                            "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' S{TvdbSeason:D2}E{TvdbEpisode:D2} '{TvdbEpisodeName}' via season/episode fallback",
+                            unmatchedEpisode.ToString(),
                             seriesData.Series.Name,
                             tvdbEpisode.SeasonNumber,
                             tvdbEpisode.Number,
                             tvdbEpisode.Name);
-                        unmatchedEpisode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id));
                     }
                 }
             }
@@ -214,15 +210,14 @@ internal sealed class TvdbEpisodeLookupJob(
                 continue;
             }
 
+            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, missingTvdbIds.Contains(tvdbPartTwoEpisode.Id));
             logger.LogInformation(
-                "Matched RÚV episode '{RuvEpisode}' of program '{ProgramName}' with TVDB episode '{SeriesName}' S{Season:D2}E{Episode:D2} '{EpisodeName}' via part-one sibling fallback",
-                partTwoEpisode.Title,
-                program.Name,
+                "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' S{TvdbSeason:D2}E{TvdbEpisode:D2} '{TvdbEpisodeName}' via part-one sibling fallback",
+                partTwoEpisode.ToString(),
                 seriesData.Series.Name,
                 tvdbPartTwoEpisode.SeasonNumber,
                 tvdbPartTwoEpisode.Number,
                 tvdbPartTwoEpisode.Name);
-            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, missingTvdbIds.Contains(tvdbPartTwoEpisode.Id));
         }
     }
 

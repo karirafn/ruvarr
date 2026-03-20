@@ -65,7 +65,7 @@ internal class DownloadQueueProcessor(
             return;
         }
 
-        logger.LogInformation("Downloading {Program} - {Title}", item.Episode.Program.Name, item.Episode.Title);
+        logger.LogInformation("Downloading {Episode}", item.Episode.ToString());
         string tentativePath = item.Episode.ToFilePath(
             downloadsRootDirectory,
             episodeDownloadDirectory,
@@ -103,11 +103,8 @@ internal class DownloadQueueProcessor(
         if (missingEpisode is null)
         {
             logger.LogError(
-                "{Program} S{Season:D2}E{Episode:D2} {Title} was scheduled for manual import into Sonarr but was not found in missing episodes.",
-                item.Episode.Program.Name,
-                item.Episode.SeasonNumber,
-                item.Episode.EpisodeNumber,
-                item.Episode.Title);
+                "{Episode} was scheduled for manual import into Sonarr but was not found in missing episodes.",
+                item.Episode.ToString());
             return;
         }
 
@@ -122,11 +119,7 @@ internal class DownloadQueueProcessor(
             Languages: file.Languages,
             ReleaseGroup: "RUV");
 
-        logger.LogInformation("Importing {Program} S{Season:D2}E{Episode:D2} {Title} into Sonarr",
-            item.Episode.Program.Name,
-            item.Episode.SeasonNumber,
-            item.Episode.EpisodeNumber,
-            item.Episode.Title);
+        logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
         await sonarr.ManualImportFilesAsync([request]);
     }
 }
