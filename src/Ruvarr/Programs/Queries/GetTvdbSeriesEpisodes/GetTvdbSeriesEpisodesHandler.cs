@@ -32,7 +32,12 @@ internal sealed class GetTvdbSeriesEpisodesHandler(ITvdbClient tvdbClient, IMemo
             .OrderBy(e => e.SeasonNumber)
             .ThenBy(e => e.EpisodeNumber)];
 
-        cache.Set(cacheKey, episodes, TimeSpan.FromMinutes(30));
+        MemoryCacheEntryOptions cacheOptions = new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+            Size = 1
+        };
+        cache.Set(cacheKey, episodes, cacheOptions);
 
         return episodes;
     }

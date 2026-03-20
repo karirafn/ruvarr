@@ -90,10 +90,12 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
             accessToken = response.Data.Token;
 
             // The TVDB access token is valid for 1 month
-            memoryCache.Set(
-                key: TvdbOptions.AccessTokenCacheKey,
-                value: accessToken,
-                absoluteExpiration: DateTimeOffset.Now.AddDays(28));
+            MemoryCacheEntryOptions cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpiration = DateTimeOffset.Now.AddDays(28),
+                Size = 1
+            };
+            memoryCache.Set(TvdbOptions.AccessTokenCacheKey, accessToken, cacheOptions);
         }
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);

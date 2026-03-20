@@ -14,7 +14,7 @@ namespace Ruvarr.UnitTests.Programs.Queries.GetTvdbSeriesEpisodes.GetTvdbSeriesE
 public sealed class Handle : IDisposable
 {
     private readonly ITvdbClient _tvdbClient = Substitute.For<ITvdbClient>();
-    private readonly MemoryCache _cache = new(new MemoryCacheOptions());
+    private readonly MemoryCache _cache = new(new MemoryCacheOptions { SizeLimit = 512 });
     private readonly GetTvdbSeriesEpisodesHandler _sut;
 
     public Handle()

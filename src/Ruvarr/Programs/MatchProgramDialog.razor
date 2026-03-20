@@ -1,13 +1,43 @@
 @namespace Ruvarr.Programs
 @using Ruvarr.Abstractions
+@using Ruvarr.Contracts
 @using Ruvarr.Programs.Commands.MatchProgram
+@using Ruvarr.Programs.Queries.SearchTvdbSeries
 @implements IAsyncDisposable
 @inject IServiceScopeFactory ScopeFactory
 @inject IJSRuntime Js
 
 <dialog @ref="_dialog" @onclose="OnDialogClose">
     <h2>Match to TVDB</h2>
-    <label>
+    @if (_isLoadingSuggestions)
+    {
+        <div class="dialog-spinner-container" role="status" aria-label="Loading suggestions">
+            <span class="dialog-spinner"></span>
+        </div>
+    }
+    else if (_suggestions.Count > 0)
+    {
+        <p class="suggestion-label" id="suggestion-label">Suggestions</p>
+        <div class="suggestion-list" role="group" aria-labelledby="suggestion-label">
+            @foreach (TvdbSeriesSuggestion suggestion in _suggestions)
+            {
+                <button class="suggestion-item @(IsSuggestionSelected(suggestion.TvdbId, _tvdbIdInput) ? "suggestion-item--selected" : "")"
+                        @onclick="() => SelectSuggestion(suggestion)">
+                    <span class="suggestion-name">@suggestion.Name</span>
+                    <span class="suggestion-meta">@FormatMeta(suggestion)</span>
+                </button>
+            }
+        </div>
+    }
+    else if (_searchFailed)
+    {
+        <p class="suggestion-empty">Could not load suggestions</p>
+    }
+    else if (_suggestions.Count == 0 && !_isLoadingSuggestions && _hasSearched)
+    {
+        <p class="suggestion-empty">No series found on TVDB</p>
+    }
+    <label class="manual-input-label">
         TVDB Series ID
         <input type="number" min="1" @bind="_tvdbIdInput" @bind:event="oninput" @onkeydown="HandleKeyDown" />
     </label>
@@ -39,14 +69,52 @@
     private string? _errorMessage;
     private readonly CancellationTokenSource _cts = new();
 
-    public async Task OpenAsync(int ruvId, int? currentTvdbSeriesId)
+    private IReadOnlyList<TvdbSeriesSuggestion> _suggestions = [];
+    private bool _isLoadingSuggestions;
+    private bool _searchFailed;
+    private bool _hasSearched;
+
+    public async Task OpenAsync(int ruvId, int? currentTvdbSeriesId, string programName)
     {
         _ruvId = ruvId;
         _currentTvdbSeriesId = currentTvdbSeriesId;
         _tvdbIdInput = currentTvdbSeriesId?.ToString() ?? string.Empty;
         _errorMessage = null;
+        _suggestions = [];
+        _isLoadingSuggestions = true;
+        _searchFailed = false;
+        _hasSearched = false;
         await InvokeAsync(StateHasChanged);
         await Js.InvokeVoidAsync("showDialog", _dialog);
+
+        await LoadSuggestionsAsync(programName);
+    }
+
+    private async Task LoadSuggestionsAsync(string programName)
+    {
+        try
+        {
+            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+            IRequestHandler<SearchTvdbSeriesQuery, IReadOnlyList<TvdbSeriesSuggestion>> handler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<SearchTvdbSeriesQuery, IReadOnlyList<TvdbSeriesSuggestion>>>();
+            _suggestions = await handler.Handle(new SearchTvdbSeriesQuery(programName), _cts.Token);
+        }
+        catch (Exception)
+        {
+            _searchFailed = true;
+        }
+        finally
+        {
+            _isLoadingSuggestions = false;
+            _hasSearched = true;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private void SelectSuggestion(TvdbSeriesSuggestion suggestion)
+    {
+        _tvdbIdInput = suggestion.TvdbId.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
@@ -60,6 +128,10 @@
         _ruvId = null;
         _currentTvdbSeriesId = null;
         _tvdbIdInput = string.Empty;
+        _suggestions = [];
+        _isLoadingSuggestions = false;
+        _searchFailed = false;
+        _hasSearched = false;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
@@ -129,5 +201,18 @@
         }
 
         return parsed == currentTvdbSeriesId;
+    }
+
+    internal static bool IsSuggestionSelected(int tvdbId, string tvdbIdInput)
+    {
+        return int.TryParse(tvdbIdInput, out int parsed) && parsed == tvdbId;
+    }
+
+    private static string FormatMeta(TvdbSeriesSuggestion suggestion)
+    {
+        string parts = suggestion.Year is not null
+            ? $"{suggestion.Year} \u00b7 TVDB {suggestion.TvdbId}"
+            : $"TVDB {suggestion.TvdbId}";
+        return parts;
     }
 }

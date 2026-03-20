@@ -320,7 +320,7 @@ else
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task OpenMatchProgramDialog(ProgramSummary program)
     {
-        await _matchProgramDialog!.OpenAsync(program.ProgramRuvId, program.TvdbSeriesId);
+        await _matchProgramDialog!.OpenAsync(program.ProgramRuvId, program.TvdbSeriesId, program.ProgramName);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
