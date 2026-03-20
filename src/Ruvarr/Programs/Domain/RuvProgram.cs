@@ -55,7 +55,7 @@ internal sealed class RuvProgram
 
     public TmdbMovie? Movie { get; private set; }
 
-    public IReadOnlyList<RuvEpisode> Episodes => [.. _episodes];
+    public IReadOnlyList<RuvEpisode> Episodes => _episodes.AsReadOnly();
 
     public int SeasonNumber
     {
