@@ -167,6 +167,59 @@ public sealed class GetProgramHandlerTests(IntegrationTestFactory factory) : ICl
     }
 
     [Fact]
+    public async Task ReturnsDescriptionWhenProgramHasDescription()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(40030)
+            .WithMultipleEpisodes()
+            .WithDescription("First paragraph.\n\nSecond paragraph.")
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40030), cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Description.ShouldBe("First paragraph.\n\nSecond paragraph.");
+    }
+
+    [Fact]
+    public async Task ReturnsDescriptionAsNullWhenProgramHasNoDescription()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(40031)
+            .WithMultipleEpisodes()
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40031), cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Description.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ReturnsNullForUnknownRuvId()
     {
         // Arrange

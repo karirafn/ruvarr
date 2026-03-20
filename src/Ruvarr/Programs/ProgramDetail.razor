@@ -104,6 +104,16 @@ else
         }
     </div>
 
+    @if (!string.IsNullOrWhiteSpace(_program.Description))
+    {
+        <div class="program-description">
+            @foreach (string paragraph in _program.Description.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
+            {
+                <p>@paragraph</p>
+            }
+        </div>
+    }
+
     @if (_episodes is null)
     {
         <div class="spinner"></div>

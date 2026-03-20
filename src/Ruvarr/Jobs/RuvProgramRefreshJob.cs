@@ -65,7 +65,7 @@ internal sealed class RuvProgramRefreshJob(
 
         List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
-            .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes, x.Slug, x.Image))];
+            .Select(x => RuvProgram.Create(x.Id, x.Channel, x.Title, x.ForeignTitle, x.MultipleEpisodes, x.Slug, x.Image, JoinDescription(x.Description)))];
 
         if (newPrograms.Count > 0)
         {
@@ -83,6 +83,7 @@ internal sealed class RuvProgramRefreshJob(
             .ToDictionary(x => x.Id, x => x.Slug);
 
         Dictionary<int, Uri?> imageByRuvId = programs.ToDictionary(x => x.Id, x => x.Image);
+        Dictionary<int, string?> descriptionByRuvId = programs.ToDictionary(x => x.Id, x => JoinDescription(x.Description));
 
         foreach (RuvProgram existing in existingTvPrograms)
         {
@@ -95,6 +96,11 @@ internal sealed class RuvProgramRefreshJob(
             if (imageByRuvId.TryGetValue(existing.RuvId, out Uri? incomingImage) && existing.ImageUrl != incomingImage)
             {
                 existing.UpdateImageUrl(incomingImage);
+            }
+
+            if (descriptionByRuvId.TryGetValue(existing.RuvId, out string? incomingDescription) && existing.Description != incomingDescription)
+            {
+                existing.UpdateDescription(incomingDescription);
             }
         }
 
@@ -136,5 +142,16 @@ internal sealed class RuvProgramRefreshJob(
             tvdbLookupQueue.Enqueue(program.RuvId, program.Name);
         }
         broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
+    }
+
+    private static string? JoinDescription(IReadOnlyList<string> paragraphs)
+    {
+        if (paragraphs is [])
+        {
+            return null;
+        }
+
+        string joined = string.Join("\n\n", paragraphs);
+        return string.IsNullOrWhiteSpace(joined) ? null : joined;
     }
 }

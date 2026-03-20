@@ -29,3 +29,21 @@
     object-position: center 20%;
     display: block;
 }
+
+.program-description {
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.program-description p {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 48rem;
+}
+
+.program-description p + p {
+    margin-top: 0.75rem;
+}

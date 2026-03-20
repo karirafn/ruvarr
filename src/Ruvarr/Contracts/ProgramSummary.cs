@@ -12,4 +12,5 @@ public sealed record ProgramSummary(
     Uri? RuvUrl,
     EpisodeMatchStatus EpisodeMatchStatus,
     Uri? ImageUrl,
-    bool IsMovieMatch);
+    bool IsMovieMatch,
+    string? Description);
