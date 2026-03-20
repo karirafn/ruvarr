@@ -12,6 +12,7 @@ internal sealed class ProgramMatchedTvdbEventHandler(
     {
         notifier.Enqueue(@event.RuvId, @event.Name);
         broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
+        broadcaster.Publish(@event);
         return Task.CompletedTask;
     }
 }
