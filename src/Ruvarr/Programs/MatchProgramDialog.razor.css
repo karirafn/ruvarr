@@ -1,5 +1,6 @@
 ::deep dialog {
     min-width: 24rem;
+    max-width: 32rem;
 }
 
 .suggestion-area {
@@ -55,6 +56,9 @@
     color: #fff;
     font-size: 0.9rem;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .suggestion-meta {
