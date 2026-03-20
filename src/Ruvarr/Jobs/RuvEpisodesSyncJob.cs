@@ -72,6 +72,7 @@ internal sealed class RuvEpisodesSyncJob(
                 dbContext.Set<RuvProgram>().Remove(program);
                 await dbContext.SaveChangesAsync();
                 syncQueue.MarkComplete(program.RuvId);
+                broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
                 continue;
             }
 
@@ -113,6 +114,7 @@ internal sealed class RuvEpisodesSyncJob(
 
             await dbContext.SaveChangesAsync();
             syncQueue.MarkComplete(program.RuvId);
+            broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
         }
 
         foreach (int ruvId in ruvIds.Where(id => !loadedIds.Contains(id)))
