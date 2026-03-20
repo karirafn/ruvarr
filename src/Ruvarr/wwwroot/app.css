@@ -725,7 +725,7 @@ dialog input[type="number"]:focus {
 }
 
 .series-name {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 1rem;
 }
 
