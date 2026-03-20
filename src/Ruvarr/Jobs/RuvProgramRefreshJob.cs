@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Globalization;
+
+using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
@@ -105,6 +107,10 @@ internal sealed class RuvProgramRefreshJob(
         }
 
         await dbContext.SaveChangesAsync();
+
+#pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
+        programs.Sort((a, b) => string.Compare(a.Title, b.Title, new CultureInfo("is-IS"), CompareOptions.None));
+#pragma warning restore CA1309
 
         foreach (RuvTvProgram program in programs.Where(x => x.MultipleEpisodes))
         {
