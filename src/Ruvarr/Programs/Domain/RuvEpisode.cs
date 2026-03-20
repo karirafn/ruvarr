@@ -72,6 +72,16 @@ internal sealed partial class RuvEpisode
         };
     }
 
+    public override string ToString()
+    {
+        if (SeasonNumber is not null && EpisodeNumber is not null)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} S{1:D2}E{2:D2} - {3}", Program.Name, SeasonNumber, EpisodeNumber, Title);
+        }
+
+        return $"{Program.Name} - {Title}";
+    }
+
     public string ToFilename()
     {
         StringBuilder builder = new();
