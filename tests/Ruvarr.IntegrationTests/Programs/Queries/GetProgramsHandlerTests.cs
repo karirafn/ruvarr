@@ -42,7 +42,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -54,7 +54,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
     }
 
     [Fact]
-    public async Task FiltersByUnmatchedPrograms()
+    public async Task FiltersByUnmatched()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -64,9 +64,9 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
             scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
-        RuvProgram matched = RuvProgram.Create(20002, "RÚV1", "Matched Program", null, multipleEpisodes: true);
-        matched.MatchTvdb(TvdbSeries.Create(9001, "Some Series"));
-        dbContext.Set<RuvProgram>().Add(matched);
+        RuvProgram matchedSeries = RuvProgram.Create(20002, "RÚV1", "Matched Series Program", null, multipleEpisodes: true);
+        matchedSeries.MatchTvdb(TvdbSeries.Create(9001, "Some Series"));
+        dbContext.Set<RuvProgram>().Add(matchedSeries);
 
         RuvProgram unmatched = RuvProgram.Create(20003, "RÚV1", "Unmatched Program", null, multipleEpisodes: true);
         dbContext.Set<RuvProgram>().Add(unmatched);
@@ -75,12 +75,47 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, IsProgramMatched: false, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, IsUnmatched: true, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
         result.ShouldContain(p => p.ProgramRuvId == 20003);
         result.ShouldNotContain(p => p.ProgramRuvId == 20002);
+    }
+
+    [Fact]
+    public async Task FiltersByMatched()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram matchedSeries = RuvProgram.Create(20050, "RÚV1", "Matched Series For Filter", null, multipleEpisodes: true);
+        matchedSeries.MatchTvdb(TvdbSeries.Create(9050, "Some Series"));
+        dbContext.Set<RuvProgram>().Add(matchedSeries);
+
+        RuvProgram matchedMovie = RuvProgram.Create(20051, "RÚV1", "Matched Movie For Filter", null, multipleEpisodes: true);
+        matchedMovie.MatchTmdb(TmdbMovie.Create(9051, "Some Movie"));
+        dbContext.Set<RuvProgram>().Add(matchedMovie);
+
+        RuvProgram unmatched = RuvProgram.Create(20052, "RÚV1", "Unmatched For Filter", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(unmatched);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, IsUnmatched: false, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 20050);
+        result.ShouldContain(p => p.ProgramRuvId == 20051);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20052);
     }
 
     [Fact]
@@ -104,7 +139,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -133,7 +168,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, IsProgramMatched: false, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, IsUnmatched: true, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -142,7 +177,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
     }
 
     [Fact]
-    public async Task FiltersByUnmatchedEpisodes()
+    public async Task FiltersByNotMissingEpisodes()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -152,26 +187,141 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
             scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
 
-        RuvProgram withUnmatched = RuvProgram.Create(20030, "RÚV1", "Program With Unmatched Episodes", null, multipleEpisodes: true);
-        withUnmatched.MatchTvdb(TvdbSeries.Create(5001, "Some Series"));
-        dbContext.Set<RuvProgram>().Add(withUnmatched);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        withUnmatched.TryAddEpisode("WU-EP1", new Uri("https://example.com/wu-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
-        await dbContext.SaveChangesAsync(cancellationToken);
+        RuvProgram missingProgram = RuvProgram.Create(20060, "RÚV1", "Program With Missing Episodes", null, multipleEpisodes: true);
+        missingProgram.SetHasMissingEpisodes(true);
+        dbContext.Set<RuvProgram>().Add(missingProgram);
 
-        RuvProgram allMatched = RuvProgram.Create(20031, "RÚV1", "Program With All Matched Episodes", null, multipleEpisodes: true);
-        allMatched.MatchTvdb(TvdbSeries.Create(5002, "Other Series"));
-        dbContext.Set<RuvProgram>().Add(allMatched);
+        RuvProgram notMissingProgram = RuvProgram.Create(20061, "RÚV1", "Program Without Missing Episodes", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(notMissingProgram);
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, IsEpisodeMatched: false), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, IsMissing: false, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 20061);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20060);
+    }
+
+    [Fact]
+    public async Task FiltersByPendingLookup()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram pending = RuvProgram.Create(20030, "RÚV1", "Pending Lookup Program", null, multipleEpisodes: true);
+        pending.ScheduleLookup();
+        dbContext.Set<RuvProgram>().Add(pending);
+
+        RuvProgram notPending = RuvProgram.Create(20031, "RÚV1", "No Pending Lookup Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(notPending);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, IsPendingLookup: true, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
         result.ShouldContain(p => p.ProgramRuvId == 20030);
         result.ShouldNotContain(p => p.ProgramRuvId == 20031);
+    }
+
+    [Fact]
+    public async Task FiltersByHasForeignName()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram withForeign = RuvProgram.Create(20032, "RÚV1", "Program With Foreign Name", "Foreign Name", multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(withForeign);
+
+        RuvProgram withoutForeign = RuvProgram.Create(20033, "RÚV1", "Program Without Foreign Name", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(withoutForeign);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, HasForeignName: true, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 20032);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20033);
+    }
+
+    [Fact]
+    public async Task FiltersByNotPendingLookup()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram pending = RuvProgram.Create(20034, "RÚV1", "Pending Lookup Program 2", null, multipleEpisodes: true);
+        pending.ScheduleLookup();
+        dbContext.Set<RuvProgram>().Add(pending);
+
+        RuvProgram notPending = RuvProgram.Create(20035, "RÚV1", "No Pending Lookup Program 2", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(notPending);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, IsPendingLookup: false, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 20035);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20034);
+    }
+
+    [Fact]
+    public async Task FiltersByNoForeignName()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram withForeign = RuvProgram.Create(20036, "RÚV1", "Program With Foreign Name 2", "Foreign Name", multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(withForeign);
+
+        RuvProgram withoutForeign = RuvProgram.Create(20037, "RÚV1", "Program Without Foreign Name 2", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(withoutForeign);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, HasForeignName: false, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 20037);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20036);
     }
 
     [Fact]
@@ -192,7 +342,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -219,7 +369,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -245,7 +395,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -271,7 +421,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -297,7 +447,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -334,7 +484,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -369,7 +519,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -400,7 +550,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -427,7 +577,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -454,7 +604,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -483,7 +633,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
@@ -513,12 +663,162 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         // Act
         List<ProgramSummary> result = await handler
-            .Handle(new GetProgramsQuery(null, null, null, null, null, null), cancellationToken)
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
             .ToListAsync(cancellationToken);
 
         // Assert
         ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 20025);
         found.ShouldNotBeNull();
         found.TvdbUrl.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task FiltersByNotMonitored()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram monitored = RuvProgram.Create(20070, "RÚV1", "Monitored Program", null, multipleEpisodes: true);
+        monitored.SetMonitoredStatus(true);
+        dbContext.Set<RuvProgram>().Add(monitored);
+
+        RuvProgram unmonitored = RuvProgram.Create(20071, "RÚV1", "Unmonitored Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(unmonitored);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, IsMonitored: false, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 20071);
+        result.ShouldNotContain(p => p.ProgramRuvId == 20070);
+    }
+
+    [Fact]
+    public async Task FiltersByEpisodeMatchFullyMatched()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram fullyMatched = RuvProgram.Create(40001, "RÚV1", "Fully Matched Filter", null, multipleEpisodes: true);
+        fullyMatched.MatchTvdb(TvdbSeries.Create(7001, "FM Series"));
+        dbContext.Set<RuvProgram>().Add(fullyMatched);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        fullyMatched.TryAddEpisode("FMF-EP1", new Uri("https://example.com/fmf-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+        fullyMatched.Episodes.First(e => e.RuvId == "FMF-EP1").Match(tvdbId: 301, season: 1, episode: 1, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvProgram noneMatched = RuvProgram.Create(40002, "RÚV1", "None Matched Filter", null, multipleEpisodes: true);
+        noneMatched.MatchTvdb(TvdbSeries.Create(7002, "NM Series"));
+        dbContext.Set<RuvProgram>().Add(noneMatched);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        noneMatched.TryAddEpisode("NMF-EP1", new Uri("https://example.com/nmf-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, EpisodeMatch: Contracts.EpisodeMatchStatus.FullyMatched), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 40001);
+        result.ShouldNotContain(p => p.ProgramRuvId == 40002);
+    }
+
+    [Fact]
+    public async Task FiltersByEpisodeMatchPartiallyMatched()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram partial = RuvProgram.Create(40003, "RÚV1", "Partial Match Filter", null, multipleEpisodes: true);
+        partial.MatchTvdb(TvdbSeries.Create(7003, "PM Series"));
+        dbContext.Set<RuvProgram>().Add(partial);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        partial.TryAddEpisode("PMF-EP1", new Uri("https://example.com/pmf-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        partial.TryAddEpisode("PMF-EP2", new Uri("https://example.com/pmf-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+        partial.Episodes.First(e => e.RuvId == "PMF-EP1").Match(tvdbId: 401, season: 1, episode: 1, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvProgram fullyMatched = RuvProgram.Create(40004, "RÚV1", "Fully Matched For Partial Filter", null, multipleEpisodes: true);
+        fullyMatched.MatchTvdb(TvdbSeries.Create(7004, "FM Series 2"));
+        dbContext.Set<RuvProgram>().Add(fullyMatched);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        fullyMatched.TryAddEpisode("FMF2-EP1", new Uri("https://example.com/fmf2-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+        fullyMatched.Episodes.First(e => e.RuvId == "FMF2-EP1").Match(tvdbId: 402, season: 1, episode: 1, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, EpisodeMatch: Contracts.EpisodeMatchStatus.PartiallyMatched), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 40003);
+        result.ShouldNotContain(p => p.ProgramRuvId == 40004);
+    }
+
+    [Fact]
+    public async Task FiltersByEpisodeMatchNoneMatched()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram noneMatched = RuvProgram.Create(40005, "RÚV1", "None Matched For Filter", null, multipleEpisodes: true);
+        noneMatched.MatchTvdb(TvdbSeries.Create(7005, "NM Series 2"));
+        dbContext.Set<RuvProgram>().Add(noneMatched);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        noneMatched.TryAddEpisode("NMF2-EP1", new Uri("https://example.com/nmf2-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvProgram partial = RuvProgram.Create(40006, "RÚV1", "Partial For None Filter", null, multipleEpisodes: true);
+        partial.MatchTvdb(TvdbSeries.Create(7006, "PM Series 2"));
+        dbContext.Set<RuvProgram>().Add(partial);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        partial.TryAddEpisode("PMF2-EP1", new Uri("https://example.com/pmf2-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+        partial.Episodes.First(e => e.RuvId == "PMF2-EP1").Match(tvdbId: 501, season: 1, episode: 1, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, EpisodeMatch: Contracts.EpisodeMatchStatus.NoneMatched), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        result.ShouldContain(p => p.ProgramRuvId == 40005);
+        result.ShouldNotContain(p => p.ProgramRuvId == 40006);
     }
 }

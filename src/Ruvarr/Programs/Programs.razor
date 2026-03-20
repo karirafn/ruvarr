@@ -8,6 +8,7 @@
 @using Ruvarr.Programs.Commands.MatchProgram
 @using Ruvarr.Programs.Commands.RefreshProgram
 @using Ruvarr.Programs.Events
+@using Ruvarr.Programs.Filters
 @using Ruvarr.Programs.Queries.GetPrograms
 @inject IServiceScopeFactory ScopeFactory
 @inject ProgramRefreshNotifier RefreshNotifier
@@ -18,26 +19,80 @@
 <h1>Programs</h1>
 
 <div class="filter-panel">
-    <label class="filter-chip @(FilterState.FilterUnmatchedPrograms ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="FilterState.FilterUnmatchedPrograms" @bind:after="LoadProgramsAsync" />
-        Unmatched Programs
-    </label>
-    <label class="filter-chip @(FilterState.FilterUnmatchedEpisodes ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="FilterState.FilterUnmatchedEpisodes" @bind:after="LoadProgramsAsync" />
-        Unmatched Episodes
-    </label>
-    <label class="filter-chip @(FilterState.FilterMissingFromSonarr ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="FilterState.FilterMissingFromSonarr" @bind:after="LoadProgramsAsync" />
-        Missing from Sonarr
-    </label>
-    <label class="filter-chip @(FilterState.FilterPartiallyMatched ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="FilterState.FilterPartiallyMatched" @bind:after="LoadProgramsAsync" />
-        Partially Matched
-    </label>
-    <label class="filter-chip @(FilterState.FilterMonitored ? "filter-chip--active" : "")">
-        <input type="checkbox" @bind="FilterState.FilterMonitored" @bind:after="LoadProgramsAsync" />
-        Monitored
-    </label>
+    <div class="filter-group" role="group" aria-label="Program filters">
+        <span class="filter-group-label">Programs</span>
+        <button class="filter-chip @(FilterState.FilterMatch != MatchFilter.All ? "filter-chip--active" : "")"
+                aria-pressed="@(FilterState.FilterMatch != MatchFilter.All)"
+                type="button"
+                @onclick="ToggleMatchFilter">
+            @(FilterState.FilterMatch switch
+            {
+                MatchFilter.Matched => "Matched",
+                MatchFilter.Unmatched => "Unmatched",
+                _ => "Match: All"
+            })
+        </button>
+        <button class="filter-chip @(FilterState.FilterMonitored != MonitoredFilter.All ? "filter-chip--active" : "")"
+                aria-pressed="@(FilterState.FilterMonitored != MonitoredFilter.All)"
+                type="button"
+                @onclick="ToggleMonitored">
+            @(FilterState.FilterMonitored switch
+            {
+                MonitoredFilter.Monitored => "Monitored",
+                MonitoredFilter.NotMonitored => "Not Monitored",
+                _ => "Monitored: All"
+            })
+        </button>
+        <button class="filter-chip @(FilterState.FilterMissingEpisodes != MissingEpisodesFilter.All ? "filter-chip--active" : "")"
+                aria-pressed="@(FilterState.FilterMissingEpisodes != MissingEpisodesFilter.All)"
+                type="button"
+                @onclick="ToggleMissing">
+            @(FilterState.FilterMissingEpisodes switch
+            {
+                MissingEpisodesFilter.MissingEpisodes => "Missing Episodes",
+                MissingEpisodesFilter.NotMissingEpisodes => "Not Missing Episodes",
+                _ => "Missing: All"
+            })
+        </button>
+        <button class="filter-chip @(FilterState.FilterPendingLookup != PendingLookupFilter.All ? "filter-chip--active" : "")"
+                aria-pressed="@(FilterState.FilterPendingLookup != PendingLookupFilter.All)"
+                type="button"
+                @onclick="TogglePendingLookup">
+            @(FilterState.FilterPendingLookup switch
+            {
+                PendingLookupFilter.PendingLookup => "Pending Lookup",
+                PendingLookupFilter.NotPendingLookup => "Not Pending",
+                _ => "Pending: All"
+            })
+        </button>
+        <button class="filter-chip @(FilterState.FilterForeignName != ForeignNameFilter.All ? "filter-chip--active" : "")"
+                aria-pressed="@(FilterState.FilterForeignName != ForeignNameFilter.All)"
+                type="button"
+                @onclick="ToggleForeignName">
+            @(FilterState.FilterForeignName switch
+            {
+                ForeignNameFilter.HasForeignName => "Has Foreign Name",
+                ForeignNameFilter.NoForeignName => "No Foreign Name",
+                _ => "Foreign Name: All"
+            })
+        </button>
+    </div>
+    <span class="filter-divider"></span>
+    <div class="filter-group" role="group" aria-label="Episode filters">
+        <span class="filter-group-label">Episodes</span>
+        <button class="filter-chip @(FilterState.FilterEpisodeMatch != EpisodeMatchFilter.All ? "filter-chip--active" : "")"
+                aria-pressed="@(FilterState.FilterEpisodeMatch != EpisodeMatchFilter.All)"
+                type="button"
+                @onclick="ToggleEpisodeMatchFilter">
+            @(FilterState.FilterEpisodeMatch switch
+            {
+                EpisodeMatchFilter.FullyMatched => "All Matched",
+                EpisodeMatchFilter.PartiallyMatched => "Partial Match",
+                EpisodeMatchFilter.NoneMatched => "None Matched",
+                _ => "Match: All"
+            })
+        </button>
+    </div>
     <span class="filter-divider"></span>
     <select class="filter-select" @bind="FilterState.FilterChannel" @bind:after="ResetScrollPosition">
         <option value="">All channels</option>
@@ -271,28 +326,45 @@ else
         _programs = null;
         await InvokeAsync(StateHasChanged);
 
-        bool? isProgramMatched = (FilterState.FilterUnmatchedPrograms, FilterState.FilterUnmatchedEpisodes) switch
-        {
-            (true, false) => false,
-            (false, true) => true,
-            _ => null
-        };
-
-        bool? isEpisodeMatched = FilterState.FilterUnmatchedEpisodes ? false : null;
-
-        bool? isProgramMonitored = (FilterState.FilterMonitored || FilterState.FilterMissingFromSonarr) ? true : null;
-
-        bool? isProgramMissingEpisodes = FilterState.FilterMissingFromSonarr ? true : null;
-
-        bool? isProgramPartiallyMatched = FilterState.FilterPartiallyMatched ? true : null;
-
         GetProgramsQuery query = new(
             null,
-            isProgramMonitored,
-            isProgramMissingEpisodes,
-            isProgramMatched,
-            isProgramPartiallyMatched,
-            isEpisodeMatched);
+            FilterState.FilterMatch switch
+            {
+                MatchFilter.Matched => false,
+                MatchFilter.Unmatched => true,
+                _ => null
+            },
+            FilterState.FilterMonitored switch
+            {
+                MonitoredFilter.Monitored => true,
+                MonitoredFilter.NotMonitored => false,
+                _ => null
+            },
+            FilterState.FilterMissingEpisodes switch
+            {
+                MissingEpisodesFilter.MissingEpisodes => true,
+                MissingEpisodesFilter.NotMissingEpisodes => false,
+                _ => null
+            },
+            FilterState.FilterPendingLookup switch
+            {
+                PendingLookupFilter.PendingLookup => true,
+                PendingLookupFilter.NotPendingLookup => false,
+                _ => null
+            },
+            FilterState.FilterForeignName switch
+            {
+                ForeignNameFilter.HasForeignName => true,
+                ForeignNameFilter.NoForeignName => false,
+                _ => null
+            },
+            FilterState.FilterEpisodeMatch switch
+            {
+                EpisodeMatchFilter.FullyMatched => EpisodeMatchStatus.FullyMatched,
+                EpisodeMatchFilter.PartiallyMatched => EpisodeMatchStatus.PartiallyMatched,
+                EpisodeMatchFilter.NoneMatched => EpisodeMatchStatus.NoneMatched,
+                _ => null
+            });
 
         List<ProgramSummary> loaded = [];
         await using (AsyncServiceScope scope = ScopeFactory.CreateAsyncScope())
@@ -315,6 +387,73 @@ else
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleMatchFilter()
+    {
+        FilterState.FilterMatch = FilterState.FilterMatch switch
+        {
+            MatchFilter.All => MatchFilter.Matched,
+            MatchFilter.Matched => MatchFilter.Unmatched,
+            _ => MatchFilter.All
+        };
+        await LoadProgramsAsync();
+    }
+
+    private async Task ToggleMonitored()
+    {
+        FilterState.FilterMonitored = FilterState.FilterMonitored switch
+        {
+            MonitoredFilter.All => MonitoredFilter.Monitored,
+            MonitoredFilter.Monitored => MonitoredFilter.NotMonitored,
+            _ => MonitoredFilter.All
+        };
+        await LoadProgramsAsync();
+    }
+
+    private async Task ToggleMissing()
+    {
+        FilterState.FilterMissingEpisodes = FilterState.FilterMissingEpisodes switch
+        {
+            MissingEpisodesFilter.All => MissingEpisodesFilter.MissingEpisodes,
+            MissingEpisodesFilter.MissingEpisodes => MissingEpisodesFilter.NotMissingEpisodes,
+            _ => MissingEpisodesFilter.All
+        };
+        await LoadProgramsAsync();
+    }
+
+    private async Task TogglePendingLookup()
+    {
+        FilterState.FilterPendingLookup = FilterState.FilterPendingLookup switch
+        {
+            PendingLookupFilter.All => PendingLookupFilter.PendingLookup,
+            PendingLookupFilter.PendingLookup => PendingLookupFilter.NotPendingLookup,
+            _ => PendingLookupFilter.All
+        };
+        await LoadProgramsAsync();
+    }
+
+    private async Task ToggleEpisodeMatchFilter()
+    {
+        FilterState.FilterEpisodeMatch = FilterState.FilterEpisodeMatch switch
+        {
+            EpisodeMatchFilter.All => EpisodeMatchFilter.FullyMatched,
+            EpisodeMatchFilter.FullyMatched => EpisodeMatchFilter.PartiallyMatched,
+            EpisodeMatchFilter.PartiallyMatched => EpisodeMatchFilter.NoneMatched,
+            _ => EpisodeMatchFilter.All
+        };
+        await LoadProgramsAsync();
+    }
+
+    private async Task ToggleForeignName()
+    {
+        FilterState.FilterForeignName = FilterState.FilterForeignName switch
+        {
+            ForeignNameFilter.All => ForeignNameFilter.HasForeignName,
+            ForeignNameFilter.HasForeignName => ForeignNameFilter.NoForeignName,
+            _ => ForeignNameFilter.All
+        };
+        await LoadProgramsAsync();
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]

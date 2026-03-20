@@ -1,4 +1,4 @@
-using Ruvarr.Programs;
+using Ruvarr.Programs.Filters;
 
 using Shouldly;
 
@@ -12,12 +12,13 @@ public sealed class Clear
         // Arrange
         ProgramsFilterState sut = new()
         {
-            FilterUnmatchedPrograms = true,
-            FilterUnmatchedEpisodes = true,
-            FilterMissingFromSonarr = true,
-            FilterPartiallyMatched = true,
-            FilterMonitored = true,
-            FilterChannel = "RUV"
+            FilterMatch = MatchFilter.Unmatched,
+            FilterMonitored = MonitoredFilter.Monitored,
+            FilterMissingEpisodes = MissingEpisodesFilter.MissingEpisodes,
+            FilterPendingLookup = PendingLookupFilter.PendingLookup,
+            FilterForeignName = ForeignNameFilter.HasForeignName,
+            FilterChannel = "RUV",
+            FilterEpisodeMatch = EpisodeMatchFilter.FullyMatched
         };
 
         // Act
@@ -25,12 +26,13 @@ public sealed class Clear
 
         // Assert
         sut.HasActiveFilters.ShouldBeFalse();
-        sut.FilterUnmatchedPrograms.ShouldBeFalse();
-        sut.FilterUnmatchedEpisodes.ShouldBeFalse();
-        sut.FilterMissingFromSonarr.ShouldBeFalse();
-        sut.FilterPartiallyMatched.ShouldBeFalse();
-        sut.FilterMonitored.ShouldBeFalse();
+        sut.FilterMatch.ShouldBe(MatchFilter.All);
+        sut.FilterMonitored.ShouldBe(MonitoredFilter.All);
+        sut.FilterMissingEpisodes.ShouldBe(MissingEpisodesFilter.All);
+        sut.FilterPendingLookup.ShouldBe(PendingLookupFilter.All);
+        sut.FilterForeignName.ShouldBe(ForeignNameFilter.All);
         sut.FilterChannel.ShouldBeEmpty();
+        sut.FilterEpisodeMatch.ShouldBe(EpisodeMatchFilter.All);
     }
 
     [Fact]
