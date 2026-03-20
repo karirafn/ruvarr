@@ -521,6 +521,7 @@ dialog input[type="number"]:focus {
 .programs-table td:nth-child(6) { width: 6rem; text-align: center; }
 
 .col-center { text-align: center; }
+.col-center svg { display: block; margin: 0 auto; }
 
 .col-number { width: 5rem; }
 .col-date { white-space: nowrap; }
