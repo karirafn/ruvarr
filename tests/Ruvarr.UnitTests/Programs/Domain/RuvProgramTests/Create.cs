@@ -132,4 +132,38 @@ public sealed class Create
         // Assert
         result.ImageUrl.ShouldBeNull();
     }
+
+    [Fact]
+    public void SetsDescription()
+    {
+        // Arrange / Act
+        RuvProgram result = new RuvProgramBuilder().WithDescription("A great show.").Build();
+
+        // Assert
+        result.Description.ShouldBe("A great show.");
+    }
+
+    [Fact]
+    public void DescriptionIsNullByDefault()
+    {
+        // Arrange / Act
+        RuvProgram result = new RuvProgramBuilder().Build();
+
+        // Assert
+        result.Description.ShouldBeNull();
+    }
+
+    [Fact]
+    public void TruncatesDescriptionLongerThan4096Characters()
+    {
+        // Arrange
+        string longDescription = new('x', 5000);
+
+        // Act
+        RuvProgram result = new RuvProgramBuilder().WithDescription(longDescription).Build();
+
+        // Assert
+        result.Description.ShouldNotBeNull();
+        result.Description.Length.ShouldBe(4096);
+    }
 }

@@ -40,6 +40,11 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
             .HasMaxLength(256)
             .IsUnicode(false);
 
+        builder.Property(x => x.Description)
+            .HasMaxLength(4096)
+            .IsUnicode(true)
+            .IsFixedLength(false);
+
         builder.Property(x => x.ImageUrl)
             .HasMaxLength(2048)
             .HasConversion<string?>();

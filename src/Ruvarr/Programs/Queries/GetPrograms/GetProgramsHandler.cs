@@ -82,7 +82,8 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 x.Slug is { } programSlug ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(programSlug)}/{x.RuvId}") : null,
                 DeriveEpisodeMatchStatus(x.HasSeries, x.HasAnyEpisodes, x.AllEpisodesMatched, x.AnyEpisodeMatched),
                 null,
-                x.HasMovie));
+                x.HasMovie,
+                null));
 
         await foreach (ProgramSummary summary in results.WithCancellation(cancellationToken))
         {

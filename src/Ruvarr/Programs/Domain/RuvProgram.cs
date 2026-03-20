@@ -9,6 +9,7 @@ namespace Ruvarr.Programs.Domain;
 
 internal sealed class RuvProgram
 {
+    private const int MaxDescriptionLength = 4096;
     private static readonly Regex SlugPattern = new(@"^[a-z0-9\-]{1,128}$", RegexOptions.Compiled);
 
     private readonly List<IDomainEvent> _domainEvents = [];
@@ -46,6 +47,8 @@ internal sealed class RuvProgram
 
     public string? Slug { get; private set; }
 
+    public string? Description { get; private set; }
+
     public Uri? ImageUrl { get; private set; }
 
     public TvdbSeries? Series { get; private set; }
@@ -79,7 +82,7 @@ internal sealed class RuvProgram
         }
     }
 
-    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null, Uri? imageUrl = null)
+    public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null, Uri? imageUrl = null, string? description = null)
     {
         RuvProgram program = new()
         {
@@ -91,6 +94,7 @@ internal sealed class RuvProgram
             Created = DateTime.UtcNow,
             Slug = SanitizeSlug(slug),
             ImageUrl = imageUrl,
+            Description = TruncateDescription(description),
         };
 
         program._domainEvents.Add(new ProgramCreatedEvent(program));
@@ -101,6 +105,11 @@ internal sealed class RuvProgram
     public void UpdateSlug(string? slug) => Slug = SanitizeSlug(slug);
 
     public void UpdateImageUrl(Uri? imageUrl) => ImageUrl = imageUrl;
+
+    public void UpdateDescription(string? description) => Description = TruncateDescription(description);
+
+    private static string? TruncateDescription(string? description) =>
+        description?.Length > MaxDescriptionLength ? description[..MaxDescriptionLength] : description;
 
     private static string? SanitizeSlug(string? slug) =>
         slug is not null && SlugPattern.IsMatch(slug) ? slug : null;
