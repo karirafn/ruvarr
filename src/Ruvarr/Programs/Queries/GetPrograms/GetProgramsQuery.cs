@@ -1,9 +1,12 @@
 namespace Ruvarr.Programs.Queries.GetPrograms;
 
+using Ruvarr.Contracts;
+
 public sealed record GetProgramsQuery(
     string? Channel,
-    bool? IsProgramMonitored,
-    bool? IsProgramMissingEpisodes,
-    bool? IsProgramMatched,
-    bool? IsProgramPartiallyMatched,
-    bool? IsEpisodeMatched);
+    bool? IsUnmatched,
+    bool? IsMonitored,
+    bool? IsMissing,
+    bool? IsPendingLookup,
+    bool? HasForeignName,
+    EpisodeMatchStatus? EpisodeMatch);

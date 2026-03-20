@@ -21,32 +21,69 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
             query = query.Where(x => x.Channel == request.Channel);
         }
 
-        if (request.IsProgramMonitored is not null)
+        if (request.IsUnmatched is true)
         {
-            query = query.Where(x => x.IsMonitored == request.IsProgramMonitored);
+            query = query.Where(x => x.Series == null && x.Movie == null);
+        }
+        else if (request.IsUnmatched is false)
+        {
+            query = query.Where(x => x.Series != null || x.Movie != null);
         }
 
-        if (request.IsProgramMissingEpisodes is not null)
+        if (request.IsMonitored is true)
         {
-            query = query.Where(x => x.HasMissingEpisodes == request.IsProgramMissingEpisodes);
+            query = query.Where(x => x.IsMonitored);
+        }
+        else if (request.IsMonitored is false)
+        {
+            query = query.Where(x => !x.IsMonitored);
         }
 
-        if (request.IsProgramMatched is not null)
+        if (request.IsMissing is true)
         {
-            query = query.Where(x => (x.Series == null) != request.IsProgramMatched);
+            query = query.Where(x => x.HasMissingEpisodes);
+        }
+        else if (request.IsMissing is false)
+        {
+            query = query.Where(x => !x.HasMissingEpisodes);
         }
 
-        if (request.IsProgramPartiallyMatched is true)
+        if (request.IsPendingLookup is true)
         {
-            query = query.Where(x =>
-                x.Series != null &&
-                x.Episodes.Any(e => e.TvdbId != null) &&
-                x.Episodes.Any(e => e.TvdbId == null));
+            query = query.Where(x => x.NextLookup != null);
+        }
+        else if (request.IsPendingLookup is false)
+        {
+            query = query.Where(x => x.NextLookup == null);
         }
 
-        if (request.IsEpisodeMatched is not null)
+        if (request.HasForeignName is true)
         {
-            query = query.Where(x => x.Episodes.Any(e => (e.TvdbId == null) != request.IsEpisodeMatched));
+            query = query.Where(x => x.ForeignName != null);
+        }
+        else if (request.HasForeignName is false)
+        {
+            query = query.Where(x => x.ForeignName == null);
+        }
+
+        if (request.EpisodeMatch is EpisodeMatchStatus episodeMatch)
+        {
+            query = episodeMatch switch
+            {
+                EpisodeMatchStatus.FullyMatched => query.Where(x =>
+                    x.Series != null &&
+                    x.Episodes.Any() &&
+                    x.Episodes.All(e => e.TvdbId != null)),
+                EpisodeMatchStatus.PartiallyMatched => query.Where(x =>
+                    x.Series != null &&
+                    x.Episodes.Any() &&
+                    x.Episodes.Any(e => e.TvdbId != null) &&
+                    !x.Episodes.All(e => e.TvdbId != null)),
+                _ => query.Where(x =>
+                    x.Series == null ||
+                    !x.Episodes.Any() ||
+                    !x.Episodes.Any(e => e.TvdbId != null)),
+            };
         }
 
         IAsyncEnumerable<ProgramSummary> results = query

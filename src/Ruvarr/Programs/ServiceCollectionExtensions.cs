@@ -2,6 +2,7 @@
 using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Programs.Commands.AddProgramToSonarr;
+using Ruvarr.Programs.Filters;
 using Ruvarr.Programs.Commands.DownloadEpisode;
 using Ruvarr.Programs.Commands.MatchEpisode;
 using Ruvarr.Programs.Commands.MatchProgram;

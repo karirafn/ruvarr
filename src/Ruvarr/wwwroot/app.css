@@ -272,12 +272,29 @@ tbody tr:hover {
     margin-bottom: 1rem;
 }
 
+.filter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.filter-group-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.35);
+    margin-right: 0.15rem;
+}
+
 .filter-chip {
     display: inline-flex;
     align-items: center;
     padding: 0.35rem 0.7rem;
     font-size: 0.8rem;
+    font-family: inherit;
     font-weight: 500;
+    line-height: inherit;
     letter-spacing: 0.02em;
     color: rgba(255, 255, 255, 0.45);
     background: rgba(255, 255, 255, 0.04);
@@ -301,12 +318,9 @@ tbody tr:hover {
     border-color: rgba(96, 165, 250, 0.5);
 }
 
-.filter-chip input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-    width: 0;
-    height: 0;
+.filter-chip:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 1px;
 }
 
 .filter-divider {
