@@ -47,7 +47,7 @@ public sealed class SubmitMatch : BunitContext
             .Returns(RuvarrResult.Failure(error));
 
         IRenderedComponent<MatchProgramDialog> cut = Render<MatchProgramDialog>();
-        await cut.Instance.OpenAsync(ruvId: 1, currentTvdbSeriesId: null, programName: "Test Program");
+        await cut.Instance.OpenAsync(ruvId: 1, currentTvdbSeriesId: null, programName: "Test Program", isFixMatch: false);
         await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "12345" });
 
         // Act
@@ -67,13 +67,13 @@ public sealed class SubmitMatch : BunitContext
             .Returns(RuvarrResult.Failure(error));
 
         IRenderedComponent<MatchProgramDialog> cut = Render<MatchProgramDialog>();
-        await cut.Instance.OpenAsync(ruvId: 1, currentTvdbSeriesId: null, programName: "Test Program");
+        await cut.Instance.OpenAsync(ruvId: 1, currentTvdbSeriesId: null, programName: "Test Program", isFixMatch: false);
         await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "12345" });
         await cut.Find("button.dialog-button--primary").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
         cut.Markup.ShouldContain("Something went wrong.");
 
         // Act
-        await cut.Instance.OpenAsync(ruvId: 1, currentTvdbSeriesId: null, programName: "Test Program");
+        await cut.Instance.OpenAsync(ruvId: 1, currentTvdbSeriesId: null, programName: "Test Program", isFixMatch: false);
 
         // Assert
         cut.Markup.ShouldNotContain("Something went wrong.");

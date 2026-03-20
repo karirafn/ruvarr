@@ -191,12 +191,9 @@ else
                         </td>
                         <td>
                             <div class="row-actions">
-                                @if (program.TvdbSeriesId is null)
-                                {
-                                    <button class="icon-button" @onclick="() => OpenMatchProgramDialog(program)" title="Match to TVDB">
-                                        <Icon Type="IconType.Link" Class="icon" AriaLabel="Match to TVDB" />
-                                    </button>
-                                }
+                                <button class="icon-button" @onclick="() => OpenMatchProgramDialog(program)" title="@GetMatchButtonLabel(program.TvdbSeriesId, program.IsMovieMatch)">
+                                    <Icon Type="IconType.Link" Class="icon" AriaLabel="@GetMatchButtonLabel(program.TvdbSeriesId, program.IsMovieMatch)" />
+                                </button>
                                 @if (program.RuvUrl is not null)
                                 {
                                     <a class="icon-button" href="@program.RuvUrl" target="_blank" rel="noopener noreferrer" title="View on RÚV">
@@ -456,10 +453,16 @@ else
         await LoadProgramsAsync();
     }
 
+    internal static string GetMatchButtonLabel(int? tvdbSeriesId, bool isMovieMatch)
+    {
+        return tvdbSeriesId is null && !isMovieMatch ? "Match" : "Fix Match";
+    }
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task OpenMatchProgramDialog(ProgramSummary program)
     {
-        await _matchProgramDialog!.OpenAsync(program.ProgramRuvId, program.TvdbSeriesId, program.ProgramName);
+        bool isFixMatch = program.TvdbSeriesId is not null || program.IsMovieMatch;
+        await _matchProgramDialog!.OpenAsync(program.ProgramRuvId, program.TvdbSeriesId, program.ProgramName, isFixMatch);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
