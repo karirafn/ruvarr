@@ -45,7 +45,8 @@ internal sealed class CachingSonarrClient(
 
                 cache.Set(CacheKey, result, new MemoryCacheEntryOptions
                 {
-                    AbsoluteExpirationRelativeToNow = CacheDuration
+                    AbsoluteExpirationRelativeToNow = CacheDuration,
+                    Size = 1
                 });
 
                 return result;
