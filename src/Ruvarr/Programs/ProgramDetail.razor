@@ -39,7 +39,7 @@ else
     <div class="program-header">
         @if (_program.ImageUrl is not null)
         {
-            <img class="program-thumbnail" src="@_program.ImageUrl" alt="@_program.ProgramName" width="288" height="400" decoding="async" />
+            <img @key="@_program.ImageUrl" class="program-thumbnail" src="@_program.ImageUrl" alt="@_program.ProgramName" width="288" height="400" decoding="async" />
         }
         <div class="program-header-content">
         <div class="program-header-meta">
@@ -249,12 +249,14 @@ else
     private MatchEpisodeDialog? _matchDialog;
     private AddToSonarrDialog? _addToSonarrDialog;
     private DateTime _lastEpisodeReloadTime;
+    private DateTime _lastProgramReloadTime;
 
     protected override async Task OnInitializedAsync()
     {
         _ = WatchDownloadQueueAsync();
         _ = WatchRefreshQueueAsync();
         _ = WatchEpisodeMatchesAsync();
+        _ = WatchProgramMatchesAsync();
 
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<GetProgramQuery, ProgramSummary?> programHandler =
@@ -327,6 +329,72 @@ else
             _lastEpisodeReloadTime = DateTime.UtcNow;
             await ReloadEpisodesAsync();
         }
+    }
+
+    private async Task WatchProgramMatchesAsync()
+    {
+        Task tvdbTask = Task.Run(async () =>
+        {
+            await foreach (ProgramMatchedTvdbEvent @event in Broadcaster.Subscribe<ProgramMatchedTvdbEvent>(_cts.Token))
+            {
+                if (@event.RuvId != RuvId)
+                {
+                    continue;
+                }
+
+                if (DateTime.UtcNow - _lastProgramReloadTime < TimeSpan.FromMilliseconds(200))
+                {
+                    continue;
+                }
+
+                await Task.Delay(200, _cts.Token);
+
+                if (DateTime.UtcNow - _lastProgramReloadTime < TimeSpan.FromMilliseconds(200))
+                {
+                    continue;
+                }
+
+                _lastProgramReloadTime = DateTime.UtcNow;
+                await ReloadProgramDetailsAsync();
+            }
+        }, _cts.Token);
+
+        Task tmdbTask = Task.Run(async () =>
+        {
+            await foreach (ProgramMatchedTmdbEvent @event in Broadcaster.Subscribe<ProgramMatchedTmdbEvent>(_cts.Token))
+            {
+                if (@event.RuvId != RuvId)
+                {
+                    continue;
+                }
+
+                if (DateTime.UtcNow - _lastProgramReloadTime < TimeSpan.FromMilliseconds(200))
+                {
+                    continue;
+                }
+
+                await Task.Delay(200, _cts.Token);
+
+                if (DateTime.UtcNow - _lastProgramReloadTime < TimeSpan.FromMilliseconds(200))
+                {
+                    continue;
+                }
+
+                _lastProgramReloadTime = DateTime.UtcNow;
+                await ReloadProgramDetailsAsync();
+            }
+        }, _cts.Token);
+
+        await Task.WhenAll(tvdbTask, tmdbTask);
+    }
+
+    private async Task ReloadProgramDetailsAsync()
+    {
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+        _program = await handler.Handle(new GetProgramQuery(RuvId), _cts.Token);
+        await InvokeAsync(StateHasChanged);
     }
 
     public async ValueTask DisposeAsync()
