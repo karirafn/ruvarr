@@ -81,10 +81,10 @@ else
                 <tr>
                     <th>Program</th>
                     <th>Channel</th>
-                    <th class="col-center">Monitored</th>
-                    <th class="col-center">Missing</th>
                     <th>TVDB Series</th>
-                    <th class="col-center">Matched</th>
+                    <th class="col-center"></th>
+                    <th class="col-center"></th>
+                    <th class="col-center"></th>
                     <th></th>
                 </tr>
             </thead>
@@ -93,22 +93,6 @@ else
                     <tr @key="program.ProgramRuvId">
                         <td><a class="program-link" href="/program/@program.ProgramRuvId">@program.ProgramName</a></td>
                         <td><span class="channel-tag">@program.Channel</span></td>
-                        <td class="col-center">
-                            @if (program.IsMonitored)
-                            {
-                                <Icon Type="IconType.Eye" Class="icon icon--monitored" AriaLabel="Monitored" />
-                            }
-                            else
-                            {
-                                <Icon Type="IconType.EyeOff" Class="icon icon--unmonitored" AriaLabel="Unmonitored" />
-                            }
-                        </td>
-                        <td class="col-center">
-                            @if (program.HasMissingEpisodes)
-                            {
-                                <Icon Type="IconType.Warning" Class="icon icon--missing" AriaLabel="Missing episodes" />
-                            }
-                        </td>
                         <td>
                             @if (program.TvdbUrl is not null)
                             {
@@ -124,6 +108,22 @@ else
                             }
                         </td>
                         <td class="col-center">
+                            @if (program.HasMissingEpisodes)
+                            {
+                                <span title="Missing episodes"><Icon Type="IconType.Warning" Class="icon icon--missing" AriaLabel="Missing episodes" /></span>
+                            }
+                        </td>
+                        <td class="col-center">
+                            @if (program.IsMonitored)
+                            {
+                                <span title="Monitored"><Icon Type="IconType.Eye" Class="icon icon--monitored" AriaLabel="Monitored" /></span>
+                            }
+                            else
+                            {
+                                <span title="Unmonitored"><Icon Type="IconType.EyeOff" Class="icon icon--unmonitored" AriaLabel="Unmonitored" /></span>
+                            }
+                        </td>
+                        <td class="col-center">
                             @{
                                 (string cssClass, string ariaLabel) = program.EpisodeMatchStatus switch
                                 {
@@ -132,7 +132,7 @@ else
                                     _ => ("icon--matched-none", "No episodes matched"),
                                 };
                             }
-                            <Icon Type="IconType.CheckmarkCircle" Class="@($"icon {cssClass}")" AriaLabel="@ariaLabel" />
+                            <span title="@ariaLabel"><Icon Type="IconType.CheckmarkCircle" Class="@($"icon {cssClass}")" AriaLabel="@ariaLabel" /></span>
                         </td>
                         <td>
                             <div class="row-actions">
@@ -150,13 +150,13 @@ else
                                 }
                                 @if (_refreshQueue.TryGetValue(program.ProgramRuvId, out ProgramRefreshStatus status) && status == ProgramRefreshStatus.Processing)
                                 {
-                                    <span class="icon-button">
+                                    <span class="icon-button" title="Refreshing">
                                         <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Refreshing" />
                                     </span>
                                 }
                                 else if (_refreshQueue.ContainsKey(program.ProgramRuvId) || _pendingRefresh.Contains(program.ProgramRuvId))
                                 {
-                                    <span class="icon-button">
+                                    <span class="icon-button" title="Queued for refresh">
                                         <Icon Type="IconType.Clock" Class="icon" AriaLabel="Pending" />
                                     </span>
                                 }
