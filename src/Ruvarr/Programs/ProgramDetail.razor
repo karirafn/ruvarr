@@ -9,6 +9,7 @@
 @using Ruvarr.ProgramRefreshQueue.Notifiers
 @using Ruvarr.Programs.Events
 @using Ruvarr.Programs.Commands.DownloadEpisode
+@using Ruvarr.Programs.Commands.MatchProgram
 @using Ruvarr.Programs.Commands.RefreshProgram
 @using Ruvarr.Programs.Queries.GetProgram
 @using Ruvarr.Programs.Queries.GetProgramEpisodes
@@ -73,35 +74,35 @@ else
             }
         </div>
         <h1>@_program.ProgramName</h1>
-        @if (_program.SeriesName is not null || _program.RuvUrl is not null || _program.TvdbSeriesId is null)
-        {
-            <div class="series-meta">
-                @if (_program.SeriesName is not null)
-                {
-                    <span class="series-name">@_program.SeriesName</span>
-                }
-                @if (_program.TvdbUrl is not null)
-                {
-                    <a class="badge--tvdb" href="@_program.TvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
-                }
-                @if (_program.RuvUrl is not null)
-                {
-                    <a class="badge--ruv" href="@_program.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
-                }
-                @if (_program.TvdbSeriesId is null)
-                {
-                    <button class="badge--tvdb-create" @onclick="CreateOnTvdb" title="Create series on TVDB">
-                        <Icon Type="IconType.Plus" Width="12" Height="12" /> TVDB
-                    </button>
-                }
-                @if (_program.TvdbSeriesId is not null && !_program.IsMonitored && !_program.IsMovieMatch)
-                {
-                    <button class="action-button" @onclick="OpenAddToSonarrDialog">
-                        <Icon Type="IconType.Plus" Width="12" Height="12" /> Add to Sonarr
-                    </button>
-                }
-            </div>
-        }
+        <div class="series-meta">
+            @if (_program.SeriesName is not null)
+            {
+                <span class="series-name">@_program.SeriesName</span>
+            }
+            @if (_program.TvdbUrl is not null)
+            {
+                <a class="badge--tvdb" href="@_program.TvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
+            }
+            @if (_program.RuvUrl is not null)
+            {
+                <a class="badge--ruv" href="@_program.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
+            }
+            @if (_program.TvdbSeriesId is null)
+            {
+                <button class="badge--tvdb-create" @onclick="CreateOnTvdb" title="Create series on TVDB">
+                    <Icon Type="IconType.Plus" Width="12" Height="12" /> TVDB
+                </button>
+            }
+            <button class="action-button" @onclick="OpenMatchProgramDialog" title="@GetMatchButtonLabel(_program.TvdbSeriesId, _program.IsMovieMatch)">
+                <Icon Type="IconType.Link" Width="12" Height="12" /> @GetMatchButtonLabel(_program.TvdbSeriesId, _program.IsMovieMatch)
+            </button>
+            @if (_program.TvdbSeriesId is not null && !_program.IsMonitored && !_program.IsMovieMatch)
+            {
+                <button class="action-button" @onclick="OpenAddToSonarrDialog">
+                    <Icon Type="IconType.Plus" Width="12" Height="12" /> Add to Sonarr
+                </button>
+            }
+        </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(_program.Description))
@@ -227,6 +228,7 @@ else
     }
 }
 
+<MatchProgramDialog @ref="_matchProgramDialog" OnMatchComplete="ReloadProgramAsync" />
 <MatchEpisodeDialog @ref="_matchDialog" OnMatchComplete="ReloadEpisodesAsync" />
 <AddToSonarrDialog @ref="_addToSonarrDialog" OnAddComplete="ReloadProgramAsync" />
 
@@ -245,6 +247,7 @@ else
     private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();
 
+    private MatchProgramDialog? _matchProgramDialog;
     private MatchEpisodeDialog? _matchDialog;
     private AddToSonarrDialog? _addToSonarrDialog;
     private DateTime _lastEpisodeReloadTime;
@@ -381,6 +384,18 @@ else
     private async Task OpenMatchDialog(string ruvId, int? currentTvdbId, string episodeTitle)
     {
         await _matchDialog!.OpenAsync(ruvId, currentTvdbId, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
+    }
+
+    internal static string GetMatchButtonLabel(int? tvdbSeriesId, bool isMovieMatch)
+    {
+        return tvdbSeriesId is null && !isMovieMatch ? "Match" : "Fix Match";
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task OpenMatchProgramDialog()
+    {
+        bool isFixMatch = _program!.TvdbSeriesId is not null || _program.IsMovieMatch;
+        await _matchProgramDialog!.OpenAsync(_program.ProgramRuvId, _program.TvdbSeriesId, _program.ProgramName, isFixMatch);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]

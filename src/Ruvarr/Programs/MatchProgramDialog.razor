@@ -8,7 +8,7 @@
 @inject IJSRuntime Js
 
 <dialog @ref="_dialog" @onclose="OnDialogClose">
-    <h2>Match to TVDB</h2>
+    <h2>@(_isFixMatch ? "Fix Match" : "Match to TVDB")</h2>
     @if (_isLoadingSuggestions)
     {
         <div class="dialog-spinner-container" role="status" aria-label="Loading suggestions">
@@ -65,6 +65,7 @@
     private int? _ruvId;
     private string _tvdbIdInput = string.Empty;
     private int? _currentTvdbSeriesId;
+    private bool _isFixMatch;
     private bool _isSubmitting;
     private string? _errorMessage;
     private readonly CancellationTokenSource _cts = new();
@@ -74,9 +75,10 @@
     private bool _searchFailed;
     private bool _hasSearched;
 
-    public async Task OpenAsync(int ruvId, int? currentTvdbSeriesId, string programName)
+    public async Task OpenAsync(int ruvId, int? currentTvdbSeriesId, string programName, bool isFixMatch)
     {
         _ruvId = ruvId;
+        _isFixMatch = isFixMatch;
         _currentTvdbSeriesId = currentTvdbSeriesId;
         _tvdbIdInput = currentTvdbSeriesId?.ToString() ?? string.Empty;
         _errorMessage = null;
@@ -126,6 +128,7 @@
     private void OnDialogClose()
     {
         _ruvId = null;
+        _isFixMatch = false;
         _currentTvdbSeriesId = null;
         _tvdbIdInput = string.Empty;
         _suggestions = [];

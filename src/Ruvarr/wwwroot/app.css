@@ -231,6 +231,11 @@ tbody tr:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+.icon-button:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 1px;
+}
+
 .icon-button--error {
     color: #fd4646;
 }
