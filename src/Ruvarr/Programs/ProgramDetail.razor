@@ -127,8 +127,8 @@ else
         <table>
             <thead>
                 <tr>
-                    <th>Season</th>
-                    <th>Episode</th>
+                    <th class="col-center">Season</th>
+                    <th class="col-center">Episode</th>
                     <th>First Run</th>
                     <th>Duration</th>
                     <th>Title</th>
@@ -140,8 +140,8 @@ else
                 @foreach (EpisodeSummary episode in _episodes)
                 {
                     <tr>
-                        <td class="col-number">@episode.SeasonNumber</td>
-                        <td class="col-number">@episode.EpisodeNumber</td>
+                        <td class="col-number col-center">@episode.SeasonNumber</td>
+                        <td class="col-number col-center">@episode.EpisodeNumber</td>
                         <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
                         <td class="col-duration">
                             @((int)Math.Round(episode.Duration.TotalMinutes, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
