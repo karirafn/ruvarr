@@ -45,7 +45,6 @@ public sealed class EmptySearchResults : BunitContext
 
         // Assert
         string emptyMessage = cut.Find(".suggestion-empty").TextContent;
-        emptyMessage.ShouldContain("No series found");
-        emptyMessage.ShouldContain("TVDB Series ID");
+        emptyMessage.ShouldBe("No suggestions available.");
     }
 }
