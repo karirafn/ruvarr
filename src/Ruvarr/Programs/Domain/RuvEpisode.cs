@@ -12,6 +12,7 @@ namespace Ruvarr.Programs.Domain;
 internal sealed partial class RuvEpisode
 {
     private readonly List<IDomainEvent> _domainEvents = [];
+    private readonly List<TvdbEpisode> _tvdbEpisodes = [];
 
     private RuvEpisode()
     {
@@ -33,19 +34,13 @@ internal sealed partial class RuvEpisode
 
     public required DateTime FirstRun { get; init; }
 
-    public int? TvdbId { get; private set; }
-
-    public int? SeasonNumber { get; private set; }
-
-    public int? EpisodeNumber { get; private set; }
+    public IReadOnlyList<TvdbEpisode> TvdbEpisodes => _tvdbEpisodes.AsReadOnly();
 
     public int LookupCount { get; private set; }
 
     public DateTime? Matched { get; private set; }
 
     public DateTime? NextLookup { get; private set; }
-
-    public bool IsMissing { get; private set; }
 
     public TimeSpan Duration { get; private set; }
 
@@ -74,9 +69,20 @@ internal sealed partial class RuvEpisode
 
     public override string ToString()
     {
-        if (SeasonNumber is not null && EpisodeNumber is not null)
+        if (_tvdbEpisodes.Count > 0)
         {
-            return string.Format(CultureInfo.InvariantCulture, "{0} S{1:D2}E{2:D2} - {3}", Program.Name, SeasonNumber, EpisodeNumber, Title);
+            List<TvdbEpisode> ordered = [.. _tvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber)];
+            StringBuilder sb = new();
+            sb.Append(Program.Name);
+            sb.Append(' ');
+            sb.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}", ordered[0].SeasonNumber);
+            foreach (TvdbEpisode ep in ordered)
+            {
+                sb.AppendFormat(CultureInfo.InvariantCulture, "E{0:D2}", ep.EpisodeNumber);
+            }
+            sb.Append(" - ");
+            sb.Append(Title);
+            return sb.ToString();
         }
 
         return $"{Program.Name} - {Title}";
@@ -97,9 +103,14 @@ internal sealed partial class RuvEpisode
 
         builder.Append(' ');
 
-        if (SeasonNumber is not null && EpisodeNumber is not null)
+        if (_tvdbEpisodes.Count > 0)
         {
-            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}E{1:D2}", SeasonNumber, EpisodeNumber);
+            List<TvdbEpisode> ordered = [.. _tvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber)];
+            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}", ordered[0].SeasonNumber);
+            foreach (TvdbEpisode ep in ordered)
+            {
+                builder.AppendFormat(CultureInfo.InvariantCulture, "E{0:D2}", ep.EpisodeNumber);
+            }
         }
         else
         {
@@ -140,30 +151,46 @@ internal sealed partial class RuvEpisode
 
     public void Match(int tvdbId, int season, int episode, bool isMissing)
     {
+        MatchMultiple([TvdbEpisode.Create(tvdbId, season, episode, isMissing)]);
+    }
+
+    public void MatchMultiple(IReadOnlyList<TvdbEpisode> tvdbEpisodes)
+    {
         _domainEvents.Add(new EpisodeMatchedEvent(this));
         Matched = DateTime.UtcNow;
         NextLookup = null;
-        TvdbId = tvdbId;
-        SeasonNumber = season;
-        EpisodeNumber = episode;
-        SetMissing(isMissing);
-    }
+        _tvdbEpisodes.Clear();
+        _tvdbEpisodes.AddRange(tvdbEpisodes);
 
-    public void SetMissing(bool isMissing)
-    {
-        if (isMissing && !IsMissing)
+        bool anyMissing = _tvdbEpisodes.Any(e => e.IsMissing);
+        if (anyMissing)
         {
             _domainEvents.Add(new EpisodeMissingEvent(this));
         }
+    }
 
-        IsMissing = isMissing;
+    public void UpdateMissingStatus(HashSet<int> missingTvdbIds)
+    {
+        bool wasMissing = _tvdbEpisodes.Any(e => e.IsMissing);
+
+        foreach (TvdbEpisode tvdbEpisode in _tvdbEpisodes)
+        {
+            tvdbEpisode.IsMissing = missingTvdbIds.Contains(tvdbEpisode.TvdbId);
+        }
+
+        bool nowMissing = _tvdbEpisodes.Any(e => e.IsMissing);
+
+        if (nowMissing && !wasMissing)
+        {
+            _domainEvents.Add(new EpisodeMissingEvent(this));
+        }
     }
 
     public void RequestDownload() => _domainEvents.Add(new EpisodeDownloadRequestedEvent(this));
 
     public void ScheduleLookup()
     {
-        if (TvdbId is not null)
+        if (_tvdbEpisodes.Count > 0)
         {
             return;
         }

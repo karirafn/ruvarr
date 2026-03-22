@@ -8,7 +8,7 @@ namespace Ruvarr.UnitTests.Programs.Domain.RuvEpisodeTests;
 public sealed class Match
 {
     [Fact]
-    public void SetsTvdbId()
+    public void AddsTvdbEpisodeToCollection()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
@@ -17,7 +17,8 @@ public sealed class Match
         sut.Match(tvdbId: 42, season: 1, episode: 1, isMissing: false);
 
         // Assert
-        sut.TvdbId.ShouldBe(42);
+        sut.TvdbEpisodes.ShouldHaveSingleItem();
+        sut.TvdbEpisodes[0].TvdbId.ShouldBe(42);
     }
 
     [Fact]
@@ -30,7 +31,7 @@ public sealed class Match
         sut.Match(tvdbId: 1, season: 3, episode: 1, isMissing: false);
 
         // Assert
-        sut.SeasonNumber.ShouldBe(3);
+        sut.TvdbEpisodes[0].SeasonNumber.ShouldBe(3);
     }
 
     [Fact]
@@ -43,7 +44,7 @@ public sealed class Match
         sut.Match(tvdbId: 1, season: 1, episode: 7, isMissing: false);
 
         // Assert
-        sut.EpisodeNumber.ShouldBe(7);
+        sut.TvdbEpisodes[0].EpisodeNumber.ShouldBe(7);
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public sealed class Match
         sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
 
         // Assert
-        sut.IsMissing.ShouldBeTrue();
+        sut.TvdbEpisodes[0].IsMissing.ShouldBeTrue();
     }
 
     [Fact]
@@ -99,6 +100,21 @@ public sealed class Match
         sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
 
         // Assert
-        sut.IsMissing.ShouldBeFalse();
+        sut.TvdbEpisodes[0].IsMissing.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ReplacesExistingMatches()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+
+        // Act
+        sut.Match(tvdbId: 2, season: 2, episode: 5, isMissing: false);
+
+        // Assert
+        sut.TvdbEpisodes.ShouldHaveSingleItem();
+        sut.TvdbEpisodes[0].TvdbId.ShouldBe(2);
     }
 }

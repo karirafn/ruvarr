@@ -28,8 +28,8 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
                 x.ImageUrl,
                 x.Description,
                 HasAnyEpisodes = x.Episodes.Any(),
-                AllEpisodesMatched = x.Episodes.All(e => e.TvdbId != null),
-                AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbId != null),
+                AllEpisodesMatched = x.Episodes.All(e => e.TvdbEpisodes.Any()),
+                AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbEpisodes.Any()),
                 HasMovie = x.Movie != null,
             })
             .FirstOrDefaultAsync(cancellationToken);

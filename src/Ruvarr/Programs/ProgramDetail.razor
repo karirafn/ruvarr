@@ -139,8 +139,8 @@ else
                 @foreach (EpisodeSummary episode in _episodes)
                 {
                     <tr>
-                        <td class="col-number col-center">@episode.SeasonNumber</td>
-                        <td class="col-number col-center">@episode.EpisodeNumber</td>
+                        <td class="col-number col-center">@FormatSeasons(episode.TvdbMatches)</td>
+                        <td class="col-number col-center">@FormatEpisodes(episode.TvdbMatches)</td>
                         <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
                         <td class="col-duration">
                             @((int)Math.Round(episode.Duration.TotalMinutes, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
@@ -193,7 +193,7 @@ else
                                 }
                                 @if (_program.SeriesName is not null)
                                 {
-                                    <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbId, episode.EpisodeTitle)" title="Match to TVDB">
+                                    <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbMatches, episode.EpisodeTitle)" title="Match to TVDB">
                                         <Icon Type="IconType.LinkDiagonal" Class="icon" AriaLabel="Match to TVDB" />
                                     </button>
                                 }
@@ -447,9 +447,29 @@ else
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task OpenMatchDialog(string ruvId, int? currentTvdbId, string episodeTitle)
+    private async Task OpenMatchDialog(string ruvId, IReadOnlyList<EpisodeMatchSummary> currentMatches, string episodeTitle)
     {
-        await _matchDialog!.OpenAsync(ruvId, currentTvdbId, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
+        await _matchDialog!.OpenAsync(ruvId, currentMatches, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
+    }
+
+    internal static string FormatSeasons(IReadOnlyList<EpisodeMatchSummary> matches)
+    {
+        if (matches.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(", ", matches.Select(m => m.SeasonNumber).Distinct().Order());
+    }
+
+    internal static string FormatEpisodes(IReadOnlyList<EpisodeMatchSummary> matches)
+    {
+        if (matches.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(", ", matches.Select(m => m.EpisodeNumber).Order());
     }
 
     internal static string GetMatchButtonLabel(int? tvdbSeriesId, bool isMovieMatch)

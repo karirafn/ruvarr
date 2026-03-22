@@ -87,13 +87,13 @@ public sealed class Create
     }
 
     [Fact]
-    public void TvdbIdIsNull()
+    public void TvdbEpisodesIsEmpty()
     {
         // Arrange / Act
         RuvEpisode result = new RuvEpisodeBuilder().Build();
 
         // Assert
-        result.TvdbId.ShouldBeNull();
+        result.TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]

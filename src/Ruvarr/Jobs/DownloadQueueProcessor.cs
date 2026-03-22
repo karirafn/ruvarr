@@ -26,7 +26,9 @@ internal class DownloadQueueProcessor(
 
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
             .Include(x => x.Episode)
-            .ThenInclude(x => x.Program)
+                .ThenInclude(x => x.Program)
+            .Include(x => x.Episode)
+                .ThenInclude(x => x.TvdbEpisodes)
             .Where(x => x.Status == DownloadQueueStatus.Pending)
             .OrderBy(x => x.Created)
             .FirstOrDefaultAsync();
@@ -90,20 +92,30 @@ internal class DownloadQueueProcessor(
 
         await dbContext.SaveChangesAsync();
 
-        if (item.Episode.TvdbId == null)
+        if (item.Episode.TvdbEpisodes.Count == 0)
         {
             logger.LogDebug("Episode is not matched with TVDB. Skipping Sonarr import");
             return;
         }
 
         IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+        Dictionary<int, MissingEpisode> missingByTvdbId = missingEpisodes.ToDictionary(x => x.TvdbId);
 
-        MissingEpisode? missingEpisode = missingEpisodes.FirstOrDefault(x => x.TvdbId == item.Episode.TvdbId);
+        List<int> episodeIds = [.. item.Episode.TvdbEpisodes
+            .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
+            .OfType<MissingEpisode>()
+            .Select(m => m.Id)];
 
-        if (missingEpisode is null)
+        int? seriesId = item.Episode.TvdbEpisodes
+            .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
+            .OfType<MissingEpisode>()
+            .Select(m => (int?)m.SeriesId)
+            .FirstOrDefault();
+
+        if (episodeIds.Count == 0 || seriesId is null)
         {
             logger.LogError(
-                "{Episode} was scheduled for manual import into Sonarr but was not found in missing episodes.",
+                "{Episode} was scheduled for manual import into Sonarr but none of its matched episodes were found in missing episodes.",
                 item.Episode.ToString());
             return;
         }
@@ -113,8 +125,8 @@ internal class DownloadQueueProcessor(
         ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
         ManualImportRequest request = new(
             Path: file.Path,
-            SeriesId: missingEpisode.SeriesId,
-            EpisodeIds: [missingEpisode.Id],
+            SeriesId: seriesId.Value,
+            EpisodeIds: episodeIds,
             Quality: file.Quality,
             Languages: file.Languages,
             ReleaseGroup: "RUV");

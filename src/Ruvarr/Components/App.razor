@@ -15,6 +15,7 @@
         window.showDialog = (el) => el.showModal();
         window.closeDialog = (el) => el.close();
         window.copyToClipboard = async (text) => { try { await navigator.clipboard.writeText(text); } catch {} };
+        window.focusElement = (el) => { if (el) el.focus(); };
         window._trackedScrollY = 0;
         window._scrollTracker = null;
         window.startScrollTracking = () => {

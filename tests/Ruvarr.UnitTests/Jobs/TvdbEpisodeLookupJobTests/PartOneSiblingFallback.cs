@@ -79,12 +79,12 @@ public sealed class PartOneSiblingFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(501);
-        program.Episodes[0].SeasonNumber.ShouldBe(1);
-        program.Episodes[0].EpisodeNumber.ShouldBe(3);
-        program.Episodes[1].TvdbId.ShouldBe(502);
-        program.Episodes[1].SeasonNumber.ShouldBe(1);
-        program.Episodes[1].EpisodeNumber.ShouldBe(4);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(501);
+        program.Episodes[0].TvdbEpisodes[0].SeasonNumber.ShouldBe(1);
+        program.Episodes[0].TvdbEpisodes[0].EpisodeNumber.ShouldBe(3);
+        program.Episodes[1].TvdbEpisodes[0].TvdbId.ShouldBe(502);
+        program.Episodes[1].TvdbEpisodes[0].SeasonNumber.ShouldBe(1);
+        program.Episodes[1].TvdbEpisodes[0].EpisodeNumber.ShouldBe(4);
     }
 
     [Fact]
@@ -127,10 +127,10 @@ public sealed class PartOneSiblingFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(601);
-        program.Episodes[1].TvdbId.ShouldBe(602);
-        program.Episodes[1].SeasonNumber.ShouldBe(2);
-        program.Episodes[1].EpisodeNumber.ShouldBe(6);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(601);
+        program.Episodes[1].TvdbEpisodes[0].TvdbId.ShouldBe(602);
+        program.Episodes[1].TvdbEpisodes[0].SeasonNumber.ShouldBe(2);
+        program.Episodes[1].TvdbEpisodes[0].EpisodeNumber.ShouldBe(6);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public sealed class PartOneSiblingFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[1].TvdbId.ShouldBeNull();
+        program.Episodes[1].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -199,8 +199,8 @@ public sealed class PartOneSiblingFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(501);
-        program.Episodes[1].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(501);
+        program.Episodes[1].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -244,8 +244,8 @@ public sealed class PartOneSiblingFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(501);
-        program.Episodes[1].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(501);
+        program.Episodes[1].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -288,10 +288,10 @@ public sealed class PartOneSiblingFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(501);
-        program.Episodes[1].TvdbId.ShouldBe(502);
-        program.Episodes[1].SeasonNumber.ShouldBe(1);
-        program.Episodes[1].EpisodeNumber.ShouldBe(4);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(501);
+        program.Episodes[1].TvdbEpisodes[0].TvdbId.ShouldBe(502);
+        program.Episodes[1].TvdbEpisodes[0].SeasonNumber.ShouldBe(1);
+        program.Episodes[1].TvdbEpisodes[0].EpisodeNumber.ShouldBe(4);
     }
 
     [Fact]
@@ -315,6 +315,6 @@ public sealed class PartOneSiblingFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 }

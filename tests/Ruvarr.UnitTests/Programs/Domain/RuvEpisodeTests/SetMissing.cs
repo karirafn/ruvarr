@@ -10,9 +10,12 @@ public sealed class SetMissing
     [Fact]
     public void IsFalseByDefault()
     {
+        // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
 
-        sut.IsMissing.ShouldBeFalse();
+        // Assert
+        sut.TvdbEpisodes[0].IsMissing.ShouldBeFalse();
     }
 
     [Fact]
@@ -20,12 +23,13 @@ public sealed class SetMissing
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
 
         // Act
-        sut.SetMissing(true);
+        sut.UpdateMissingStatus(new HashSet<int> { 1 });
 
         // Assert
-        sut.IsMissing.ShouldBeTrue();
+        sut.TvdbEpisodes[0].IsMissing.ShouldBeTrue();
     }
 
     [Fact]
@@ -33,12 +37,12 @@ public sealed class SetMissing
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.SetMissing(true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
 
         // Act
-        sut.SetMissing(false);
+        sut.UpdateMissingStatus([]);
 
         // Assert
-        sut.IsMissing.ShouldBeFalse();
+        sut.TvdbEpisodes[0].IsMissing.ShouldBeFalse();
     }
 }

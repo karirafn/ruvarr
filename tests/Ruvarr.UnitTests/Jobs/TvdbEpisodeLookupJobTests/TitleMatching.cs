@@ -69,7 +69,7 @@ public sealed class TitleMatching
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(101);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(101);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class TitleMatching
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class TitleMatching
 
         // Assert
         _ = _tvdb.DidNotReceive().GetEpisodeTranslationAsync(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public sealed class TitleMatching
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -191,9 +191,9 @@ public sealed class TitleMatching
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(101);
-        program.Episodes[1].TvdbId.ShouldBe(102);
-        program.Episodes[2].TvdbId.ShouldBe(103);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(101);
+        program.Episodes[1].TvdbEpisodes[0].TvdbId.ShouldBe(102);
+        program.Episodes[2].TvdbEpisodes[0].TvdbId.ShouldBe(103);
         await _tvdb.Received(3).GetEpisodeTranslationAsync(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -228,7 +228,7 @@ public sealed class TitleMatching
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].IsMissing.ShouldBeTrue();
+        program.Episodes[0].TvdbEpisodes[0].IsMissing.ShouldBeTrue();
     }
 
     [Fact]
@@ -263,6 +263,6 @@ public sealed class TitleMatching
         // Assert
         await _tvdb.DidNotReceive().GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _tvdb.Received(1).GetEpisodeTranslationAsync(102, Arg.Any<string>(), Arg.Any<CancellationToken>());
-        program.Episodes[1].TvdbId.ShouldBe(102);
+        program.Episodes[1].TvdbEpisodes[0].TvdbId.ShouldBe(102);
     }
 }

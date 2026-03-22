@@ -1,4 +1,4 @@
-﻿using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -68,5 +68,30 @@ public sealed class ToFilename
 
         // Assert
         result.ShouldBe("Awesome.Show.S02E03-RUV.mp4");
+    }
+
+    [Fact]
+    public void ReturnsMultiEpisodeFilename_WhenMatchedToMultipleEpisodes()
+    {
+        // Arrange
+        TvdbSeries series = new TvdbSeriesBuilder()
+            .WithName("Awesome Show")
+            .Build();
+        RuvProgram program = new RuvProgramBuilder().Build();
+        program.MatchTvdb(series);
+        RuvEpisode sut = new RuvEpisodeBuilder()
+            .WithProgram(program)
+            .Build();
+        sut.MatchMultiple(
+        [
+            TvdbEpisode.Create(100, 1, 1, false),
+            TvdbEpisode.Create(101, 1, 2, false),
+        ]);
+
+        // Act
+        string result = sut.ToFilename();
+
+        // Assert
+        result.ShouldBe("Awesome.Show.S01E01E02-RUV.mp4");
     }
 }

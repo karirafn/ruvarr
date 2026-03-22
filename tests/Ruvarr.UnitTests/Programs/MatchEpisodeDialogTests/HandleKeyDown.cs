@@ -40,7 +40,7 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
         await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 
         // Season auto-selected, episode auto-selected via title parsing
@@ -60,7 +60,7 @@ public sealed class HandleKeyDown : BunitContext
             .Returns([new TvdbSeriesEpisode(99999, "Test Episode", 1, 1)]);
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null, tvdbSeriesId: 42, episodeTitle: "Mynd", siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "Mynd", siblingEpisodes: []);
         await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 
         // Episode not auto-selected because title doesn't match "þáttur N" pattern
@@ -72,14 +72,15 @@ public sealed class HandleKeyDown : BunitContext
     }
 
     [Fact]
-    public async Task EnterKey_WhenSelectedMatchesCurrentTvdbId_DoesNotInvokeSubmitMatch()
+    public async Task EnterKey_WhenSelectedMatchesCurrentMatches_DoesNotInvokeSubmitMatch()
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: 99999, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        List<EpisodeMatchSummary> currentMatches = [new(99999, 1, 1, false)];
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
         await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 
-        // Episode auto-selected to 99999 which equals currentTvdbId
+        // Episode auto-selected to 99999 which equals current match
         // Act
         await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
@@ -92,7 +93,7 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentTvdbId: null, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
         await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 
         // Act

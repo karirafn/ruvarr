@@ -51,8 +51,8 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
 
         // Assert
         result.Count.ShouldBe(2);
-        result[0].EpisodeNumber.ShouldBe(1);
-        result[1].EpisodeNumber.ShouldBe(2);
+        result[0].TvdbMatches[0].EpisodeNumber.ShouldBe(1);
+        result[1].TvdbMatches[0].EpisodeNumber.ShouldBe(2);
     }
 
     [Fact]

@@ -40,8 +40,6 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
 
         builder.Property<int>("program_id");
 
-        builder.HasIndex("program_id", nameof(RuvEpisode.TvdbId));
-
         builder.Property(x => x.Duration)
             .HasConversion(
                 v => (long)v.TotalSeconds,
@@ -49,6 +47,16 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
             .HasColumnName("duration_seconds");
 
         builder.Ignore(x => x.RuvUrl);
+
+        builder.HasMany(x => x.TvdbEpisodes)
+            .WithOne()
+            .HasForeignKey("episode_id")
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata
+            .FindNavigation(nameof(RuvEpisode.TvdbEpisodes))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasOne(x => x.DownloadQueueItem)
             .WithOne(x => x.Episode)

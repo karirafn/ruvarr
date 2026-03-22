@@ -39,6 +39,8 @@ internal sealed class TvdbEpisodeLookupJob(
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Include(x => x.Series)
+            .Include(x => x.Episodes)
+                .ThenInclude(x => x.TvdbEpisodes)
             .Where(x => x.RuvId == ruvId)
             .FirstOrDefaultAsync();
 
@@ -75,7 +77,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
     private async Task MatchByTranslationAsync(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
     {
-        HashSet<int> matchedIds = [.. program.Episodes.Select(x => x.TvdbId).OfType<int>()];
+        HashSet<int> matchedIds = [.. program.Episodes.SelectMany(x => x.TvdbEpisodes).Select(x => x.TvdbId)];
 
         logger.LogDebug("Series {Name} has {Count} episodes", seriesData.Series.Name, seriesData.Episodes.Count);
         List<Episode> translatedEpisodes = [.. seriesData.Episodes
@@ -128,7 +130,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
     private void MatchByEpisodeNumber(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
     {
-        List<RuvEpisode> unmatchedEpisodes = [.. program.Episodes.Where(x => x.TvdbId is null)];
+        List<RuvEpisode> unmatchedEpisodes = [.. program.Episodes.Where(x => x.TvdbEpisodes.Count == 0)];
 
         if (unmatchedEpisodes.Count > 0)
         {
@@ -171,7 +173,7 @@ internal sealed class TvdbEpisodeLookupJob(
     private void MatchByPartOneSibling(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
     {
         List<RuvEpisode> unmatchedPartTwoEpisodes = [.. program.Episodes
-            .Where(x => x.TvdbId is null)
+            .Where(x => x.TvdbEpisodes.Count == 0)
             .Where(x => RuvEpisode.IsPartTwo(x.Title))];
 
         foreach (RuvEpisode partTwoEpisode in unmatchedPartTwoEpisodes)
@@ -179,7 +181,7 @@ internal sealed class TvdbEpisodeLookupJob(
             string partOneTitle = RuvEpisode.ToPartOneTitle(partTwoEpisode.Title);
 
             RuvEpisode? partOneSibling = program.Episodes
-                .FirstOrDefault(x => x.TvdbId is not null
+                .FirstOrDefault(x => x.TvdbEpisodes.Count > 0
                     && x.Title.Equals(partOneTitle, StringComparison.OrdinalIgnoreCase));
 
             if (partOneSibling is null)
@@ -187,8 +189,14 @@ internal sealed class TvdbEpisodeLookupJob(
                 continue;
             }
 
+            TvdbEpisode? firstMatch = partOneSibling.TvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).FirstOrDefault();
+            if (firstMatch is null)
+            {
+                continue;
+            }
+
             Episode? tvdbPartOneEpisode = seriesData.Episodes
-                .FirstOrDefault(x => x.Id == partOneSibling.TvdbId);
+                .FirstOrDefault(x => x.Id == firstMatch.TvdbId);
 
             if (tvdbPartOneEpisode is null)
             {
@@ -238,7 +246,7 @@ internal sealed class TvdbEpisodeLookupJob(
 
     private async Task ScheduleLookupAsync(RuvProgram program)
     {
-        foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbId is null))
+        foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbEpisodes.Count == 0))
         {
             episode.ScheduleLookup();
         }

@@ -86,7 +86,7 @@ public sealed class EarlyReturns
 
         // Assert
         _ = _tvdb.DidNotReceive().GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]

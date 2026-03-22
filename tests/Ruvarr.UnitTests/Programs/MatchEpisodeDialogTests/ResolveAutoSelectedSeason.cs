@@ -44,24 +44,6 @@ public sealed class ResolveAutoSelectedSeason
     }
 
     [Fact]
-    public void IgnoresNullSeasonFromSiblings()
-    {
-        // Arrange
-        List<EpisodeSummary> siblings =
-        [
-            CreateEpisode(seasonNumber: null),
-            CreateEpisode(seasonNumber: 3),
-        ];
-        List<int> availableSeasons = [1, 2, 3];
-
-        // Act
-        int? result = MatchEpisodeDialog.ResolveAutoSelectedSeason(siblings, availableSeasons);
-
-        // Assert
-        result.ShouldBe(3);
-    }
-
-    [Fact]
     public void FallsBackToFirstAvailableSeasonWhenNoSiblingMatches()
     {
         // Arrange
@@ -107,7 +89,7 @@ public sealed class ResolveAutoSelectedSeason
     }
 
     [Fact]
-    public void FallsBackToFirstAvailableWhenAllSiblingsHaveNullSeason()
+    public void FallsBackToFirstAvailableWhenAllSiblingsUnmatched()
     {
         // Arrange
         List<EpisodeSummary> siblings =
@@ -124,15 +106,19 @@ public sealed class ResolveAutoSelectedSeason
         result.ShouldBe(2);
     }
 
-    private static EpisodeSummary CreateEpisode(int? seasonNumber) => new(
-        EpisodeTitle: "Test",
-        EpisodeRuvId: Guid.NewGuid().ToString()[..6],
-        EpisodeDescription: "",
-        TvdbId: seasonNumber is not null ? 100 : null,
-        SeasonNumber: seasonNumber,
-        EpisodeNumber: 1,
-        FirstRun: DateTime.UtcNow,
-        IsMissing: false,
-        RuvUrl: null,
-        Duration: TimeSpan.Zero);
+    private static EpisodeSummary CreateEpisode(int? seasonNumber)
+    {
+        IReadOnlyList<EpisodeMatchSummary> matches = seasonNumber is not null
+            ? [new EpisodeMatchSummary(100, seasonNumber.Value, 1, false)]
+            : [];
+
+        return new(
+            EpisodeTitle: "Test",
+            EpisodeRuvId: Guid.NewGuid().ToString()[..6],
+            EpisodeDescription: "",
+            TvdbMatches: matches,
+            FirstRun: DateTime.UtcNow,
+            RuvUrl: null,
+            Duration: TimeSpan.Zero);
+    }
 }

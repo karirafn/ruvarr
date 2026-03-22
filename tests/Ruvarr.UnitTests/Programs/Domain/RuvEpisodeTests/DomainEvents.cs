@@ -9,13 +9,15 @@ namespace Ruvarr.UnitTests.Programs.Domain.RuvEpisodeTests;
 public sealed class DomainEvents
 {
     [Fact]
-    public void SetMissing_WhenTransitioningToTrue_RaisesEpisodeMissingEvent()
+    public void UpdateMissingStatus_WhenTransitioningToTrue_RaisesEpisodeMissingEvent()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.ClearDomainEvents();
 
         // Act
-        sut.SetMissing(true);
+        sut.UpdateMissingStatus(new HashSet<int> { 1 });
 
         // Assert
         EpisodeMissingEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMissingEvent>();
@@ -23,28 +25,30 @@ public sealed class DomainEvents
     }
 
     [Fact]
-    public void SetMissing_WhenAlreadyMissing_DoesNotRaiseSecondEvent()
+    public void UpdateMissingStatus_WhenAlreadyMissing_DoesNotRaiseSecondEvent()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.SetMissing(true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
         sut.ClearDomainEvents();
 
         // Act
-        sut.SetMissing(true);
+        sut.UpdateMissingStatus(new HashSet<int> { 1 });
 
         // Assert
         sut.DomainEvents.ShouldBeEmpty();
     }
 
     [Fact]
-    public void SetMissing_WhenFalse_DoesNotRaiseEvent()
+    public void UpdateMissingStatus_WhenFalse_DoesNotRaiseEvent()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.ClearDomainEvents();
 
         // Act
-        sut.SetMissing(false);
+        sut.UpdateMissingStatus([]);
 
         // Assert
         sut.DomainEvents.ShouldBeEmpty();
@@ -55,7 +59,7 @@ public sealed class DomainEvents
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.SetMissing(true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
 
         // Act
         sut.ClearDomainEvents();

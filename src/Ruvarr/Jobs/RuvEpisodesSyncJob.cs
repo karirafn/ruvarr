@@ -37,6 +37,8 @@ internal sealed class RuvEpisodesSyncJob(
         }
 
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
+            .Include(x => x.Episodes)
+                .ThenInclude(x => x.TvdbEpisodes)
             .Where(x => ruvIds.Contains(x.RuvId))
             .Where(x => x.HasMultipleEpisodes)
             .ToListAsync();
@@ -106,9 +108,9 @@ internal sealed class RuvEpisodesSyncJob(
                 program.RemoveEpisode(episode);
             }
 
-            foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbId is not null))
+            foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbEpisodes.Count > 0))
             {
-                episode.SetMissing(missingTvdbIds.Contains(episode.TvdbId!.Value));
+                episode.UpdateMissingStatus(missingTvdbIds);
             }
 
             bool isMonitored = program.Series is not null &&
