@@ -12,7 +12,7 @@ internal sealed class GetDownloadQueueHandler(RuvarrDbContext dbContext)
     public async Task<List<DownloadQueueItemSummary>> Handle(GetDownloadQueueQuery request, CancellationToken cancellationToken)
     {
         IQueryable<DownloadQueueItem> query = dbContext.Set<DownloadQueueItem>()
-            .Where(x => x.Episode != null);
+            .AsQueryable();
 
         if (!request.IncludeDownloaded)
         {
@@ -24,9 +24,9 @@ internal sealed class GetDownloadQueueHandler(RuvarrDbContext dbContext)
             .ThenByDescending(x => x.Status == DownloadQueueStatus.Downloading)
             .ThenBy(x => x.Created)
             .Select(x => new DownloadQueueItemSummary(
-                x.Episode!.RuvId,
-                x.Episode!.Title,
-                x.Episode!.Program.Name,
+                x.Episode.RuvId,
+                x.Episode.Title,
+                x.Episode.Program.Name,
                 x.Created,
                 x.Downloaded,
                 x.Status))

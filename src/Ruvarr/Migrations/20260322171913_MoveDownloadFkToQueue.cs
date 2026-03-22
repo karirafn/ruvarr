@@ -14,7 +14,8 @@ namespace Ruvarr.Migrations
                 name: "episode_id",
                 table: "download_queue",
                 type: "INTEGER",
-                nullable: true);
+                nullable: false,
+                defaultValue: 0);
 
             migrationBuilder.Sql(
                 "UPDATE download_queue SET episode_id = (SELECT e.id FROM episodes e WHERE e.download_queue_item_id = download_queue.id)");

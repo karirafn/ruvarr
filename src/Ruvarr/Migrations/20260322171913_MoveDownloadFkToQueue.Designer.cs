@@ -11,7 +11,7 @@ using Ruvarr;
 namespace Ruvarr.Migrations
 {
     [DbContext(typeof(RuvarrDbContext))]
-    [Migration("20260322144242_MoveDownloadFkToQueue")]
+    [Migration("20260322171913_MoveDownloadFkToQueue")]
     partial class MoveDownloadFkToQueue
     {
         /// <inheritdoc />
@@ -40,7 +40,7 @@ namespace Ruvarr.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("status");
 
-                    b.Property<int?>("episode_id")
+                    b.Property<int>("episode_id")
                         .HasColumnType("INTEGER")
                         .HasColumnName("episode_id");
 
@@ -341,6 +341,7 @@ namespace Ruvarr.Migrations
                         .WithMany("DownloadQueueItems")
                         .HasForeignKey("episode_id")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
                         .HasConstraintName("fk_download_queue_episodes_episode_id");
 
                     b.Navigation("Episode");
