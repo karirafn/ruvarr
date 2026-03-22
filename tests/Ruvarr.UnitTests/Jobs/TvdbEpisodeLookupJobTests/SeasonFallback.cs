@@ -61,8 +61,8 @@ public sealed class SeasonFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(201);
-        program.Episodes[0].SeasonNumber.ShouldBe(2);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(201);
+        program.Episodes[0].TvdbEpisodes[0].SeasonNumber.ShouldBe(2);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class SeasonFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
         program.Episodes[0].NextLookup.ShouldNotBeNull();
     }
 
@@ -116,7 +116,7 @@ public sealed class SeasonFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class SeasonFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -187,8 +187,8 @@ public sealed class SeasonFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(101);
-        program.Episodes[1].TvdbId.ShouldBe(202);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(101);
+        program.Episodes[1].TvdbEpisodes[0].TvdbId.ShouldBe(202);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public sealed class SeasonFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBeNull();
+        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -242,7 +242,7 @@ public sealed class SeasonFallback
         await sut.Execute(null!);
 
         // Assert
-        program.Episodes[0].TvdbId.ShouldBe(301);
-        program.Episodes[0].SeasonNumber.ShouldBe(3);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(301);
+        program.Episodes[0].TvdbEpisodes[0].SeasonNumber.ShouldBe(3);
     }
 }

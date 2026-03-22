@@ -4,10 +4,7 @@ public sealed record EpisodeSummary(
     string EpisodeTitle,
     string EpisodeRuvId,
     string EpisodeDescription,
-    int? TvdbId,
-    int? SeasonNumber,
-    int? EpisodeNumber,
+    IReadOnlyList<EpisodeMatchSummary> TvdbMatches,
     DateTime FirstRun,
-    bool IsMissing,
     Uri? RuvUrl,
     TimeSpan Duration);

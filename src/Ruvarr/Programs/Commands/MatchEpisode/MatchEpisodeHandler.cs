@@ -19,9 +19,15 @@ internal sealed class MatchEpisodeHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        if (command.TvdbIds.Count > 10)
+        {
+            return ProgramErrors.TooManyTvdbIds;
+        }
+
         logger.LogDebug("Matching episode with Ruv ID {RuvId}", command.RuvId);
         RuvEpisode? episode = await dbContext.Set<RuvEpisode>()
             .Include(x => x.Program)
+            .Include(x => x.TvdbEpisodes)
             .Where(x => x.RuvId == command.RuvId)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -31,23 +37,29 @@ internal sealed class MatchEpisodeHandler(
             return ProgramErrors.EpisodeNotFound;
         }
 
-        Episode? tvdbEpisode = await tvdb.GetEpisodeAsync(command.TvdbId, cancellationToken);
-        if (tvdbEpisode is null)
+        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
+        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+
+        List<TvdbEpisode> tvdbEpisodes = [];
+        foreach (int tvdbId in command.TvdbIds)
         {
-            logger.LogWarning("TVDB episode with TVDB id {TvdbId} not found", command.TvdbId);
-            return TvdbErrors.EpisodeNotFound;
+            Episode? tvdbEpisode = await tvdb.GetEpisodeAsync(tvdbId, cancellationToken);
+            if (tvdbEpisode is null)
+            {
+                logger.LogWarning("TVDB episode with TVDB id {TvdbId} not found", tvdbId);
+                return TvdbErrors.EpisodeNotFound;
+            }
+
+            tvdbEpisodes.Add(TvdbEpisode.Create(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id)));
         }
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
-        bool isMissing = missingEpisodes.Any(x => x.TvdbId == tvdbEpisode.Id);
-
-        episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, isMissing);
+        episode.MatchMultiple(tvdbEpisodes);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Matched RÚV episode {Episode} with TVDB episode {TvdbEpisodeName}",
+            "Matched RÚV episode {Episode} with {Count} TVDB episode(s)",
             episode.ToString(),
-            tvdbEpisode.Name);
+            tvdbEpisodes.Count);
 
         return RuvarrResult.Success;
     }

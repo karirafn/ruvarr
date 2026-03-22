@@ -34,4 +34,8 @@ public static class ProgramErrors
     public static RuvarrError SeasonUndetermined => new(
         "Episodes.SeasonUndetermined",
         "TVDB has multiple seasons. Failed to determine which season the RÚV episodes are from.");
+
+    public static RuvarrError TooManyTvdbIds => new(
+        "Episodes.TooManyTvdbIds",
+        "Cannot match more than 10 TVDB episodes at once.");
 }

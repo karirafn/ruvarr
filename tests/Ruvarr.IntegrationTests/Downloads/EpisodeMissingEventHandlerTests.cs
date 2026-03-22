@@ -37,9 +37,11 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
+        episode.Match(tvdbId: 1001, season: 1, episode: 1, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        episode.SetMissing(true);
+        episode.UpdateMissingStatus(new HashSet<int> { 1001 });
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Assert — the episode now has a queue item
@@ -69,11 +71,12 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
+        episode.Match(tvdbId: 2001, season: 1, episode: 1, isMissing: false);
         dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Act — episode already has a queue item; SetMissing(true) should not add another
-        episode.SetMissing(true);
+        // Act — episode already has a queue item; UpdateMissingStatus should not add another
+        episode.UpdateMissingStatus(new HashSet<int> { 2001 });
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Assert — still exactly one queue item for this episode

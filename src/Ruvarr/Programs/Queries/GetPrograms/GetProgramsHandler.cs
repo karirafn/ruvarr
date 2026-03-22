@@ -73,16 +73,16 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 EpisodeMatchStatus.FullyMatched => query.Where(x =>
                     x.Series != null &&
                     x.Episodes.Any() &&
-                    x.Episodes.All(e => e.TvdbId != null)),
+                    x.Episodes.All(e => e.TvdbEpisodes.Any())),
                 EpisodeMatchStatus.PartiallyMatched => query.Where(x =>
                     x.Series != null &&
                     x.Episodes.Any() &&
-                    x.Episodes.Any(e => e.TvdbId != null) &&
-                    !x.Episodes.All(e => e.TvdbId != null)),
+                    x.Episodes.Any(e => e.TvdbEpisodes.Any()) &&
+                    !x.Episodes.All(e => e.TvdbEpisodes.Any())),
                 _ => query.Where(x =>
                     x.Series == null ||
                     !x.Episodes.Any() ||
-                    !x.Episodes.Any(e => e.TvdbId != null)),
+                    !x.Episodes.Any(e => e.TvdbEpisodes.Any())),
             };
         }
 
@@ -102,8 +102,8 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 SeriesTvdbId = (int?)x.Series!.TvdbId,
                 HasSeries = x.Series != null,
                 HasAnyEpisodes = x.Episodes.Any(),
-                AllEpisodesMatched = x.Episodes.All(e => e.TvdbId != null),
-                AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbId != null),
+                AllEpisodesMatched = x.Episodes.All(e => e.TvdbEpisodes.Any()),
+                AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbEpisodes.Any()),
                 HasMovie = x.Movie != null,
             })
             .AsAsyncEnumerable()
