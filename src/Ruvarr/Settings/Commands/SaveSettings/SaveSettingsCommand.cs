@@ -6,5 +6,4 @@ public sealed record SaveSettingsCommand(
     string DownloadsRootDirectory,
     string EpisodeDownloadDirectory,
     string MovieDownloadDirectory,
-    IReadOnlyList<string> IgnoredChannels,
-    string FfmpegPath);
+    IReadOnlyList<string> IgnoredChannels);

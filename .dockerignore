@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+data/
+tests/
+.env
+.git/
+.github/
+.vs/
+*.user
+*.suo
+*.md
+LICENSE
+Dockerfile
+docker-compose.yml

@@ -1,0 +1,9 @@
+services:
+  ruvarr:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src/Ruvarr/data:/app/data

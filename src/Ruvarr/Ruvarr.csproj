@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <UserSecretsId>b1e7724b-8ae0-48bc-be48-bf7f39922201</UserSecretsId>
-    <NoWarn>$(NoWarn);CA1515</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

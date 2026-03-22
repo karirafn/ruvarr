@@ -45,8 +45,7 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
             sonarrApiKey,
             command.DownloadsRootDirectory,
             command.EpisodeDownloadDirectory,
-            command.MovieDownloadDirectory,
-            command.FfmpegPath)
+            command.MovieDownloadDirectory)
         {
             IgnoredChannels = command.IgnoredChannels
         };

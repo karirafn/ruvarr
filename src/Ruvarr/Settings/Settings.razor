@@ -117,7 +117,6 @@ else
     private string _episodeDownloadDirectory = string.Empty;
     private string _movieDownloadDirectory = string.Empty;
     private IReadOnlyList<string> _ignoredChannels = [];
-    private string _ffmpegPath = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,7 +135,6 @@ else
             _episodeDownloadDirectory = settings.EpisodeDownloadDirectory;
             _movieDownloadDirectory = settings.MovieDownloadDirectory;
             _ignoredChannels = settings.IgnoredChannels;
-            _ffmpegPath = settings.FfmpegPath;
         }
 
         _loading = false;
@@ -164,8 +162,7 @@ else
             _downloadsRootDirectory,
             _episodeDownloadDirectory,
             _movieDownloadDirectory,
-            _ignoredChannels,
-            _ffmpegPath);
+            _ignoredChannels);
 
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<SaveSettingsCommand> handler =

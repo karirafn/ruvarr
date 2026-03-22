@@ -8,6 +8,9 @@
     <File Path="LICENSE" />
     <File Path="nuget.config" />
   </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
   <Folder Name="/src/">
     <Project Path="src/Ruvarr/Ruvarr.csproj" />
   </Folder>

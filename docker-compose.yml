@@ -1,0 +1,16 @@
+services:
+  ruvarr:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ruvarr-data:/app/data
+      # Uncomment and adjust the paths below to enable episode/movie downloads:
+      # - /path/to/episodes:/downloads/episodes
+      # - /path/to/movies:/downloads/movies
+
+volumes:
+  ruvarr-data:

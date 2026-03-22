@@ -5,8 +5,7 @@ internal sealed record RuvarrSettings(
     string SonarrApiKey = "",
     string DownloadsRootDirectory = "",
     string EpisodeDownloadDirectory = "",
-    string MovieDownloadDirectory = "",
-    string FfmpegPath = "")
+    string MovieDownloadDirectory = "")
 {
     public IReadOnlyList<string> IgnoredChannels { get; init; } = [];
 
