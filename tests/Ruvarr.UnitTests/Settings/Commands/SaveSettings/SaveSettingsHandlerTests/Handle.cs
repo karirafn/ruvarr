@@ -33,7 +33,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, [], "");
+        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -52,7 +52,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri(url), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, [], "");
+        SaveSettingsCommand command = new(new Uri(url), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -68,7 +68,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "/nonexistent/directory", _tempDirectory, _tempDirectory, [], "");
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "/nonexistent/directory", _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -83,7 +83,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, "/nonexistent/directory", _tempDirectory, [], "");
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, "/nonexistent/directory", _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -98,7 +98,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, _tempDirectory, "/nonexistent/directory", [], "");
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, _tempDirectory, "/nonexistent/directory", []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -114,7 +114,7 @@ public sealed class Handle : IDisposable
         // Arrange
         _store.Current.Returns(new RuvarrSettings(SonarrApiKey: "real-secret-key"));
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "****", _tempDirectory, _tempDirectory, _tempDirectory, [], "");
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "****", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -132,7 +132,7 @@ public sealed class Handle : IDisposable
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
         Uri baseUrl = new("http://localhost:8989");
-        SaveSettingsCommand command = new(baseUrl, "api-key", _tempDirectory, _tempDirectory, _tempDirectory, [], "/usr/bin/ffmpeg");
+        SaveSettingsCommand command = new(baseUrl, "api-key", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -145,8 +145,7 @@ public sealed class Handle : IDisposable
                 s.SonarrApiKey == "api-key" &&
                 s.DownloadsRootDirectory == _tempDirectory &&
                 s.EpisodeDownloadDirectory == _tempDirectory &&
-                s.MovieDownloadDirectory == _tempDirectory &&
-                s.FfmpegPath == "/usr/bin/ffmpeg"),
+                s.MovieDownloadDirectory == _tempDirectory),
             Arg.Any<CancellationToken>());
     }
 }

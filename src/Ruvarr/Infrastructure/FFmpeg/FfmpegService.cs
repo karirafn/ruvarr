@@ -1,11 +1,11 @@
 using System.Diagnostics;
 
-using Ruvarr.Settings;
-
 namespace Ruvarr.Infrastructure.FFmpeg;
 
-internal sealed class FfmpegService(ISettingsStore settingsStore) : IFfmpegService
+internal sealed class FfmpegService(IConfiguration configuration) : IFfmpegService
 {
+    private readonly string _ffmpegPath = configuration.GetValue("Ruvarr:FfmpegPath", "ffmpeg")!;
+
     public async Task DownloadAsync(Uri uri, string filepath, string title)
     {
         List<string> argumentList = new FfmpegArgumentsBuilder()
@@ -22,7 +22,7 @@ internal sealed class FfmpegService(ISettingsStore settingsStore) : IFfmpegServi
 
         ProcessStartInfo psi = new()
         {
-            FileName = settingsStore.Current.FfmpegPath,
+            FileName = _ffmpegPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
