@@ -1,24 +1,25 @@
+using Microsoft.EntityFrameworkCore;
+
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
-using Ruvarr.Programs.Domain;
 using Ruvarr.Programs.Events;
 
 namespace Ruvarr.Downloads;
 
 internal sealed class EpisodeMissingEventHandler(RuvarrDbContext dbContext) : IDomainEventHandler<EpisodeMissingEvent>
 {
-    public Task Handle(EpisodeMissingEvent @event, CancellationToken cancellationToken)
+    public async Task Handle(EpisodeMissingEvent @event, CancellationToken cancellationToken)
     {
-        RuvEpisode episode = @event.Episode;
+        int episodeId = (int)dbContext.Entry(@event.Episode).Property("id").CurrentValue!;
 
-        // Check the shadow FK property so we detect an existing queue item
-        // even when the DownloadQueueItem navigation property isn't loaded.
-        int? downloadQueueItemId = (int?)dbContext.Entry(episode).Property("download_queue_item_id").CurrentValue;
-        if (downloadQueueItemId == null)
+        bool hasActiveItem = await dbContext.Set<DownloadQueueItem>()
+            .AnyAsync(x => EF.Property<int?>(x, "episode_id") == episodeId
+                && x.Status != DownloadQueueStatus.Complete, cancellationToken);
+
+        if (!hasActiveItem)
         {
-            dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
+            dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(@event.Episode));
         }
-
-        return Task.CompletedTask;
     }
 }

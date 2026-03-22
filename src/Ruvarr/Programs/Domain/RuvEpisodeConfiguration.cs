@@ -1,8 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-using Ruvarr.Downloads.Domain;
-
 namespace Ruvarr.Programs.Domain;
 
 internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpisode>
@@ -58,9 +56,13 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
             .FindNavigation(nameof(RuvEpisode.TvdbEpisodes))?
             .SetPropertyAccessMode(PropertyAccessMode.Field);
 
-        builder.HasOne(x => x.DownloadQueueItem)
+        builder.HasMany(x => x.DownloadQueueItems)
             .WithOne(x => x.Episode)
-            .HasForeignKey<RuvEpisode>("download_queue_item_id")
-            .HasPrincipalKey<DownloadQueueItem>("id");
+            .HasForeignKey("episode_id")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata
+            .FindNavigation(nameof(RuvEpisode.DownloadQueueItems))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

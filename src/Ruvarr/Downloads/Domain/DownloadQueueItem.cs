@@ -17,7 +17,7 @@ internal sealed class DownloadQueueItem
 
     public void ClearDomainEvents() => _domainEvents.Clear();
 
-    public required RuvEpisode Episode { get; init; }
+    public RuvEpisode? Episode { get; init; }
 
     public required DateTime Created { get; init; }
 

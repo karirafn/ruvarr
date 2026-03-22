@@ -25,9 +25,9 @@ internal class DownloadQueueProcessor(
         logger.LogDebug("Starting download queue processor job");
 
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
-            .Include(x => x.Episode)
+            .Include(x => x.Episode!)
                 .ThenInclude(x => x.Program)
-            .Include(x => x.Episode)
+            .Include(x => x.Episode!)
                 .ThenInclude(x => x.TvdbEpisodes)
             .Where(x => x.Status == DownloadQueueStatus.Pending)
             .OrderBy(x => x.Created)

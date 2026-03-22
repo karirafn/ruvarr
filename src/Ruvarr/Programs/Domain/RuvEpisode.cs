@@ -44,9 +44,8 @@ internal sealed partial class RuvEpisode
 
     public TimeSpan Duration { get; private set; }
 
-#pragma warning disable S1144 // EF Core sets this via the private setter
-    public DownloadQueueItem? DownloadQueueItem { get; private set; }
-#pragma warning restore S1144
+    private readonly List<DownloadQueueItem> _downloadQueueItems = [];
+    public IReadOnlyList<DownloadQueueItem> DownloadQueueItems => _downloadQueueItems.AsReadOnly();
 
     public Uri? RuvUrl =>
         string.IsNullOrEmpty(Program.Slug)

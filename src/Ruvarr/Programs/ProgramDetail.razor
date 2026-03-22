@@ -5,7 +5,6 @@
 @using Ruvarr.Abstractions
 @using Ruvarr.Contracts
 @using Ruvarr.Downloads.Events
-@using Ruvarr.Downloads.Queries.GetDownloadQueue
 @using Ruvarr.ProgramRefreshQueue.Notifiers
 @using Ruvarr.Programs.Events
 @using Ruvarr.Programs.Commands.DownloadEpisode
@@ -278,16 +277,6 @@ else
     {
         await foreach (DownloadCompletedEvent _ in Broadcaster.Subscribe<DownloadCompletedEvent>(_cts.Token))
         {
-            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
-            IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>> handler =
-                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>>>();
-            List<DownloadQueueItemSummary> items = await handler.Handle(new GetDownloadQueueQuery(IncludeDownloaded: true), _cts.Token);
-
-            HashSet<string> inQueue = [.. items.Select(x => x.EpisodeRuvId)];
-            foreach (string ruvId in _queued.Where(id => !inQueue.Contains(id)).ToList())
-            {
-                _queued.Remove(ruvId);
-            }
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -429,10 +418,25 @@ else
         if (result.IsSuccess)
         {
             _queued.Add(ruvId);
+            _ = ClearQueuedAfterDelayAsync(ruvId);
         }
         else
         {
             _failed.Add(ruvId);
+        }
+    }
+
+    private async Task ClearQueuedAfterDelayAsync(string ruvId)
+    {
+        try
+        {
+            await Task.Delay(2000, _cts.Token);
+            _queued.Remove(ruvId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // Component disposed, discard the delayed UI update
         }
     }
 
