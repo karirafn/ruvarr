@@ -447,12 +447,12 @@ else
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task OpenMatchDialog(string ruvId, IReadOnlyList<EpisodeMatchSummary> currentMatches, string episodeTitle)
+    private async Task OpenMatchDialog(string ruvId, IReadOnlyList<TvdbEpisodeSummary> currentMatches, string episodeTitle)
     {
         await _matchDialog!.OpenAsync(ruvId, currentMatches, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
     }
 
-    internal static string FormatSeasons(IReadOnlyList<EpisodeMatchSummary> matches)
+    internal static string FormatSeasons(IReadOnlyList<TvdbEpisodeSummary> matches)
     {
         if (matches.Count == 0)
         {
@@ -462,7 +462,7 @@ else
         return string.Join(", ", matches.Select(m => m.SeasonNumber).Distinct().Order());
     }
 
-    internal static string FormatEpisodes(IReadOnlyList<EpisodeMatchSummary> matches)
+    internal static string FormatEpisodes(IReadOnlyList<TvdbEpisodeSummary> matches)
     {
         if (matches.Count == 0)
         {
