@@ -46,14 +46,14 @@ public sealed class EpisodeDownloadRequestedEventHandlerTests(IntegrationTestFac
         await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
         RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         RuvEpisode saved = await verifyContext.Set<RuvEpisode>()
-            .Include(x => x.DownloadQueueItem)
+            .Include(x => x.DownloadQueueItems)
             .Where(x => x.RuvId == "ABC123")
             .FirstAsync(cancellationToken);
-        saved.DownloadQueueItem.ShouldNotBeNull();
+        saved.DownloadQueueItems.ShouldHaveSingleItem();
     }
 
     [Fact]
-    public async Task DoesNotCreateDuplicate_WhenEpisodeAlreadyQueued()
+    public async Task CreatesSecondQueueItem_WhenEpisodeAlreadyQueued()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -80,6 +80,6 @@ public sealed class EpisodeDownloadRequestedEventHandlerTests(IntegrationTestFac
         await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
         RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         int count = await verifyContext.Set<DownloadQueueItem>().CountAsync(cancellationToken);
-        count.ShouldBe(1);
+        count.ShouldBe(2);
     }
 }

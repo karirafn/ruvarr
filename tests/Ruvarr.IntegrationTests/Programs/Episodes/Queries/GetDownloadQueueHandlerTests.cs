@@ -55,10 +55,10 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
         await dbContext.SaveChangesAsync(cancellationToken);
 
         await dbContext.Database.ExecuteSqlAsync(
-            $"UPDATE download_queue SET created = {olderCreated.ToString("o")} WHERE id = (SELECT download_queue_item_id FROM episodes WHERE ruv_id = 'EP001')",
+            $"UPDATE download_queue SET created = {olderCreated.ToString("o")} WHERE episode_id = (SELECT id FROM episodes WHERE ruv_id ='EP001')",
             cancellationToken);
         await dbContext.Database.ExecuteSqlAsync(
-            $"UPDATE download_queue SET created = {newerCreated.ToString("o")} WHERE id = (SELECT download_queue_item_id FROM episodes WHERE ruv_id = 'EP002')",
+            $"UPDATE download_queue SET created = {newerCreated.ToString("o")} WHERE episode_id = (SELECT id FROM episodes WHERE ruv_id ='EP002')",
             cancellationToken);
 
         // Act
@@ -100,7 +100,7 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
         await dbContext.SaveChangesAsync(cancellationToken);
 
         await dbContext.Database.ExecuteSqlAsync(
-            $"UPDATE download_queue SET status = 'Downloading' WHERE id = (SELECT download_queue_item_id FROM episodes WHERE ruv_id = 'EP004')",
+            $"UPDATE download_queue SET status = 'Downloading' WHERE episode_id = (SELECT id FROM episodes WHERE ruv_id ='EP004')",
             cancellationToken);
 
         // Act

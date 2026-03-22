@@ -97,12 +97,12 @@ public sealed class Create
     }
 
     [Fact]
-    public void DownloadQueueItemIsNull()
+    public void DownloadQueueItemsIsEmpty()
     {
         // Arrange / Act
         RuvEpisode result = new RuvEpisodeBuilder().Build();
 
         // Assert
-        result.DownloadQueueItem.ShouldBeNull();
+        result.DownloadQueueItems.ShouldBeEmpty();
     }
 }

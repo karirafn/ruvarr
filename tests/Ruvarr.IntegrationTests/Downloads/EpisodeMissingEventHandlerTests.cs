@@ -48,14 +48,14 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
         RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         RuvEpisode saved = await verifyContext.Set<RuvEpisode>()
-            .Include(x => x.DownloadQueueItem)
+            .Include(x => x.DownloadQueueItems)
             .Where(x => x.RuvId == "ABC123")
             .FirstAsync(cancellationToken);
-        saved.DownloadQueueItem.ShouldNotBeNull();
+        saved.DownloadQueueItems.ShouldHaveSingleItem();
     }
 
     [Fact]
-    public async Task DoesNotEnqueueDuplicate_WhenEpisodeAlreadyQueued()
+    public async Task DoesNotEnqueueDuplicate_WhenActiveItemExists()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -75,16 +75,50 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Act — episode already has a queue item; UpdateMissingStatus should not add another
+        // Act — episode already has a Pending queue item; UpdateMissingStatus should not add another
         episode.UpdateMissingStatus(new HashSet<int> { 2001 });
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Assert — still exactly one queue item for this episode
+        // Assert — still exactly one queue item
         await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
         RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-        int count = await verifyContext.Set<RuvEpisode>()
-            .Where(x => x.RuvId == "DEF456")
-            .CountAsync(x => x.DownloadQueueItem != null, cancellationToken);
+        int count = await verifyContext.Set<DownloadQueueItem>().CountAsync(cancellationToken);
         count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task EnqueuesNewItem_WhenOnlyCompletedItemExists()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(3, "RÚV1", "Test Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("GHI789", new Uri("https://example.com/ep.mp4"), "Test Episode", "Description", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode episode = program.Episodes[0];
+        episode.Match(tvdbId: 3001, season: 1, episode: 1, isMissing: false);
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await dbContext.Database.ExecuteSqlAsync(
+            $"UPDATE download_queue SET status = 'Complete', downloaded = {DateTime.UtcNow.ToString("o")} WHERE episode_id = (SELECT id FROM episodes WHERE ruv_id = 'GHI789')",
+            cancellationToken);
+
+        // Act — only completed items exist; UpdateMissingStatus should add a new one
+        episode.UpdateMissingStatus(new HashSet<int> { 3001 });
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Assert — two queue items total (one complete, one pending)
+        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        int count = await verifyContext.Set<DownloadQueueItem>().CountAsync(cancellationToken);
+        count.ShouldBe(2);
     }
 }
