@@ -59,6 +59,7 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
         builder.HasMany(x => x.DownloadQueueItems)
             .WithOne(x => x.Episode)
             .HasForeignKey("episode_id")
+            .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Metadata

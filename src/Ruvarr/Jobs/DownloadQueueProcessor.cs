@@ -25,9 +25,9 @@ internal class DownloadQueueProcessor(
         logger.LogDebug("Starting download queue processor job");
 
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
-            .Include(x => x.Episode!)
+            .Include(x => x.Episode)
                 .ThenInclude(x => x.Program)
-            .Include(x => x.Episode!)
+            .Include(x => x.Episode)
                 .ThenInclude(x => x.TvdbEpisodes)
             .Where(x => x.Status == DownloadQueueStatus.Pending)
             .OrderBy(x => x.Created)
@@ -36,15 +36,6 @@ internal class DownloadQueueProcessor(
         if (item is null)
         {
             logger.LogDebug("No pending items in download queue");
-            return;
-        }
-
-        if (item.Episode is null)
-        {
-            logger.LogWarning("Download queue item has no associated episode, removing orphaned item");
-            await dbContext.Set<DownloadQueueItem>()
-                .Where(x => x.Episode == null)
-                .ExecuteDeleteAsync();
             return;
         }
 

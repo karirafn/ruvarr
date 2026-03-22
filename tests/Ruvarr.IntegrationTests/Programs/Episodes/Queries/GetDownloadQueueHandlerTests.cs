@@ -114,40 +114,4 @@ public sealed class GetDownloadQueueHandlerTests(IntegrationTestFactory factory)
         items[1].EpisodeRuvId.ShouldBe("EP003");
     }
 
-    [Fact]
-    public async Task DoesNotReturnOrphanedItems()
-    {
-        // Arrange
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-
-        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
-        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-        IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>> handler =
-            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDownloadQueueQuery, List<DownloadQueueItemSummary>>>();
-
-        RuvProgram program = RuvProgram.Create(2, "RÚV1", "Test Program", null, multipleEpisodes: true);
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        program.TryAddEpisode("DEF456", new Uri("https://example.com/ep.mp4"), "Test Episode", "Description", DateTime.UtcNow, TimeSpan.FromMinutes(30));
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        RuvEpisode episode = program.Episodes[0];
-        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Simulate an orphaned item by inserting a second queue item via raw SQL
-        // (bypassing EF's FK update so the episode's download_queue_item_id still points to the first item)
-        await dbContext.Database.ExecuteSqlAsync(
-            $"INSERT INTO download_queue (created, status) VALUES ({DateTime.UtcNow.ToString("o")}, 'Pending')",
-            cancellationToken);
-
-        // Act
-        List<DownloadQueueItemSummary> items = await handler.Handle(
-            new GetDownloadQueueQuery(IncludeDownloaded: true),
-            cancellationToken);
-
-        // Assert
-        items.ShouldAllBe(x => x.EpisodeRuvId != null);
-    }
 }
