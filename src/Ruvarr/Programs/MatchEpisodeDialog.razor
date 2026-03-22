@@ -102,7 +102,7 @@
     private ElementReference _dialog;
     private ElementReference _addButton;
     private string? _ruvId;
-    private List<EpisodeMatchSummary> _currentMatches = [];
+    private List<TvdbEpisodeSummary> _currentMatches = [];
     private bool _isLoading;
     private bool _isSubmitting;
     private string? _errorMessage;
@@ -115,7 +115,7 @@
     private string _episodeTitle = string.Empty;
     private List<EpisodeSummary> _siblingEpisodes = [];
 
-    public async Task OpenAsync(string ruvId, IReadOnlyList<EpisodeMatchSummary> currentMatches, int tvdbSeriesId, string episodeTitle, List<EpisodeSummary> siblingEpisodes)
+    public async Task OpenAsync(string ruvId, IReadOnlyList<TvdbEpisodeSummary> currentMatches, int tvdbSeriesId, string episodeTitle, List<EpisodeSummary> siblingEpisodes)
     {
         _ruvId = ruvId;
         _currentMatches = [.. currentMatches];
@@ -147,7 +147,7 @@
             if (_currentMatches.Count > 0)
             {
                 _matchEntries.Clear();
-                foreach (EpisodeMatchSummary match in _currentMatches)
+                foreach (TvdbEpisodeSummary match in _currentMatches)
                 {
                     MatchEntry entry = new()
                     {
@@ -366,7 +366,7 @@
         _cts.Dispose();
     }
 
-    internal static bool IsMatchDisabled(List<MatchEntry> entries, List<EpisodeMatchSummary> currentMatches, bool isSubmitting)
+    internal static bool IsMatchDisabled(List<MatchEntry> entries, List<TvdbEpisodeSummary> currentMatches, bool isSubmitting)
     {
         if (isSubmitting)
         {

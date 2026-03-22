@@ -19,7 +19,7 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
                 x.RuvId,
                 x.Description,
                 x.TvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber)
-                    .Select(e => new EpisodeMatchSummary(e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.IsMissing))
+                    .Select(e => new TvdbEpisodeSummary(e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.IsMissing))
                     .ToList(),
                 x.FirstRun,
                 string.IsNullOrEmpty(x.Program.Slug)

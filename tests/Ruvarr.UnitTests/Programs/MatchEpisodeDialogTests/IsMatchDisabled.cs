@@ -48,7 +48,7 @@ public sealed class IsMatchDisabled
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries = [new() { SelectedEpisodeId = 12345 }];
-        List<EpisodeMatchSummary> current = [new(12345, 1, 1, false)];
+        List<TvdbEpisodeSummary> current = [new(12345, 1, 1, false)];
 
         // Act
         bool result = MatchEpisodeDialog.IsMatchDisabled(entries, current, isSubmitting: false);
@@ -62,7 +62,7 @@ public sealed class IsMatchDisabled
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries = [new() { SelectedEpisodeId = 12345 }];
-        List<EpisodeMatchSummary> current = [new(99999, 1, 1, false)];
+        List<TvdbEpisodeSummary> current = [new(99999, 1, 1, false)];
 
         // Act
         bool result = MatchEpisodeDialog.IsMatchDisabled(entries, current, isSubmitting: false);
@@ -93,7 +93,7 @@ public sealed class IsMatchDisabled
             new() { SelectedEpisodeId = 100 },
             new() { SelectedEpisodeId = 101 },
         ];
-        List<EpisodeMatchSummary> current = [new(100, 1, 1, false)];
+        List<TvdbEpisodeSummary> current = [new(100, 1, 1, false)];
 
         // Act
         bool result = MatchEpisodeDialog.IsMatchDisabled(entries, current, isSubmitting: false);
