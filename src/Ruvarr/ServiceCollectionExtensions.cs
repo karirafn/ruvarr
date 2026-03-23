@@ -113,7 +113,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped(sp =>
         {
             ISettingsStore store = sp.GetRequiredService<ISettingsStore>();
-            return new TMDbClient(store.Current.TmdbApiKey);
+            string apiKey = store.Current.TmdbApiKey;
+            return new TMDbClient(string.IsNullOrWhiteSpace(apiKey) ? "unconfigured" : apiKey);
         });
 
         return services;
