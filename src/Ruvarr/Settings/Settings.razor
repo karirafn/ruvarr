@@ -30,7 +30,7 @@ else
 
             <div class="settings-field">
                 <label for="sonarr-api-key">API Key</label>
-                <input id="sonarr-api-key" type="password" @bind="_sonarrApiKey" />
+                <input id="sonarr-api-key" type="password" @bind="_sonarrApiKey" aria-label="Sonarr API Key" />
             </div>
 
             <div class="settings-field">
@@ -51,6 +51,32 @@ else
                     {
                         <span class="test-result test-result--failure" role="alert">@_testResult.Error.Description</span>
                     }
+                }
+            </div>
+        </section>
+
+        <section class="settings-section">
+            <h2 class="settings-section-title">TVDB</h2>
+
+            <div class="settings-field">
+                <label for="tvdb-api-key">API Key</label>
+                <input id="tvdb-api-key" type="password" @bind="_tvdbApiKey" aria-label="TVDB API Key" aria-describedby="tvdb-api-key-error" />
+                @if (_fieldErrors.TryGetValue(SettingsErrors.InvalidTvdbApiKeyCode, out string? tvdbApiKeyError))
+                {
+                    <span id="tvdb-api-key-error" class="field-error" role="alert">@tvdbApiKeyError</span>
+                }
+            </div>
+        </section>
+
+        <section class="settings-section">
+            <h2 class="settings-section-title">TMDB</h2>
+
+            <div class="settings-field">
+                <label for="tmdb-api-key">API Key</label>
+                <input id="tmdb-api-key" type="password" @bind="_tmdbApiKey" aria-label="TMDB API Key" aria-describedby="tmdb-api-key-error" />
+                @if (_fieldErrors.TryGetValue(SettingsErrors.InvalidTmdbApiKeyCode, out string? tmdbApiKeyError))
+                {
+                    <span id="tmdb-api-key-error" class="field-error" role="alert">@tmdbApiKeyError</span>
                 }
             </div>
         </section>
@@ -113,6 +139,8 @@ else
 
     private string _sonarrBaseAddress = string.Empty;
     private string _sonarrApiKey = string.Empty;
+    private string _tvdbApiKey = string.Empty;
+    private string _tmdbApiKey = string.Empty;
     private string _downloadsRootDirectory = string.Empty;
     private string _episodeDownloadDirectory = string.Empty;
     private string _movieDownloadDirectory = string.Empty;
@@ -131,6 +159,8 @@ else
             RuvarrSettings settings = result.FromResult();
             _sonarrBaseAddress = settings.SonarrBaseAddress;
             _sonarrApiKey = settings.SonarrApiKey;
+            _tvdbApiKey = settings.TvdbApiKey;
+            _tmdbApiKey = settings.TmdbApiKey;
             _downloadsRootDirectory = settings.DownloadsRootDirectory;
             _episodeDownloadDirectory = settings.EpisodeDownloadDirectory;
             _movieDownloadDirectory = settings.MovieDownloadDirectory;
@@ -159,6 +189,8 @@ else
         SaveSettingsCommand command = new(
             sonarrUri,
             _sonarrApiKey,
+            _tvdbApiKey,
+            _tmdbApiKey,
             _downloadsRootDirectory,
             _episodeDownloadDirectory,
             _movieDownloadDirectory,

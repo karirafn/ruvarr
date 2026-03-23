@@ -56,9 +56,19 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
             ? store.Current.SonarrApiKey
             : command.SonarrApiKey;
 
+        string tvdbApiKey = command.TvdbApiKey == ApiKeySentinel
+            ? store.Current.TvdbApiKey
+            : command.TvdbApiKey;
+
+        string tmdbApiKey = command.TmdbApiKey == ApiKeySentinel
+            ? store.Current.TmdbApiKey
+            : command.TmdbApiKey;
+
         RuvarrSettings settings = new(
             command.SonarrBaseAddress.ToString(),
             sonarrApiKey,
+            tvdbApiKey,
+            tmdbApiKey,
             command.DownloadsRootDirectory,
             command.EpisodeDownloadDirectory,
             command.MovieDownloadDirectory)

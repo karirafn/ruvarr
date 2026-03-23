@@ -5,6 +5,8 @@ namespace Ruvarr.Settings;
 public static class SettingsErrors
 {
     public const string InvalidSonarrBaseAddressCode = "Settings.InvalidSonarrBaseAddress";
+    public const string InvalidTvdbApiKeyCode = "Settings.InvalidTvdbApiKey";
+    public const string InvalidTmdbApiKeyCode = "Settings.InvalidTmdbApiKey";
     public const string DownloadsRootDirectoryNotFoundCode = "Settings.DownloadsRootDirectoryNotFound";
     public const string EpisodeDownloadDirectoryNotFoundCode = "Settings.EpisodeDownloadDirectoryNotFound";
     public const string MovieDownloadDirectoryNotFoundCode = "Settings.MovieDownloadDirectoryNotFound";

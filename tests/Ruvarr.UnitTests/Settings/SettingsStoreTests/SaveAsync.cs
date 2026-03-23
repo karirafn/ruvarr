@@ -29,7 +29,7 @@ public sealed class SaveAsync : IDisposable
         // Arrange
         string filePath = Path.Combine(_tempDirectory, "settings.json");
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://localhost:8989", "key", "/downloads", "/episodes", "/movies");
+        RuvarrSettings settings = new("http://localhost:8989", "key", "", "", "/downloads", "/episodes", "/movies");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);
@@ -44,7 +44,7 @@ public sealed class SaveAsync : IDisposable
         // Arrange
         string filePath = Path.Combine(_tempDirectory, "settings.json");
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://localhost:8989", "key", "/downloads", "/episodes", "/movies");
+        RuvarrSettings settings = new("http://localhost:8989", "key", "", "", "/downloads", "/episodes", "/movies");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);
@@ -66,7 +66,7 @@ public sealed class SaveAsync : IDisposable
         // Arrange
         string filePath = Path.Combine(_tempDirectory, "nested", "dir", "settings.json");
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://localhost:8989", "key", "/downloads", "/episodes", "/movies");
+        RuvarrSettings settings = new("http://localhost:8989", "key", "", "", "/downloads", "/episodes", "/movies");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);
@@ -82,7 +82,7 @@ public sealed class SaveAsync : IDisposable
         string filePath = Path.Combine(_tempDirectory, "settings.json");
         await File.WriteAllTextAsync(filePath, """{ "SonarrBaseAddress": "http://old:8989" }""", TestContext.Current.CancellationToken);
         using SettingsStore store = new(filePath);
-        RuvarrSettings settings = new("http://new:8989", "", "", "", "");
+        RuvarrSettings settings = new("http://new:8989", "", "", "", "", "", "");
 
         // Act
         await store.SaveAsync(settings, TestContext.Current.CancellationToken);

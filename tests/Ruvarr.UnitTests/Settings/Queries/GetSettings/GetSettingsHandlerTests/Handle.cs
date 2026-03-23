@@ -18,7 +18,7 @@ public sealed class Handle
     public async Task ReturnsCurrentSettingsFromStore()
     {
         // Arrange
-        RuvarrSettings stored = new("http://localhost:8989", "key", "/downloads", "/episodes", "/movies");
+        RuvarrSettings stored = new("http://localhost:8989", "key", "tvdb-key", "tmdb-key", "/downloads", "/episodes", "/movies");
         _store.Current.Returns(stored);
         GetSettingsHandler sut = CreateHandler();
 
@@ -30,16 +30,18 @@ public sealed class Handle
         RuvarrSettings settings = result.FromResult();
         settings.SonarrBaseAddress.ShouldBe("http://localhost:8989");
         settings.SonarrApiKey.ShouldBe("****");
+        settings.TvdbApiKey.ShouldBe("****");
+        settings.TmdbApiKey.ShouldBe("****");
         settings.DownloadsRootDirectory.ShouldBe("/downloads");
         settings.EpisodeDownloadDirectory.ShouldBe("/episodes");
         settings.MovieDownloadDirectory.ShouldBe("/movies");
     }
 
     [Fact]
-    public async Task DoesNotMaskApiKeyWhenEmpty()
+    public async Task DoesNotMaskApiKeysWhenEmpty()
     {
         // Arrange
-        RuvarrSettings stored = new("http://localhost:8989", "", "/downloads", "/episodes", "/movies");
+        RuvarrSettings stored = new("http://localhost:8989", "", "", "", "/downloads", "/episodes", "/movies");
         _store.Current.Returns(stored);
         GetSettingsHandler sut = CreateHandler();
 
@@ -50,6 +52,8 @@ public sealed class Handle
         result.IsSuccess.ShouldBeTrue();
         RuvarrSettings settings = result.FromResult();
         settings.SonarrApiKey.ShouldBeEmpty();
+        settings.TvdbApiKey.ShouldBeEmpty();
+        settings.TmdbApiKey.ShouldBeEmpty();
     }
 
     [Fact]

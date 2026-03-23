@@ -33,7 +33,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, []);
+        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -52,7 +52,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri(url), "api-key", _tempDirectory, _tempDirectory, _tempDirectory, []);
+        SaveSettingsCommand command = new(new Uri(url), "api-key", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -68,7 +68,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "/nonexistent/directory", _tempDirectory, _tempDirectory, []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "/nonexistent/directory", _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -83,7 +83,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, "/nonexistent/directory", _tempDirectory, []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, "/nonexistent/directory", _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -98,7 +98,7 @@ public sealed class Handle : IDisposable
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", _tempDirectory, _tempDirectory, "/nonexistent/directory", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, _tempDirectory, "/nonexistent/directory", []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -119,7 +119,7 @@ public sealed class Handle : IDisposable
             Directory.CreateDirectory(root);
             Directory.CreateDirectory(sibling);
             SaveSettingsHandler sut = CreateHandler();
-            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, sibling, root, []);
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", "", "", root, sibling, root, []);
 
             // Act
             RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -146,7 +146,7 @@ public sealed class Handle : IDisposable
             Directory.CreateDirectory(root);
             Directory.CreateDirectory(sibling);
             SaveSettingsHandler sut = CreateHandler();
-            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, root, sibling, []);
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", "", "", root, root, sibling, []);
 
             // Act
             RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -176,7 +176,7 @@ public sealed class Handle : IDisposable
             Directory.CreateDirectory(movieDir);
             _store.Current.Returns(RuvarrSettings.Empty);
             SaveSettingsHandler sut = CreateHandler();
-            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, episodeDir, movieDir, []);
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", "", "", root, episodeDir, movieDir, []);
 
             // Act
             RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -202,7 +202,7 @@ public sealed class Handle : IDisposable
             Directory.CreateDirectory(sibling);
             string traversalPath = Path.Combine(root, "..", Path.GetFileName(sibling));
             SaveSettingsHandler sut = CreateHandler();
-            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, traversalPath, root, []);
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", "", "", root, traversalPath, root, []);
 
             // Act
             RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -224,7 +224,7 @@ public sealed class Handle : IDisposable
         // Arrange
         _store.Current.Returns(new RuvarrSettings(SonarrApiKey: "real-secret-key"));
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "****", _tempDirectory, _tempDirectory, _tempDirectory, []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "****", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -237,12 +237,48 @@ public sealed class Handle : IDisposable
     }
 
     [Fact]
+    public async Task PreservesExistingTvdbApiKeyWhenSentinelIsProvided()
+    {
+        // Arrange
+        _store.Current.Returns(new RuvarrSettings(TvdbApiKey: "real-tvdb-key"));
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "****", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        await _store.Received(1).SaveAsync(
+            Arg.Is<RuvarrSettings>(s => s.TvdbApiKey == "real-tvdb-key"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PreservesExistingTmdbApiKeyWhenSentinelIsProvided()
+    {
+        // Arrange
+        _store.Current.Returns(new RuvarrSettings(TmdbApiKey: "real-tmdb-key"));
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "", "****", _tempDirectory, _tempDirectory, _tempDirectory, []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        await _store.Received(1).SaveAsync(
+            Arg.Is<RuvarrSettings>(s => s.TmdbApiKey == "real-tmdb-key"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task SavesSettingsWhenAllFieldsAreValid()
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
         Uri baseUrl = new("http://localhost:8989");
-        SaveSettingsCommand command = new(baseUrl, "api-key", _tempDirectory, _tempDirectory, _tempDirectory, []);
+        SaveSettingsCommand command = new(baseUrl, "api-key", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
