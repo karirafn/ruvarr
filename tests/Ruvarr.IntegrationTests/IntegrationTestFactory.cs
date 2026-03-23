@@ -1,4 +1,6 @@
 ﻿
+using System.Text.Json;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +14,11 @@ namespace Ruvarr.IntegrationTests;
 
 public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
+
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.db");
     private readonly string _settingsPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}-settings.json");
+    private readonly string _downloadsRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -35,6 +40,15 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
 
             services.RemoveAll<SettingsStore>();
             services.RemoveAll<ISettingsStore>();
+
+            string settingsJson = JsonSerializer.Serialize(new
+            {
+                DownloadsRootDirectory = _downloadsRoot,
+                EpisodeDownloadDirectory = Path.Combine(_downloadsRoot, "episodes"),
+                MovieDownloadDirectory = Path.Combine(_downloadsRoot, "movies"),
+            }, SerializerOptions);
+            File.WriteAllText(_settingsPath, settingsJson);
+
             services.AddSingleton<SettingsStore>(_ => new SettingsStore(_settingsPath));
             services.AddSingleton<ISettingsStore>(sp => sp.GetRequiredService<SettingsStore>());
         });
@@ -58,6 +72,11 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         if (File.Exists(_settingsPath))
         {
             File.Delete(_settingsPath);
+        }
+
+        if (Directory.Exists(_downloadsRoot))
+        {
+            Directory.Delete(_downloadsRoot, recursive: true);
         }
 
         await base.DisposeAsync();
