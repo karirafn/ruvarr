@@ -26,16 +26,6 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
             return SettingsErrors.DownloadsRootDirectoryNotFound;
         }
 
-        if (!Directory.Exists(command.EpisodeDownloadDirectory))
-        {
-            return SettingsErrors.EpisodeDownloadDirectoryNotFound;
-        }
-
-        if (!Directory.Exists(command.MovieDownloadDirectory))
-        {
-            return SettingsErrors.MovieDownloadDirectoryNotFound;
-        }
-
         string resolvedRoot = Path.GetFullPath(command.DownloadsRootDirectory);
 
         string resolvedEpisodeDir = Path.GetFullPath(command.EpisodeDownloadDirectory);
@@ -45,12 +35,16 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
             return SettingsErrors.EpisodeDownloadDirectoryNotUnderRoot;
         }
 
+        Directory.CreateDirectory(resolvedEpisodeDir);
+
         string resolvedMovieDir = Path.GetFullPath(command.MovieDownloadDirectory);
         if (!resolvedMovieDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
             && resolvedMovieDir != resolvedRoot)
         {
             return SettingsErrors.MovieDownloadDirectoryNotUnderRoot;
         }
+
+        Directory.CreateDirectory(resolvedMovieDir);
 
         string sonarrApiKey = command.SonarrApiKey == ApiKeySentinel
             ? store.Current.SonarrApiKey
