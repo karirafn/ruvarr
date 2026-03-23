@@ -1,19 +1,17 @@
-﻿using Microsoft.Extensions.Options;
-
-namespace Ruvarr.Infrastructure.Tvdb;
+﻿namespace Ruvarr.Infrastructure.Tvdb;
 
 internal static class ServiceCollectionExtensions
 {
     internal static IServiceCollection AddTvdb(this IServiceCollection services)
     {
-        services.AddOptions<TvdbOptions>()
-            .Configure<IConfiguration>((options, configuration)
-                => configuration.GetRequiredSection(TvdbOptions.SectionName).Bind(options));
+        services.AddHttpClient<ITvdbClient, TvdbClient>((sp, client) =>
+        {
+            string baseAddress = sp.GetRequiredService<IConfiguration>()
+                .GetRequiredSection("Tvdb")["BaseAddress"]
+                ?? throw new InvalidOperationException("Tvdb:BaseAddress is not configured.");
 
-        IOptions<TvdbOptions> options = services.BuildServiceProvider()
-            .GetRequiredService<IOptions<TvdbOptions>>();
-
-        services.AddHttpClient<ITvdbClient, TvdbClient>(client => client.BaseAddress = options.Value.BaseAddress);
+            client.BaseAddress = new Uri(baseAddress);
+        });
 
         return services;
     }

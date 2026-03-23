@@ -1,14 +1,17 @@
 ﻿using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 
 using Ruvarr.Infrastructure.Tvdb.Models;
+using Ruvarr.Settings;
 
 namespace Ruvarr.Infrastructure.Tvdb;
 
-internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IOptions<TvdbOptions> options) : ITvdbClient, IDisposable
+internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, ISettingsStore settingsStore) : ITvdbClient, IDisposable
 {
+    internal const string AccessTokenCacheKey = "TvdbAccessToken";
+    private const string CachedApiKeyCacheKey = "TvdbCachedApiKey";
+
     private readonly SemaphoreSlim _loginSemaphore = new(1, 1);
 
     public void Dispose() => _loginSemaphore.Dispose();
@@ -103,7 +106,11 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
 
     private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
     {
-        if (memoryCache.TryGetValue(TvdbOptions.AccessTokenCacheKey, out string? accessToken))
+        string currentApiKey = settingsStore.Current.TvdbApiKey;
+
+        if (memoryCache.TryGetValue(AccessTokenCacheKey, out string? accessToken)
+            && memoryCache.TryGetValue(CachedApiKeyCacheKey, out string? cachedApiKey)
+            && cachedApiKey == currentApiKey)
         {
             return accessToken!;
         }
@@ -111,12 +118,19 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
         await _loginSemaphore.WaitAsync(cancellationToken);
         try
         {
-            if (memoryCache.TryGetValue(TvdbOptions.AccessTokenCacheKey, out accessToken))
+            currentApiKey = settingsStore.Current.TvdbApiKey;
+
+            if (memoryCache.TryGetValue(AccessTokenCacheKey, out accessToken)
+                && memoryCache.TryGetValue(CachedApiKeyCacheKey, out cachedApiKey)
+                && cachedApiKey == currentApiKey)
             {
                 return accessToken!;
             }
 
-            AuthenticationResponse? response = await LoginAsync(options.Value.ApiKey, null, cancellationToken);
+            memoryCache.Remove(AccessTokenCacheKey);
+            memoryCache.Remove(CachedApiKeyCacheKey);
+
+            AuthenticationResponse? response = await LoginAsync(currentApiKey, null, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(response?.Data.Token))
             {
@@ -131,7 +145,8 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IO
                 AbsoluteExpiration = DateTimeOffset.Now.AddDays(28),
                 Size = 1
             };
-            memoryCache.Set(TvdbOptions.AccessTokenCacheKey, accessToken, cacheOptions);
+            memoryCache.Set(AccessTokenCacheKey, accessToken, cacheOptions);
+            memoryCache.Set(CachedApiKeyCacheKey, currentApiKey, cacheOptions);
 
             return accessToken;
         }

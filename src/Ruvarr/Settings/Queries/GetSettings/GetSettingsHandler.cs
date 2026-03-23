@@ -13,6 +13,16 @@ internal sealed class GetSettingsHandler(ISettingsStore store) : IRequestHandler
             settings = settings with { SonarrApiKey = "****" };
         }
 
+        if (!string.IsNullOrEmpty(settings.TvdbApiKey))
+        {
+            settings = settings with { TvdbApiKey = "****" };
+        }
+
+        if (!string.IsNullOrEmpty(settings.TmdbApiKey))
+        {
+            settings = settings with { TmdbApiKey = "****" };
+        }
+
         return Task.FromResult<Result<RuvarrSettings>>(settings);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 using Quartz;
 
@@ -111,24 +110,12 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddTmdb(this IServiceCollection services)
     {
-        services.AddOptions<TmdbOptions>()
-            .Configure<IConfiguration>((options, configuration)
-                => configuration.GetRequiredSection("Tmdb").Bind(options));
-
-        IOptions<TmdbOptions> tmdb = services.BuildServiceProvider()
-            .GetRequiredService<IOptions<TmdbOptions>>();
-
-        services.AddScoped(x => new TMDbClient(tmdb.Value.ApiKey));
+        services.AddScoped(sp =>
+        {
+            ISettingsStore store = sp.GetRequiredService<ISettingsStore>();
+            return new TMDbClient(store.Current.TmdbApiKey);
+        });
 
         return services;
     }
-
-    private sealed class TmdbOptions
-    {
-#pragma warning disable S3459 // Unassigned members should be removed
-#pragma warning disable S1144 // Unused private types or members should be removed
-        public required string ApiKey { get; init; }
-#pragma warning restore S1144 // Unused private types or members should be removed
-#pragma warning restore S3459 // Unassigned members should be removed
-    };
 }

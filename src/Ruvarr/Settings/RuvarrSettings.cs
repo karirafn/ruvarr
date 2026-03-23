@@ -3,6 +3,8 @@ namespace Ruvarr.Settings;
 internal sealed record RuvarrSettings(
     string SonarrBaseAddress = "",
     string SonarrApiKey = "",
+    string TvdbApiKey = "",
+    string TmdbApiKey = "",
     string DownloadsRootDirectory = "/downloads",
     string EpisodeDownloadDirectory = "/downloads/tv",
     string MovieDownloadDirectory = "/downloads/movies")
