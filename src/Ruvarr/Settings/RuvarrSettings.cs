@@ -4,7 +4,7 @@ internal sealed record RuvarrSettings(
     string SonarrBaseAddress = "",
     string SonarrApiKey = "",
     string DownloadsRootDirectory = "/downloads",
-    string EpisodeDownloadDirectory = "/downloads/episodes",
+    string EpisodeDownloadDirectory = "/downloads/tv",
     string MovieDownloadDirectory = "/downloads/movies")
 {
     public IReadOnlyList<string> IgnoredChannels { get; init; } = [];
