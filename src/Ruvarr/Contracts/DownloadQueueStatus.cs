@@ -5,4 +5,5 @@ public enum DownloadQueueStatus
     Pending,
     Downloading,
     Complete,
+    Failed,
 }

@@ -8,9 +8,7 @@ services:
         required: false
     volumes:
       - ruvarr-data:/app/data
-      # Uncomment and adjust the paths below to enable episode/movie downloads:
-      # - /path/to/episodes:/downloads/episodes
-      # - /path/to/movies:/downloads/movies
+      # - /path/to/downloads:/downloads
 
 volumes:
   ruvarr-data:

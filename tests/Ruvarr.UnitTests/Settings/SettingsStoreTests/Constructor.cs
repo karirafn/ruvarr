@@ -74,8 +74,8 @@ public sealed class Constructor : IDisposable
         // Assert
         store.Current.SonarrBaseAddress.ShouldBeEmpty();
         store.Current.SonarrApiKey.ShouldBeEmpty();
-        store.Current.DownloadsRootDirectory.ShouldBeEmpty();
-        store.Current.EpisodeDownloadDirectory.ShouldBeEmpty();
-        store.Current.MovieDownloadDirectory.ShouldBeEmpty();
+        store.Current.DownloadsRootDirectory.ShouldBe("/downloads");
+        store.Current.EpisodeDownloadDirectory.ShouldBe("/downloads/episodes");
+        store.Current.MovieDownloadDirectory.ShouldBe("/downloads/movies");
     }
 }

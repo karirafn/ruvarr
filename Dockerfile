@@ -15,5 +15,6 @@ COPY --from=build /app/publish .
 EXPOSE 8080
 ENV Ruvarr__FfmpegPath=/usr/bin/ffmpeg
 RUN mkdir -p /app/data && chown app:app /app/data
+RUN mkdir -p /downloads/episodes /downloads/movies && chown -R app:app /downloads
 USER app
 ENTRYPOINT ["dotnet", "Ruvarr.dll"]

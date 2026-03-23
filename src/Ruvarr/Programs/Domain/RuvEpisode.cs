@@ -125,7 +125,7 @@ internal sealed partial class RuvEpisode
 
     public string ToFilePath(string rootDirectory, string episodeSubdirectory, bool fileAlreadyExists)
     {
-        string seriesOrProgramName = Program.Series?.Name ?? Program.Name;
+        string seriesOrProgramName = (Program.Series?.Name ?? Program.Name).SanitizedForPath();
         string directory = Path.Join(rootDirectory, episodeSubdirectory, seriesOrProgramName);
 
         string resolvedDirectory = Path.GetFullPath(directory);

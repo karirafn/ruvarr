@@ -36,6 +36,22 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
             return SettingsErrors.MovieDownloadDirectoryNotFound;
         }
 
+        string resolvedRoot = Path.GetFullPath(command.DownloadsRootDirectory);
+
+        string resolvedEpisodeDir = Path.GetFullPath(command.EpisodeDownloadDirectory);
+        if (!resolvedEpisodeDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && resolvedEpisodeDir != resolvedRoot)
+        {
+            return SettingsErrors.EpisodeDownloadDirectoryNotUnderRoot;
+        }
+
+        string resolvedMovieDir = Path.GetFullPath(command.MovieDownloadDirectory);
+        if (!resolvedMovieDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && resolvedMovieDir != resolvedRoot)
+        {
+            return SettingsErrors.MovieDownloadDirectoryNotUnderRoot;
+        }
+
         string sonarrApiKey = command.SonarrApiKey == ApiKeySentinel
             ? store.Current.SonarrApiKey
             : command.SonarrApiKey;

@@ -88,4 +88,44 @@ public sealed class ToFilePath
         // Assert
         result.ShouldBe(Path.Join("/root", "episodes", "Awesome Show", "Awesome.Show.Test.Episode-RUV.X.mp4"));
     }
+
+    [Fact]
+    public void StripsPathSeparatorsFromSeriesName()
+    {
+        // Arrange
+        TvdbSeries series = new TvdbSeriesBuilder()
+            .WithName("Show/With\\Slashes")
+            .Build();
+        RuvProgram program = new RuvProgramBuilder().Build();
+        program.MatchTvdb(series);
+        RuvEpisode sut = new RuvEpisodeBuilder()
+            .WithProgram(program)
+            .WithTitle("Test Episode")
+            .Build();
+
+        // Act
+        string result = sut.ToFilePath("/root", "episodes", fileAlreadyExists: false);
+
+        // Assert
+        result.ShouldBe(Path.Join("/root", "episodes", "ShowWithSlashes", "Show.With.Slashes.Test.Episode-RUV.mp4"));
+    }
+
+    [Fact]
+    public void StripsPathSeparatorsFromProgramName_WhenSeriesIsNotMatched()
+    {
+        // Arrange
+        RuvProgram program = new RuvProgramBuilder()
+            .WithName("Show/Name")
+            .Build();
+        RuvEpisode sut = new RuvEpisodeBuilder()
+            .WithProgram(program)
+            .WithTitle("Test Episode")
+            .Build();
+
+        // Act
+        string result = sut.ToFilePath("/root", "episodes", fileAlreadyExists: false);
+
+        // Assert
+        result.ShouldBe(Path.Join("/root", "episodes", "ShowName", "Show.Name.Test.Episode-RUV.mp4"));
+    }
 }
