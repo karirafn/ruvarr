@@ -29,8 +29,8 @@ else
             </div>
 
             <div class="settings-field">
-                <label for="sonarr-api-key">API Key</label>
-                <input id="sonarr-api-key" type="password" @bind="_sonarrApiKey" aria-label="Sonarr API Key" />
+                <label for="sonarr-api-key">Sonarr API Key</label>
+                <input id="sonarr-api-key" type="password" @bind="_sonarrApiKey" />
             </div>
 
             <div class="settings-field">
@@ -59,8 +59,8 @@ else
             <h2 class="settings-section-title">TVDB</h2>
 
             <div class="settings-field">
-                <label for="tvdb-api-key">API Key</label>
-                <input id="tvdb-api-key" type="password" @bind="_tvdbApiKey" aria-label="TVDB API Key" aria-describedby="tvdb-api-key-error" />
+                <label for="tvdb-api-key">TVDB API Key</label>
+                <input id="tvdb-api-key" type="password" @bind="_tvdbApiKey" aria-describedby="tvdb-api-key-error" />
                 @if (_fieldErrors.TryGetValue(SettingsErrors.InvalidTvdbApiKeyCode, out string? tvdbApiKeyError))
                 {
                     <span id="tvdb-api-key-error" class="field-error" role="alert">@tvdbApiKeyError</span>
@@ -72,8 +72,8 @@ else
             <h2 class="settings-section-title">TMDB</h2>
 
             <div class="settings-field">
-                <label for="tmdb-api-key">API Key</label>
-                <input id="tmdb-api-key" type="password" @bind="_tmdbApiKey" aria-label="TMDB API Key" aria-describedby="tmdb-api-key-error" />
+                <label for="tmdb-api-key">TMDB API Key</label>
+                <input id="tmdb-api-key" type="password" @bind="_tmdbApiKey" aria-describedby="tmdb-api-key-error" />
                 @if (_fieldErrors.TryGetValue(SettingsErrors.InvalidTmdbApiKeyCode, out string? tmdbApiKeyError))
                 {
                     <span id="tmdb-api-key-error" class="field-error" role="alert">@tmdbApiKeyError</span>
@@ -100,6 +100,10 @@ else
                 {
                     <span id="episode-download-dir-error" class="field-error" role="alert">@episodeDirError</span>
                 }
+                @if (_fieldErrors.TryGetValue(SettingsErrors.EpisodeDownloadDirectoryNotUnderRootCode, out string? episodeDirUnderRootError))
+                {
+                    <span id="episode-download-dir-error" class="field-error" role="alert">@episodeDirUnderRootError</span>
+                }
             </div>
 
             <div class="settings-field">
@@ -108,6 +112,10 @@ else
                 @if (_fieldErrors.TryGetValue(SettingsErrors.MovieDownloadDirectoryNotFoundCode, out string? movieDirError))
                 {
                     <span id="movie-download-dir-error" class="field-error" role="alert">@movieDirError</span>
+                }
+                @if (_fieldErrors.TryGetValue(SettingsErrors.MovieDownloadDirectoryNotUnderRootCode, out string? movieDirUnderRootError))
+                {
+                    <span id="movie-download-dir-error" class="field-error" role="alert">@movieDirUnderRootError</span>
                 }
             </div>
         </section>

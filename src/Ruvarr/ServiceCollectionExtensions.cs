@@ -8,6 +8,7 @@ using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Programs;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Tmdb;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
@@ -16,8 +17,6 @@ using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.TvdbSeriesLookup.Jobs;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
-
-using TMDbLib.Client;
 
 namespace Ruvarr;
 
@@ -110,12 +109,7 @@ public static class ServiceCollectionExtensions
 
     private static IServiceCollection AddTmdb(this IServiceCollection services)
     {
-        services.AddScoped(sp =>
-        {
-            ISettingsStore store = sp.GetRequiredService<ISettingsStore>();
-            string apiKey = store.Current.TmdbApiKey;
-            return new TMDbClient(string.IsNullOrWhiteSpace(apiKey) ? "unconfigured" : apiKey);
-        });
+        services.AddSingleton<TmdbClientProvider>();
 
         return services;
     }

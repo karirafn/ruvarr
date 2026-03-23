@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
+using Ruvarr.Infrastructure.Tmdb;
 using Ruvarr.Programs.Domain;
 
 using TMDbLib.Client;
@@ -15,11 +16,13 @@ using TMDbLib.Objects.Search;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TMDbClient tmdb) : IJob
+internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TmdbClientProvider tmdbClientProvider) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
         logger.LogDebug("Starting TMDB movie lookup job");
+
+        TMDbClient tmdb = tmdbClientProvider.Client;
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => !x.HasMultipleEpisodes)
