@@ -79,33 +79,56 @@ public sealed class Handle : IDisposable
     }
 
     [Fact]
-    public async Task ReturnsErrorWhenEpisodeDownloadDirectoryDoesNotExist()
+    public async Task CreatesEpisodeDownloadDirectoryWhenUnderRootButMissing()
     {
         // Arrange
+        string episodeDir = Path.Combine(_tempDirectory, "episodes");
+        _store.Current.Returns(RuvarrSettings.Empty);
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, "/nonexistent/directory", _tempDirectory, []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, episodeDir, _tempDirectory, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
 
         // Assert
-        result.IsFailure.ShouldBeTrue();
-        result.Error.ShouldBe(SettingsErrors.EpisodeDownloadDirectoryNotFound);
+        result.IsSuccess.ShouldBeTrue();
+        Directory.Exists(episodeDir).ShouldBeTrue();
     }
 
     [Fact]
-    public async Task ReturnsErrorWhenMovieDownloadDirectoryDoesNotExist()
+    public async Task CreatesMovieDownloadDirectoryWhenUnderRootButMissing()
     {
         // Arrange
+        string movieDir = Path.Combine(_tempDirectory, "movies");
+        _store.Current.Returns(RuvarrSettings.Empty);
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, _tempDirectory, "/nonexistent/directory", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, _tempDirectory, movieDir, []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
 
         // Assert
-        result.IsFailure.ShouldBeTrue();
-        result.Error.ShouldBe(SettingsErrors.MovieDownloadDirectoryNotFound);
+        result.IsSuccess.ShouldBeTrue();
+        Directory.Exists(movieDir).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task CreatesBothDirectoriesWhenUnderRootButMissing()
+    {
+        // Arrange
+        string episodeDir = Path.Combine(_tempDirectory, "episodes");
+        string movieDir = Path.Combine(_tempDirectory, "movies");
+        _store.Current.Returns(RuvarrSettings.Empty);
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, episodeDir, movieDir, []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        Directory.Exists(episodeDir).ShouldBeTrue();
+        Directory.Exists(movieDir).ShouldBeTrue();
     }
 
     [Fact]
