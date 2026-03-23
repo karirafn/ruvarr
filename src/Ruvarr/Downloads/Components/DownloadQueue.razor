@@ -49,6 +49,9 @@ else
                             case DownloadQueueStatus.Complete:
                                 <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Complete" />
                                 break;
+                            case DownloadQueueStatus.Failed:
+                                <Icon Type="IconType.Warning" Class="icon" AriaLabel="Failed" />
+                                break;
                         }
                     </td>
                 </tr>

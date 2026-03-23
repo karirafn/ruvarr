@@ -3,9 +3,9 @@ namespace Ruvarr.Settings;
 internal sealed record RuvarrSettings(
     string SonarrBaseAddress = "",
     string SonarrApiKey = "",
-    string DownloadsRootDirectory = "",
-    string EpisodeDownloadDirectory = "",
-    string MovieDownloadDirectory = "")
+    string DownloadsRootDirectory = "/downloads",
+    string EpisodeDownloadDirectory = "/downloads/episodes",
+    string MovieDownloadDirectory = "/downloads/movies")
 {
     public IReadOnlyList<string> IgnoredChannels { get; init; } = [];
 

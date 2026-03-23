@@ -8,6 +8,8 @@ public static class SettingsErrors
     public const string DownloadsRootDirectoryNotFoundCode = "Settings.DownloadsRootDirectoryNotFound";
     public const string EpisodeDownloadDirectoryNotFoundCode = "Settings.EpisodeDownloadDirectoryNotFound";
     public const string MovieDownloadDirectoryNotFoundCode = "Settings.MovieDownloadDirectoryNotFound";
+    public const string EpisodeDownloadDirectoryNotUnderRootCode = "Settings.EpisodeDownloadDirectoryNotUnderRoot";
+    public const string MovieDownloadDirectoryNotUnderRootCode = "Settings.MovieDownloadDirectoryNotUnderRoot";
 
     public static readonly RuvarrError InvalidSonarrBaseAddress = new(
         InvalidSonarrBaseAddressCode,
@@ -24,4 +26,12 @@ public static class SettingsErrors
     public static readonly RuvarrError MovieDownloadDirectoryNotFound = new(
         MovieDownloadDirectoryNotFoundCode,
         "Movie download directory does not exist.");
+
+    public static readonly RuvarrError EpisodeDownloadDirectoryNotUnderRoot = new(
+        EpisodeDownloadDirectoryNotUnderRootCode,
+        "Episode download directory must be under the downloads root directory.");
+
+    public static readonly RuvarrError MovieDownloadDirectoryNotUnderRoot = new(
+        MovieDownloadDirectoryNotUnderRootCode,
+        "Movie download directory must be under the downloads root directory.");
 }

@@ -59,20 +59,32 @@ internal class DownloadQueueProcessor(
         }
 
         logger.LogInformation("Downloading {Episode}", item.Episode.ToString());
-        string tentativePath = item.Episode.ToFilePath(
-            downloadsRootDirectory,
-            episodeDownloadDirectory,
-            fileAlreadyExists: false);
 
-        string filepath = item.Episode.ToFilePath(
-            downloadsRootDirectory,
-            episodeDownloadDirectory,
-            fileAlreadyExists: File.Exists(tentativePath));
-
-        string? directory = Path.GetDirectoryName(filepath);
-        if (directory is not null && !Directory.Exists(directory))
+        string filepath;
+        try
         {
-            Directory.CreateDirectory(directory);
+            string tentativePath = item.Episode.ToFilePath(
+                downloadsRootDirectory,
+                episodeDownloadDirectory,
+                fileAlreadyExists: false);
+
+            filepath = item.Episode.ToFilePath(
+                downloadsRootDirectory,
+                episodeDownloadDirectory,
+                fileAlreadyExists: File.Exists(tentativePath));
+
+            string? directory = Path.GetDirectoryName(filepath);
+            if (directory is not null && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            logger.LogError(ex, "Failed to resolve download path for {Episode}", item.Episode.ToString());
+            item.MarkFailed();
+            await dbContext.SaveChangesAsync();
+            return;
         }
 
         string filename = Path.GetFileName(filepath);

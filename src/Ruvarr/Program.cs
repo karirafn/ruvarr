@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Ruvarr;
 using Ruvarr.Components;
+using Ruvarr.Settings;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,25 @@ using (IServiceScope scope = app.Services.CreateScope())
 {
     RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
     await dbContext.Database.MigrateAsync();
+}
+
+RuvarrSettings settings = app.Services.GetRequiredService<ISettingsStore>().Current;
+Directory.CreateDirectory(settings.DownloadsRootDirectory);
+
+string resolvedRoot = Path.GetFullPath(settings.DownloadsRootDirectory);
+
+string resolvedEpisodeDir = Path.GetFullPath(settings.EpisodeDownloadDirectory);
+if (resolvedEpisodeDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+    || resolvedEpisodeDir == resolvedRoot)
+{
+    Directory.CreateDirectory(settings.EpisodeDownloadDirectory);
+}
+
+string resolvedMovieDir = Path.GetFullPath(settings.MovieDownloadDirectory);
+if (resolvedMovieDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+    || resolvedMovieDir == resolvedRoot)
+{
+    Directory.CreateDirectory(settings.MovieDownloadDirectory);
 }
 
 app.MapStaticAssets();

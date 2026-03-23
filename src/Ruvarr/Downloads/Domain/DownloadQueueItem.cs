@@ -43,4 +43,9 @@ internal sealed class DownloadQueueItem
         Status = DownloadQueueStatus.Complete;
         _domainEvents.Add(new DownloadCompletedEvent(this));
     }
+
+    public void MarkFailed()
+    {
+        Status = DownloadQueueStatus.Failed;
+    }
 }

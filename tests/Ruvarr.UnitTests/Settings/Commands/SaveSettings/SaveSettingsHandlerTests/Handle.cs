@@ -109,6 +109,116 @@ public sealed class Handle : IDisposable
     }
 
     [Fact]
+    public async Task ReturnsErrorWhenEpisodeDirectoryIsOutsideRoot()
+    {
+        // Arrange
+        string root = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        string sibling = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        try
+        {
+            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(sibling);
+            SaveSettingsHandler sut = CreateHandler();
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, sibling, root, []);
+
+            // Act
+            RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.IsFailure.ShouldBeTrue();
+            result.Error.ShouldBe(SettingsErrors.EpisodeDownloadDirectoryNotUnderRoot);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+            if (Directory.Exists(sibling)) Directory.Delete(sibling, true);
+        }
+    }
+
+    [Fact]
+    public async Task ReturnsErrorWhenMovieDirectoryIsOutsideRoot()
+    {
+        // Arrange
+        string root = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        string sibling = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        try
+        {
+            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(sibling);
+            SaveSettingsHandler sut = CreateHandler();
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, root, sibling, []);
+
+            // Act
+            RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.IsFailure.ShouldBeTrue();
+            result.Error.ShouldBe(SettingsErrors.MovieDownloadDirectoryNotUnderRoot);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+            if (Directory.Exists(sibling)) Directory.Delete(sibling, true);
+        }
+    }
+
+    [Fact]
+    public async Task ReturnsSuccessWhenDirectoriesAreUnderRoot()
+    {
+        // Arrange
+        string root = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        string episodeDir = Path.Combine(root, "episodes");
+        string movieDir = Path.Combine(root, "movies");
+        try
+        {
+            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(episodeDir);
+            Directory.CreateDirectory(movieDir);
+            _store.Current.Returns(RuvarrSettings.Empty);
+            SaveSettingsHandler sut = CreateHandler();
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, episodeDir, movieDir, []);
+
+            // Act
+            RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.IsSuccess.ShouldBeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public async Task ReturnsErrorWhenEpisodeDirectoryUsesTraversal()
+    {
+        // Arrange
+        string root = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        string sibling = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        try
+        {
+            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(sibling);
+            string traversalPath = Path.Combine(root, "..", Path.GetFileName(sibling));
+            SaveSettingsHandler sut = CreateHandler();
+            SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", root, traversalPath, root, []);
+
+            // Act
+            RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.IsFailure.ShouldBeTrue();
+            result.Error.ShouldBe(SettingsErrors.EpisodeDownloadDirectoryNotUnderRoot);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+            if (Directory.Exists(sibling)) Directory.Delete(sibling, true);
+        }
+    }
+
+    [Fact]
     public async Task PreservesExistingApiKeyWhenSentinelIsProvided()
     {
         // Arrange
