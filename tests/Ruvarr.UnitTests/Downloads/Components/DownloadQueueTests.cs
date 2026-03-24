@@ -7,6 +7,7 @@ using NSubstitute;
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Commands.DeleteDownloadQueueItem;
+using Ruvarr.Downloads;
 using Ruvarr.Downloads.Components;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
 
@@ -36,6 +37,7 @@ public sealed class DownloadQueueTests : BunitContext
         IElement button = cut.Find("button.icon-button--danger");
         button.ShouldNotBeNull();
         button.GetAttribute("title").ShouldBe("Remove from queue");
+        button.GetAttribute("aria-label").ShouldBe("Remove from queue");
     }
 
     [Fact]
@@ -100,7 +102,7 @@ public sealed class DownloadQueueTests : BunitContext
     }
 
     [Fact]
-    public void RendersActionsColumnHeader()
+    public void RendersActionsColumnHeader_WithVisuallyHiddenLabel()
     {
         // Arrange
         List<DownloadQueueItemSummary> items =
@@ -117,6 +119,84 @@ public sealed class DownloadQueueTests : BunitContext
 
         // Assert
         cut.FindAll("thead th").Count.ShouldBe(5);
+        IElement actionsHeader = cut.FindAll("thead th")[4];
+        IElement hiddenLabel = actionsHeader.QuerySelector("span.visually-hidden")!;
+        hiddenLabel.ShouldNotBeNull();
+        hiddenLabel.TextContent.ShouldBe("Actions");
+    }
+
+    [Fact]
+    public async Task FirstClickShowsConfirmationState()
+    {
+        // Arrange
+        List<DownloadQueueItemSummary> items =
+        [
+            new("EP001", "Episode 1", "Program 1", DateTime.UtcNow, null, DownloadQueueStatus.Pending),
+        ];
+
+        RegisterQueryHandler(items);
+        RegisterDeleteHandler();
+        RegisterBroadcaster();
+
+        IRenderedComponent<DownloadQueue> cut = Render<DownloadQueue>();
+
+        // Act
+        await cut.Find("button.icon-button--danger").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        // Assert
+        IElement confirmButton = cut.Find("button.icon-button--confirming");
+        confirmButton.ShouldNotBeNull();
+        confirmButton.GetAttribute("title").ShouldBe("Click again to confirm");
+        confirmButton.GetAttribute("aria-label").ShouldBe("Confirm removal");
+    }
+
+    [Fact]
+    public async Task SecondClickExecutesDelete()
+    {
+        // Arrange
+        List<DownloadQueueItemSummary> items =
+        [
+            new("EP001", "Episode 1", "Program 1", DateTime.UtcNow, null, DownloadQueueStatus.Pending),
+        ];
+
+        RegisterQueryHandler(items);
+        IRequestHandler<DeleteDownloadQueueItemCommand> deleteHandler = RegisterDeleteHandler();
+        RegisterBroadcaster();
+
+        IRenderedComponent<DownloadQueue> cut = Render<DownloadQueue>();
+
+        // Act
+        await cut.Find("button.icon-button--danger").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        await cut.Find("button.icon-button--confirming").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        // Assert
+        await deleteHandler.Received(1)
+            .Handle(Arg.Is<DeleteDownloadQueueItemCommand>(c => c.EpisodeRuvId == "EP001"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DisplaysErrorMessage_WhenDeleteFails()
+    {
+        // Arrange
+        List<DownloadQueueItemSummary> items =
+        [
+            new("EP001", "Episode 1", "Program 1", DateTime.UtcNow, null, DownloadQueueStatus.Pending),
+        ];
+
+        RegisterQueryHandler(items);
+        RegisterDeleteHandler(RuvarrResult.Failure(DownloadErrors.ItemNotDeletable));
+        RegisterBroadcaster();
+
+        IRenderedComponent<DownloadQueue> cut = Render<DownloadQueue>();
+
+        // Act
+        await cut.Find("button.icon-button--danger").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        await cut.Find("button.icon-button--confirming").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        // Assert
+        IElement errorSpan = cut.Find("span.queue-delete-error");
+        errorSpan.ShouldNotBeNull();
+        errorSpan.TextContent.ShouldBe("Only pending or failed items can be deleted.");
     }
 
     private void RegisterQueryHandler(List<DownloadQueueItemSummary> items)
@@ -128,13 +208,14 @@ public sealed class DownloadQueueTests : BunitContext
         Services.AddSingleton(handler);
     }
 
-    private void RegisterDeleteHandler()
+    private IRequestHandler<DeleteDownloadQueueItemCommand> RegisterDeleteHandler(RuvarrResult? result = null)
     {
         IRequestHandler<DeleteDownloadQueueItemCommand> handler =
             Substitute.For<IRequestHandler<DeleteDownloadQueueItemCommand>>();
         handler.Handle(Arg.Any<DeleteDownloadQueueItemCommand>(), Arg.Any<CancellationToken>())
-            .Returns(RuvarrResult.Success);
+            .Returns(result ?? RuvarrResult.Success);
         Services.AddSingleton(handler);
+        return handler;
     }
 
     private void RegisterBroadcaster()

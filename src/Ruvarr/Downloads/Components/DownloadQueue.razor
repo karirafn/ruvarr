@@ -29,7 +29,7 @@ else
                 <th>Episode</th>
                 <th>Queued</th>
                 <th>Status</th>
-                <th></th>
+                <th><span class="visually-hidden">Actions</span></th>
             </tr>
         </thead>
         <tbody>
@@ -59,12 +59,31 @@ else
                     <td>
                         @if (item.Status is DownloadQueueStatus.Pending or DownloadQueueStatus.Failed)
                         {
-                            <button class="icon-button icon-button--danger"
-                                    @onclick="() => DeleteAsync(item.EpisodeRuvId)"
-                                    disabled="@_deleting.Contains(item.EpisodeRuvId)"
-                                    title="Remove from queue">
-                                <Icon Type="IconType.Trash" Class="icon" AriaLabel="Remove from queue" />
-                            </button>
+                            @if (_confirmingDeleteId == item.EpisodeRuvId)
+                            {
+                                <button class="icon-button icon-button--danger icon-button--confirming"
+                                        @onclick="() => DeleteAsync(item.EpisodeRuvId)"
+                                        @onfocusout="CancelConfirmation"
+                                        disabled="@_deleting.Contains(item.EpisodeRuvId)"
+                                        title="Click again to confirm"
+                                        aria-label="Confirm removal">
+                                    <Icon Type="IconType.Warning" Class="icon" />
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="icon-button icon-button--danger"
+                                        @onclick="() => ConfirmDelete(item.EpisodeRuvId)"
+                                        disabled="@_deleting.Contains(item.EpisodeRuvId)"
+                                        title="Remove from queue"
+                                        aria-label="Remove from queue">
+                                    <Icon Type="IconType.Trash" Class="icon" />
+                                </button>
+                            }
+                            @if (_deleteErrors.TryGetValue(item.EpisodeRuvId, out string? errorMessage))
+                            {
+                                <span class="queue-delete-error">@errorMessage</span>
+                            }
                         }
                     </td>
                 </tr>
@@ -76,6 +95,8 @@ else
 @code {
     private List<DownloadQueueItemSummary>? _items;
     private readonly HashSet<string> _deleting = [];
+    private readonly Dictionary<string, string> _deleteErrors = [];
+    private string? _confirmingDeleteId;
     private readonly CancellationTokenSource _cts = new();
 
     protected override Task OnInitializedAsync()
@@ -87,16 +108,36 @@ else
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private void ConfirmDelete(string episodeRuvId)
+    {
+        _deleteErrors.Remove(episodeRuvId);
+        _confirmingDeleteId = episodeRuvId;
+    }
+
+    private void CancelConfirmation()
+    {
+        _confirmingDeleteId = null;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task DeleteAsync(string episodeRuvId)
     {
+        _confirmingDeleteId = null;
         _deleting.Add(episodeRuvId);
+        _deleteErrors.Remove(episodeRuvId);
 
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<DeleteDownloadQueueItemCommand> handler =
             scope.ServiceProvider.GetRequiredService<IRequestHandler<DeleteDownloadQueueItemCommand>>();
-        await handler.Handle(new DeleteDownloadQueueItemCommand(episodeRuvId), _cts.Token);
+        RuvarrResult result = await handler.Handle(new DeleteDownloadQueueItemCommand(episodeRuvId), _cts.Token);
 
         _deleting.Remove(episodeRuvId);
+
+        if (result.IsFailure)
+        {
+            _deleteErrors[episodeRuvId] = result.Error.Description;
+        }
+
         _items = await QueryAsync();
         await InvokeAsync(StateHasChanged);
     }
