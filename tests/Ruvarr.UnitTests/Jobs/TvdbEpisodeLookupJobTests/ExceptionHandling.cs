@@ -68,4 +68,31 @@ public sealed class ExceptionHandling
         // Assert
         _notifier.Items.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task MarksComplete_WhenSonarrClientThrows()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(2000).Build();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(2).Build();
+        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Episode 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.MatchTvdb(series);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _tvdb.GetSeriesAsync(2000, Arg.Any<CancellationToken>())
+            .Returns(new TvdbSeriesDataBuilder().WithId(2000).Build());
+        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("Sonarr unavailable"));
+        _notifier.Enqueue(2, program.Name);
+        _notifier.Items.ShouldHaveSingleItem();
+        TvdbEpisodeLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(null!);
+
+        // Assert
+        _notifier.Items.ShouldBeEmpty();
+    }
 }
