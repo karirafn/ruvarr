@@ -26,6 +26,16 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
             return SettingsErrors.InvalidSonarrBaseAddress;
         }
 
+        if (string.IsNullOrWhiteSpace(command.EpisodeDownloadDirectory))
+        {
+            return SettingsErrors.EpisodeSubdirectoryEmpty;
+        }
+
+        if (string.IsNullOrWhiteSpace(command.MovieDownloadDirectory))
+        {
+            return SettingsErrors.MovieSubdirectoryEmpty;
+        }
+
         if (Path.IsPathRooted(command.EpisodeDownloadDirectory))
         {
             return SettingsErrors.EpisodeSubdirectoryAbsolute;
@@ -34,6 +44,19 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
         if (Path.IsPathRooted(command.MovieDownloadDirectory))
         {
             return SettingsErrors.MovieSubdirectoryAbsolute;
+        }
+
+        string normalizedRoot = Path.GetFullPath(RuvarrSettings.DownloadsRoot + Path.DirectorySeparatorChar);
+        string normalizedEpisodePath = Path.GetFullPath(Path.Join(RuvarrSettings.DownloadsRoot, command.EpisodeDownloadDirectory));
+        if (!normalizedEpisodePath.StartsWith(normalizedRoot, StringComparison.Ordinal))
+        {
+            return SettingsErrors.EpisodeSubdirectoryTraversal;
+        }
+
+        string normalizedMoviePath = Path.GetFullPath(Path.Join(RuvarrSettings.DownloadsRoot, command.MovieDownloadDirectory));
+        if (!normalizedMoviePath.StartsWith(normalizedRoot, StringComparison.Ordinal))
+        {
+            return SettingsErrors.MovieSubdirectoryTraversal;
         }
 
         string sonarrApiKey = command.SonarrApiKey == ApiKeySentinel

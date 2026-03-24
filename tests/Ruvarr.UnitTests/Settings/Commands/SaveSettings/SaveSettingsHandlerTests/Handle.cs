@@ -90,6 +90,82 @@ public sealed class Handle
         result.Error.ShouldBe(SettingsErrors.MovieSubdirectoryAbsolute);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("  ")]
+    public async Task ReturnsErrorWhenEpisodeSubdirectoryIsEmptyOrWhitespace(string value)
+    {
+        // Arrange
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", value, "movies", []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(SettingsErrors.EpisodeSubdirectoryEmpty);
+        await _store.DidNotReceive().SaveAsync(Arg.Any<RuvarrSettings>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("  ")]
+    public async Task ReturnsErrorWhenMovieSubdirectoryIsEmptyOrWhitespace(string value)
+    {
+        // Arrange
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", value, []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(SettingsErrors.MovieSubdirectoryEmpty);
+        await _store.DidNotReceive().SaveAsync(Arg.Any<RuvarrSettings>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("../../../etc")]
+    [InlineData("tv/../../etc")]
+    [InlineData("..")]
+    public async Task ReturnsErrorWhenEpisodeSubdirectoryTraversesOutsideDownloadsRoot(string value)
+    {
+        // Arrange
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", value, "movies", []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(SettingsErrors.EpisodeSubdirectoryTraversal);
+        await _store.DidNotReceive().SaveAsync(Arg.Any<RuvarrSettings>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("../../../etc")]
+    [InlineData("movies/../../etc")]
+    [InlineData("..")]
+    public async Task ReturnsErrorWhenMovieSubdirectoryTraversesOutsideDownloadsRoot(string value)
+    {
+        // Arrange
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", value, []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(SettingsErrors.MovieSubdirectoryTraversal);
+        await _store.DidNotReceive().SaveAsync(Arg.Any<RuvarrSettings>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task ReturnsSuccessWhenSubdirectoriesAreRelative()
     {
