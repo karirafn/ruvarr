@@ -1,14 +1,19 @@
+using Quartz;
+
 using Ruvarr.Abstractions;
+using Ruvarr.Jobs;
 
 namespace Ruvarr.Settings.Commands.SaveSettings;
 
-internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandler<SaveSettingsCommand>
+internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactory schedulerFactory) : IRequestHandler<SaveSettingsCommand>
 {
     private const string ApiKeySentinel = "****";
 
     public async Task<RuvarrResult> Handle(SaveSettingsCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        bool wasSonarrConfigured = store.Current.IsSonarrConfigured;
 
         if (!command.SonarrBaseAddress.IsAbsoluteUri)
         {
@@ -71,6 +76,12 @@ internal sealed class SaveSettingsHandler(ISettingsStore store) : IRequestHandle
         };
 
         await store.SaveAsync(settings, cancellationToken);
+
+        if (!wasSonarrConfigured && settings.IsSonarrConfigured)
+        {
+            IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+            await scheduler.TriggerJob(new JobKey(nameof(RuvEpisodesSyncJob)), cancellationToken);
+        }
 
         return RuvarrResult.Success;
     }
