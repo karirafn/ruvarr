@@ -57,7 +57,7 @@ else
                         }
                     </td>
                     <td>
-                        @if (item.Status is DownloadQueueStatus.Pending or DownloadQueueStatus.Failed)
+                        @if (item.Status is not DownloadQueueStatus.Downloading)
                         {
                             @if (_confirmingDeleteId == item.EpisodeRuvId)
                             {

@@ -20,7 +20,7 @@ internal sealed class DeleteDownloadQueueItemHandler(RuvarrDbContext dbContext)
             return DownloadErrors.ItemNotFound;
         }
 
-        if (item.Status is not (Contracts.DownloadQueueStatus.Pending or Contracts.DownloadQueueStatus.Failed))
+        if (item.Status is Contracts.DownloadQueueStatus.Downloading)
         {
             return DownloadErrors.ItemNotDeletable;
         }
