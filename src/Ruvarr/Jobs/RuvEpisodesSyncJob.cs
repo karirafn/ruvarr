@@ -51,10 +51,31 @@ internal sealed class RuvEpisodesSyncJob(
             .Where(x => x.HasMultipleEpisodes)
             .ToListAsync();
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+        IReadOnlyCollection<MissingEpisode> missingEpisodes;
+        IReadOnlyList<Series> sonarrSeries;
+
+        try
+        {
+            missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+            sonarrSeries = await sonarr.GetSeriesAsync();
+        }
+#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            logger.LogError(ex, "Sonarr calls failed during RÚV episode sync");
+
+            foreach (int ruvId in ruvIds)
+            {
+                syncQueue.MarkComplete(ruvId);
+            }
+
+            broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+            return;
+        }
+
         HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
 
-        IReadOnlyList<Series> sonarrSeries = await sonarr.GetSeriesAsync();
         HashSet<int> monitoredTvdbIds = [.. sonarrSeries
             .Where(x => x.Monitored)
             .Select(x => x.TvdbId)];

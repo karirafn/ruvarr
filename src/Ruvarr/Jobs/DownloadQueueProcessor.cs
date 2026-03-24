@@ -111,40 +111,51 @@ internal class DownloadQueueProcessor(
             return;
         }
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
-        Dictionary<int, MissingEpisode> missingByTvdbId = missingEpisodes.ToDictionary(x => x.TvdbId);
-
-        List<int> episodeIds = [.. item.Episode.TvdbEpisodes
-            .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
-            .OfType<MissingEpisode>()
-            .Select(m => m.Id)];
-
-        int? seriesId = item.Episode.TvdbEpisodes
-            .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
-            .OfType<MissingEpisode>()
-            .Select(m => (int?)m.SeriesId)
-            .FirstOrDefault();
-
-        if (episodeIds.Count == 0 || seriesId is null)
+        try
         {
-            logger.LogError(
-                "{Episode} was scheduled for manual import into Sonarr but none of its matched episodes were found in missing episodes.",
-                item.Episode.ToString());
-            return;
+            IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+            Dictionary<int, MissingEpisode> missingByTvdbId = missingEpisodes.ToDictionary(x => x.TvdbId);
+
+            List<int> episodeIds = [.. item.Episode.TvdbEpisodes
+                .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
+                .OfType<MissingEpisode>()
+                .Select(m => m.Id)];
+
+            int? seriesId = item.Episode.TvdbEpisodes
+                .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
+                .OfType<MissingEpisode>()
+                .Select(m => (int?)m.SeriesId)
+                .FirstOrDefault();
+
+            if (episodeIds.Count == 0 || seriesId is null)
+            {
+                logger.LogError(
+                    "{Episode} was scheduled for manual import into Sonarr but none of its matched episodes were found in missing episodes.",
+                    item.Episode.ToString());
+                return;
+            }
+
+            IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(episodeDownloadDirectory);
+
+            ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
+            ManualImportRequest request = new(
+                Path: file.Path,
+                SeriesId: seriesId.Value,
+                EpisodeIds: episodeIds,
+                Quality: file.Quality,
+                Languages: file.Languages,
+                ReleaseGroup: "RUV");
+
+            logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
+            await sonarr.ManualImportFilesAsync([request]);
         }
-
-        IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(episodeDownloadDirectory);
-
-        ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
-        ManualImportRequest request = new(
-            Path: file.Path,
-            SeriesId: seriesId.Value,
-            EpisodeIds: episodeIds,
-            Quality: file.Quality,
-            Languages: file.Languages,
-            ReleaseGroup: "RUV");
-
-        logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
-        await sonarr.ManualImportFilesAsync([request]);
+#pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            logger.LogError(ex, "Sonarr import failed for {Episode}", item.Episode.ToString());
+            item.MarkFailed();
+            await dbContext.SaveChangesAsync();
+        }
     }
 }

@@ -31,12 +31,19 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
 
     protected async Task PostAsync<T>(string path, T body, CancellationToken cancellationToken)
     {
-        HttpResponseMessage message = await httpClient.PostAsJsonAsync(path, body, cancellationToken);
-
-        if (!message.IsSuccessStatusCode)
+        try
         {
-            string content = await message.Content.ReadAsStringAsync(cancellationToken);
-            logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, content);
+            HttpResponseMessage message = await httpClient.PostAsJsonAsync(path, body, cancellationToken);
+
+            if (!message.IsSuccessStatusCode)
+            {
+                string content = await message.Content.ReadAsStringAsync(cancellationToken);
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, content);
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "POST {Path} failed: Reason: {Message}", path, ex.Message);
         }
     }
 
