@@ -87,8 +87,24 @@ else
             <div class="settings-field">
                 <label for="episode-download-dir">Episode Subdirectory</label>
                 <input id="episode-download-dir" type="text" @bind="_episodeDownloadDirectory" @bind:event="oninput" aria-describedby="episode-download-dir-resolved episode-download-dir-error" />
-                <span id="episode-download-dir-resolved" class="resolved-path">@($"{RuvarrSettings.DownloadsRoot}/{_episodeDownloadDirectory}")</span>
-                @if (_fieldErrors.TryGetValue(SettingsErrors.EpisodeSubdirectoryAbsoluteCode, out string? episodeDirError))
+                @{ var episodeTrimmed = _episodeDownloadDirectory.Trim('/'); }
+                <span id="episode-download-dir-resolved" class="resolved-path">@(string.IsNullOrEmpty(episodeTrimmed) ? RuvarrSettings.DownloadsRoot : $"{RuvarrSettings.DownloadsRoot}/{episodeTrimmed}")</span>
+                @{
+                    string? episodeDirError = null;
+                    if (_fieldErrors.TryGetValue(SettingsErrors.EpisodeSubdirectoryAbsoluteCode, out string? e1))
+                    {
+                        episodeDirError = e1;
+                    }
+                    else if (_fieldErrors.TryGetValue(SettingsErrors.EpisodeSubdirectoryEmptyCode, out string? e2))
+                    {
+                        episodeDirError = e2;
+                    }
+                    else if (_fieldErrors.TryGetValue(SettingsErrors.EpisodeSubdirectoryTraversalCode, out string? e3))
+                    {
+                        episodeDirError = e3;
+                    }
+                }
+                @if (episodeDirError is not null)
                 {
                     <span id="episode-download-dir-error" class="field-error" role="alert">@episodeDirError</span>
                 }
@@ -97,8 +113,24 @@ else
             <div class="settings-field">
                 <label for="movie-download-dir">Movie Subdirectory</label>
                 <input id="movie-download-dir" type="text" @bind="_movieDownloadDirectory" @bind:event="oninput" aria-describedby="movie-download-dir-resolved movie-download-dir-error" />
-                <span id="movie-download-dir-resolved" class="resolved-path">@($"{RuvarrSettings.DownloadsRoot}/{_movieDownloadDirectory}")</span>
-                @if (_fieldErrors.TryGetValue(SettingsErrors.MovieSubdirectoryAbsoluteCode, out string? movieDirError))
+                @{ var movieTrimmed = _movieDownloadDirectory.Trim('/'); }
+                <span id="movie-download-dir-resolved" class="resolved-path">@(string.IsNullOrEmpty(movieTrimmed) ? RuvarrSettings.DownloadsRoot : $"{RuvarrSettings.DownloadsRoot}/{movieTrimmed}")</span>
+                @{
+                    string? movieDirError = null;
+                    if (_fieldErrors.TryGetValue(SettingsErrors.MovieSubdirectoryAbsoluteCode, out string? m1))
+                    {
+                        movieDirError = m1;
+                    }
+                    else if (_fieldErrors.TryGetValue(SettingsErrors.MovieSubdirectoryEmptyCode, out string? m2))
+                    {
+                        movieDirError = m2;
+                    }
+                    else if (_fieldErrors.TryGetValue(SettingsErrors.MovieSubdirectoryTraversalCode, out string? m3))
+                    {
+                        movieDirError = m3;
+                    }
+                }
+                @if (movieDirError is not null)
                 {
                     <span id="movie-download-dir-error" class="field-error" role="alert">@movieDirError</span>
                 }
