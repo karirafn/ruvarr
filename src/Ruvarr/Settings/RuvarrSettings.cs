@@ -20,9 +20,9 @@ internal sealed record RuvarrSettings(
 
     public bool IsReady => IsTvdbConfigured && IsTmdbConfigured && IsSonarrConfigured;
 
-    public string ResolvedEpisodeDownloadDirectory => $"{DownloadsRoot}/{EpisodeDownloadDirectory}";
+    public string ResolvedEpisodeDownloadDirectory => Path.Join(DownloadsRoot, EpisodeDownloadDirectory);
 
-    public string ResolvedMovieDownloadDirectory => $"{DownloadsRoot}/{MovieDownloadDirectory}";
+    public string ResolvedMovieDownloadDirectory => Path.Join(DownloadsRoot, MovieDownloadDirectory);
 
     public static RuvarrSettings Empty => new();
 }

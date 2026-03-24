@@ -16,7 +16,7 @@ public sealed class ResolvedPaths
         string result = settings.ResolvedEpisodeDownloadDirectory;
 
         // Assert
-        result.ShouldBe("/downloads/tv");
+        result.ShouldBe(Path.Join("/downloads", "tv"));
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public sealed class ResolvedPaths
         string result = settings.ResolvedMovieDownloadDirectory;
 
         // Assert
-        result.ShouldBe("/downloads/movies");
+        result.ShouldBe(Path.Join("/downloads", "movies"));
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class ResolvedPaths
         string result = settings.ResolvedEpisodeDownloadDirectory;
 
         // Assert
-        result.ShouldBe("/downloads/series/episodes");
+        result.ShouldBe(Path.Join("/downloads", "series/episodes"));
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public sealed class ResolvedPaths
         string result = settings.ResolvedMovieDownloadDirectory;
 
         // Assert
-        result.ShouldBe("/downloads/films");
+        result.ShouldBe(Path.Join("/downloads", "films"));
     }
 
     [Fact]
