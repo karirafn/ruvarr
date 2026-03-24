@@ -19,5 +19,7 @@ internal sealed record RuvarrSettings(
 
     public bool IsDownloadsConfigured => !string.IsNullOrWhiteSpace(DownloadsRootDirectory);
 
+    public bool IsReady => IsTvdbConfigured && IsTmdbConfigured && IsSonarrConfigured && IsDownloadsConfigured;
+
     public static RuvarrSettings Empty => new();
 }
