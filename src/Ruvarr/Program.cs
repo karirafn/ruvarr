@@ -32,10 +32,17 @@ using (IServiceScope scope = app.Services.CreateScope())
     await dbContext.Database.MigrateAsync();
 }
 
-RuvarrSettings settings = app.Services.GetRequiredService<ISettingsStore>().Current;
-Directory.CreateDirectory(RuvarrSettings.DownloadsRoot);
-Directory.CreateDirectory(settings.ResolvedEpisodeDownloadDirectory);
-Directory.CreateDirectory(settings.ResolvedMovieDownloadDirectory);
+try
+{
+    RuvarrSettings settings = app.Services.GetRequiredService<ISettingsStore>().Current;
+    Directory.CreateDirectory(RuvarrSettings.DownloadsRoot);
+    Directory.CreateDirectory(settings.ResolvedEpisodeDownloadDirectory);
+    Directory.CreateDirectory(settings.ResolvedMovieDownloadDirectory);
+}
+catch (UnauthorizedAccessException)
+{
+    // Download directories may not be creatable in all environments (CI, tests, containers).
+}
 
 app.MapStaticAssets();
 app.UseAntiforgery();
