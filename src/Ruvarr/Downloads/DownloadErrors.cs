@@ -13,5 +13,5 @@ public static class DownloadErrors
 
     public static RuvarrError ItemNotDeletable => new(
         ItemNotDeletableCode,
-        "Only pending or failed items can be deleted.");
+        "Downloading items cannot be deleted.");
 }

@@ -82,7 +82,7 @@ public sealed class DownloadQueueTests : BunitContext
     }
 
     [Fact]
-    public void DoesNotRenderDeleteButton_ForCompleteItem()
+    public void RendersDeleteButton_ForCompleteItem()
     {
         // Arrange
         List<DownloadQueueItemSummary> items =
@@ -98,7 +98,8 @@ public sealed class DownloadQueueTests : BunitContext
         IRenderedComponent<DownloadQueue> cut = Render<DownloadQueue>();
 
         // Assert
-        cut.FindAll("button.icon-button--danger").ShouldBeEmpty();
+        IElement button = cut.Find("button.icon-button--danger");
+        button.ShouldNotBeNull();
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public sealed class DownloadQueueTests : BunitContext
         // Assert
         IElement errorSpan = cut.Find("span.queue-delete-error");
         errorSpan.ShouldNotBeNull();
-        errorSpan.TextContent.ShouldBe("Only pending or failed items can be deleted.");
+        errorSpan.TextContent.ShouldBe("Downloading items cannot be deleted.");
     }
 
     private void RegisterQueryHandler(List<DownloadQueueItemSummary> items)

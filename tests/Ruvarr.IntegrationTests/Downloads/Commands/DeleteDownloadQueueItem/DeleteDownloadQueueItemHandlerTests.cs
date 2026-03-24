@@ -130,7 +130,7 @@ public sealed class DeleteDownloadQueueItemHandlerTests(IntegrationTestFactory f
     }
 
     [Fact]
-    public async Task ReturnsNotDeletable_WhenItemIsComplete()
+    public async Task DeletesCompleteItem()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -159,8 +159,12 @@ public sealed class DeleteDownloadQueueItemHandlerTests(IntegrationTestFactory f
         RuvarrResult result = await handler.Handle(new DeleteDownloadQueueItemCommand("EP004"), cancellationToken);
 
         // Assert
-        result.IsFailure.ShouldBeTrue();
-        result.Error.Code.ShouldBe(DownloadErrors.ItemNotDeletableCode);
+        result.IsSuccess.ShouldBeTrue();
+
+        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        int count = await verifyContext.Set<DownloadQueueItem>().CountAsync(cancellationToken);
+        count.ShouldBe(0);
     }
 
     [Fact]
