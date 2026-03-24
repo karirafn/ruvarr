@@ -11,5 +11,13 @@ internal sealed record RuvarrSettings(
 {
     public IReadOnlyList<string> IgnoredChannels { get; init; } = [];
 
+    public bool IsTvdbConfigured => !string.IsNullOrWhiteSpace(TvdbApiKey);
+
+    public bool IsTmdbConfigured => !string.IsNullOrWhiteSpace(TmdbApiKey);
+
+    public bool IsSonarrConfigured => !string.IsNullOrWhiteSpace(SonarrBaseAddress) && !string.IsNullOrWhiteSpace(SonarrApiKey);
+
+    public bool IsDownloadsConfigured => !string.IsNullOrWhiteSpace(DownloadsRootDirectory);
+
     public static RuvarrSettings Empty => new();
 }
