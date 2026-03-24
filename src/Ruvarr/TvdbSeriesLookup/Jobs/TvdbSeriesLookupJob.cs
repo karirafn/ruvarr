@@ -35,84 +35,85 @@ internal sealed class TvdbSeriesLookupJob(
         lookupQueue.MarkProcessing(ruvId);
         broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
 
-        RuvProgram? program = await dbContext.Set<RuvProgram>()
-            .Include(x => x.Series)
-            .Include(x => x.Episodes)
-            .Where(x => x.RuvId == ruvId)
-            .FirstOrDefaultAsync();
-
-        if (program is null)
+        try
         {
-            logger.LogDebug("No RÚV program pending TVDB series lookup");
-            lookupQueue.MarkComplete(ruvId);
-            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
-            return;
-        }
+            RuvProgram? program = await dbContext.Set<RuvProgram>()
+                .Include(x => x.Series)
+                .Include(x => x.Episodes)
+                .Where(x => x.RuvId == ruvId)
+                .FirstOrDefaultAsync();
 
-        if (program.Series is not null)
-        {
-            SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId, cancellationToken: context.CancellationToken);
-
-            if (seriesData is null)
+            if (program is null)
             {
-                logger.LogWarning("TVDB returned no series data for TvdbId '{TvdbId}'", program.Series.TvdbId);
-                lookupQueue.MarkComplete(ruvId);
-            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
+                logger.LogDebug("No RÚV program pending TVDB series lookup");
                 return;
             }
 
-            program.Series.UpdateSlug(seriesData.Series.Slug);
+            if (program.Series is not null)
+            {
+                SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId, cancellationToken: context.CancellationToken);
+
+                if (seriesData is null)
+                {
+                    logger.LogWarning("TVDB returned no series data for TvdbId '{TvdbId}'", program.Series.TvdbId);
+                    return;
+                }
+
+                program.Series.UpdateSlug(seriesData.Series.Slug);
+
+                await dbContext.SaveChangesAsync(context.CancellationToken);
+
+                return;
+            }
+
+            IReadOnlyList<RuvEpisode> episodes = program.Episodes;
+
+            CancellationToken cancellationToken = context.CancellationToken;
+
+            Datum? match = await SearchTvdbAsync(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
+                ?? await TryRemovingNumeralEnding(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
+                ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken)
+                ?? await TryRemovingNumeralEnding(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken);
+
+            if (match is null)
+            {
+                await ScheduleLookupAsync(program, context.CancellationToken);
+                return;
+            }
+
+            if (!int.TryParse(match.TvdbId, NumberStyles.Integer, CultureInfo.InvariantCulture, out int matchTvdbId) || matchTvdbId < 1)
+            {
+                logger.LogWarning("Could not parse TvdbId '{TvdbId}' as integer for TVDB match '{Name}'", match.TvdbId, match.Name);
+                program.ScheduleLookup();
+                await dbContext.SaveChangesAsync(context.CancellationToken);
+                return;
+            }
+
+            TvdbSeries? entity = await dbContext
+                .Set<TvdbSeries>()
+                .Where(x => x.TvdbId == matchTvdbId)
+                .FirstOrDefaultAsync()
+                ?? TvdbSeries.Create(matchTvdbId, match.Name, match.Slug);
+
+            entity.UpdateSlug(match.Slug);
+
+            program.MatchTvdb(entity);
 
             await dbContext.SaveChangesAsync(context.CancellationToken);
 
-            lookupQueue.MarkComplete(ruvId);
-            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
-            return;
+            logger.LogInformation("Matched RÚV program '{Program}' with TVDB series '{Series}'", program.Name, entity.Name);
         }
-
-        IReadOnlyList<RuvEpisode> episodes = program.Episodes;
-
-        CancellationToken cancellationToken = context.CancellationToken;
-
-        Datum? match = await SearchTvdbAsync(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
-            ?? await TryRemovingNumeralEnding(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
-            ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken)
-            ?? await TryRemovingNumeralEnding(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken);
-
-        if (match is null)
+#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
+        catch (Exception ex)
+#pragma warning restore CA1031
         {
-            await ScheduleLookupAsync(program, context.CancellationToken);
-            lookupQueue.MarkComplete(ruvId);
-            broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
-            return;
+            logger.LogError(ex, "Error during TVDB series lookup for RuvId {RuvId}", ruvId);
         }
-
-        if (!int.TryParse(match.TvdbId, NumberStyles.Integer, CultureInfo.InvariantCulture, out int matchTvdbId) || matchTvdbId < 1)
+        finally
         {
-            logger.LogWarning("Could not parse TvdbId '{TvdbId}' as integer for TVDB match '{Name}'", match.TvdbId, match.Name);
-            program.ScheduleLookup();
-            await dbContext.SaveChangesAsync(context.CancellationToken);
             lookupQueue.MarkComplete(ruvId);
             broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
-            return;
         }
-
-        TvdbSeries? entity = await dbContext
-            .Set<TvdbSeries>()
-            .Where(x => x.TvdbId == matchTvdbId)
-            .FirstOrDefaultAsync()
-            ?? TvdbSeries.Create(matchTvdbId, match.Name, match.Slug);
-
-        entity.UpdateSlug(match.Slug);
-
-        program.MatchTvdb(entity);
-
-        await dbContext.SaveChangesAsync(context.CancellationToken);
-
-        lookupQueue.MarkComplete(ruvId);
-        broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
-
-        logger.LogInformation("Matched RÚV program '{Program}' with TVDB series '{Series}'", program.Name, entity.Name);
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program, CancellationToken cancellationToken)

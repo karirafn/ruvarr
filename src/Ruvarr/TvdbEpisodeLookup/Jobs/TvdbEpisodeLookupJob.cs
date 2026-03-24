@@ -37,42 +37,50 @@ internal sealed class TvdbEpisodeLookupJob(
         lookupQueue.MarkProcessing(ruvId);
         broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
 
-        RuvProgram? program = await dbContext.Set<RuvProgram>()
-            .Include(x => x.Series)
-            .Include(x => x.Episodes)
-                .ThenInclude(x => x.TvdbEpisodes)
-            .Where(x => x.RuvId == ruvId)
-            .FirstOrDefaultAsync();
-
-        if (program is null || program.Series is null)
+        try
         {
-            logger.LogDebug("No RÚV program pending TVDB episode lookup");
-            lookupQueue.MarkComplete(ruvId);
-            broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
-            return;
-        }
+            RuvProgram? program = await dbContext.Set<RuvProgram>()
+                .Include(x => x.Series)
+                .Include(x => x.Episodes)
+                    .ThenInclude(x => x.TvdbEpisodes)
+                .Where(x => x.RuvId == ruvId)
+                .FirstOrDefaultAsync();
 
-        logger.LogDebug("Getting TVDB series data");
-        SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId);
+            if (program is null || program.Series is null)
+            {
+                logger.LogDebug("No RÚV program pending TVDB episode lookup");
+                return;
+            }
 
-        if (seriesData is null)
-        {
+            logger.LogDebug("Getting TVDB series data");
+            SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId);
+
+            if (seriesData is null)
+            {
+                await ScheduleLookupAsync(program);
+                return;
+            }
+
+            IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+            HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+
+            await MatchByTranslationAsync(program, seriesData, missingTvdbIds);
+            MatchByEpisodeNumber(program, seriesData, missingTvdbIds);
+            MatchByPartOneSibling(program, seriesData, missingTvdbIds);
+
             await ScheduleLookupAsync(program);
+        }
+#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            logger.LogError(ex, "Error during TVDB episode lookup for RuvId {RuvId}", ruvId);
+        }
+        finally
+        {
             lookupQueue.MarkComplete(ruvId);
             broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
-            return;
         }
-
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
-        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
-
-        await MatchByTranslationAsync(program, seriesData, missingTvdbIds);
-        MatchByEpisodeNumber(program, seriesData, missingTvdbIds);
-        MatchByPartOneSibling(program, seriesData, missingTvdbIds);
-
-        await ScheduleLookupAsync(program);
-        lookupQueue.MarkComplete(ruvId);
-        broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
     }
 
     private async Task MatchByTranslationAsync(RuvProgram program, SeriesData seriesData, HashSet<int> missingTvdbIds)
