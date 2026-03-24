@@ -7,6 +7,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
+using Ruvarr.Settings;
 using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.Programs.Domain;
@@ -22,11 +23,15 @@ public sealed class SeasonFallback
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly TvdbEpisodeLookupNotifier _notifier = new();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 
     public SeasonFallback()
     {
         _sonarr.GetMissingEpisodesAsync().Returns([]);
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
+        _settingsStore.Current.Returns(new RuvarrSettings(
+            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
+            TvdbApiKey: "tvdb-key", TmdbApiKey: "tmdb-key"));
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -37,7 +42,7 @@ public sealed class SeasonFallback
 
     private TvdbEpisodeLookupJob CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<TvdbEpisodeLookupJob>.Instance,
-        dbContext, _tvdb, _sonarr, _notifier, new DomainEventBroadcaster());
+        dbContext, _tvdb, _sonarr, _notifier, new DomainEventBroadcaster(), _settingsStore);
 
     [Fact]
     public async Task MatchesEpisodeViaFallbackWhenTitleMatchFails()

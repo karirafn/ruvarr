@@ -9,6 +9,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
 using Ruvarr.Testing.Builders;
 using Ruvarr.TvdbSeriesLookup.Jobs;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
@@ -23,11 +24,15 @@ public sealed class SearchTvdbAsync
     private readonly TvdbSeriesLookupNotifier _lookupQueue = new();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
+    private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 
     public SearchTvdbAsync()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _context.CancellationToken.Returns(CancellationToken.None);
+        _settingsStore.Current.Returns(new RuvarrSettings(
+            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
+            TvdbApiKey: "tvdb-key", TmdbApiKey: "tmdb-key"));
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -41,7 +46,8 @@ public sealed class SearchTvdbAsync
         dbContext,
         _tvdb,
         _lookupQueue,
-        new DomainEventBroadcaster());
+        new DomainEventBroadcaster(),
+        _settingsStore);
 
     private static SearchResponse CreateSearchResponse(params Datum[] data) => new(
         Status: "success",

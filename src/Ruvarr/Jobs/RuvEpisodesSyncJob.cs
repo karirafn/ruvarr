@@ -12,6 +12,7 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
 
 namespace Ruvarr.Jobs;
 
@@ -22,10 +23,17 @@ internal sealed class RuvEpisodesSyncJob(
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
     ProgramRefreshNotifier syncQueue,
-    IDomainEventBroadcaster broadcaster) : IJob
+    IDomainEventBroadcaster broadcaster,
+    ISettingsStore settingsStore) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        if (!settingsStore.Current.IsSonarrConfigured)
+        {
+            logger.LogDebug("Skipping {JobName}: Sonarr is not configured", nameof(RuvEpisodesSyncJob));
+            return;
+        }
+
         logger.LogDebug("Starting RÚV episode sync job");
 
         List<int> ruvIds = [.. syncQueue.DequeueAll()];

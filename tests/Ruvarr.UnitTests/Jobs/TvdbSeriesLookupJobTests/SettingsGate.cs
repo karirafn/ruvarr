@@ -2,15 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 
 using Quartz;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Tvdb;
-using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
-using Ruvarr.Testing.Builders;
 using Ruvarr.TvdbSeriesLookup.Jobs;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
@@ -18,7 +15,7 @@ using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.TvdbSeriesLookupJobTests;
 
-public sealed class ExceptionHandling
+public sealed class SettingsGate
 {
     private readonly ITvdbClient _tvdb = Substitute.For<ITvdbClient>();
     private readonly TvdbSeriesLookupNotifier _lookupQueue = new();
@@ -26,13 +23,10 @@ public sealed class ExceptionHandling
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 
-    public ExceptionHandling()
+    public SettingsGate()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _context.CancellationToken.Returns(CancellationToken.None);
-        _settingsStore.Current.Returns(new RuvarrSettings(
-            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            TvdbApiKey: "tvdb-key", TmdbApiKey: "tmdb-key"));
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -50,28 +44,22 @@ public sealed class ExceptionHandling
         _settingsStore);
 
     [Fact]
-    public async Task MarksComplete_WhenTvdbClientThrows()
+    public async Task Skips_WhenTvdbIsNotConfigured()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        RuvProgram program = new RuvProgramBuilder()
-            .WithRuvId(1)
-            .WithName("Test Program")
-            .WithForeignName(null)
-            .Build();
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        _tvdb.SearchAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("TVDB API unavailable"));
-        _lookupQueue.Enqueue(1, program.Name);
-        _lookupQueue.Items.ShouldHaveSingleItem();
+        _settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ""));
+        _lookupQueue.Enqueue(1, "Test Program");
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
         await sut.Execute(_context);
 
         // Assert
-        _lookupQueue.Items.ShouldBeEmpty();
+        _lookupQueue.Items.ShouldHaveSingleItem();
+        _ = _tvdb.DidNotReceive().SearchAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 }

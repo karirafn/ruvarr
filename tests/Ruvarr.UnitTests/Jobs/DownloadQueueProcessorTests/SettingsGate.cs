@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Infrastructure.FFmpeg;
@@ -16,19 +18,18 @@ using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.DownloadQueueProcessorTests;
 
-public sealed class EarlyReturns
+public sealed class SettingsGate
 {
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
-    private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
+    private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 
-    public EarlyReturns()
+    public SettingsGate()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
-        _settingsStore.Current.Returns(new RuvarrSettings(
-            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            TvdbApiKey: "tvdb-key", TmdbApiKey: "tmdb-key"));
+        _context.CancellationToken.Returns(CancellationToken.None);
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -56,39 +57,40 @@ public sealed class EarlyReturns
     }
 
     [Fact]
-    public async Task MarksItemFailed_WhenDownloadsRootDirectoryIsEmpty()
+    public async Task Skips_WhenDownloadsIsNotConfigured()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
         DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            DownloadsRootDirectory: "/downloads"));
-        DownloadQueueProcessor sut = CreateJob(dbContext);
-
-        // Act — guard passes, defense-in-depth reads DownloadsRootDirectory
-        await sut.Execute(null!);
-
-        // Assert — item gets picked up and proceeds past the guard
-        item.Status.ShouldNotBe(DownloadQueueStatus.Pending);
-    }
-
-    [Fact]
-    public async Task MarksItemFailed_WhenEpisodeDownloadDirectoryIsEmpty()
-    {
-        // Arrange
-        using RuvarrDbContext dbContext = CreateDbContext();
-        DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
-        _settingsStore.Current.Returns(new RuvarrSettings(
-            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            DownloadsRootDirectory: "/downloads",
-            EpisodeDownloadDirectory: ""));
+            DownloadsRootDirectory: ""));
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
-        item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.Status.ShouldBe(DownloadQueueStatus.Pending);
+        _ = _sonarr.DidNotReceive().GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Skips_WhenSonarrIsNotConfigured()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
+        _settingsStore.Current.Returns(new RuvarrSettings(
+            DownloadsRootDirectory: "/downloads",
+            SonarrBaseAddress: "", SonarrApiKey: ""));
+        DownloadQueueProcessor sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        item.Status.ShouldBe(DownloadQueueStatus.Pending);
+        _ = _sonarr.DidNotReceive().GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 }
