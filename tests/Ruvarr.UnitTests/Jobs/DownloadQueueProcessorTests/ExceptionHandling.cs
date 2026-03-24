@@ -29,7 +29,6 @@ public sealed class ExceptionHandling
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            DownloadsRootDirectory: "/downloads",
             EpisodeDownloadDirectory: "episodes"));
     }
 

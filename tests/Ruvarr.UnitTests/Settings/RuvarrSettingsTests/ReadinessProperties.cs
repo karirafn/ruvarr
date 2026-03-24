@@ -150,45 +150,6 @@ public sealed class ReadinessProperties
     }
 
     [Fact]
-    public void IsDownloadsConfigured_ReturnsFalse_WhenDownloadsRootDirectoryIsEmpty()
-    {
-        // Arrange
-        RuvarrSettings settings = new(DownloadsRootDirectory: "");
-
-        // Act
-        bool result = settings.IsDownloadsConfigured;
-
-        // Assert
-        result.ShouldBeFalse();
-    }
-
-    [Fact]
-    public void IsDownloadsConfigured_ReturnsFalse_WhenDownloadsRootDirectoryIsWhitespace()
-    {
-        // Arrange
-        RuvarrSettings settings = new(DownloadsRootDirectory: "  ");
-
-        // Act
-        bool result = settings.IsDownloadsConfigured;
-
-        // Assert
-        result.ShouldBeFalse();
-    }
-
-    [Fact]
-    public void IsDownloadsConfigured_ReturnsTrue_WhenDownloadsRootDirectoryIsSet()
-    {
-        // Arrange
-        RuvarrSettings settings = new(DownloadsRootDirectory: "/downloads");
-
-        // Act
-        bool result = settings.IsDownloadsConfigured;
-
-        // Assert
-        result.ShouldBeTrue();
-    }
-
-    [Fact]
     public void IsReady_ReturnsTrue_WhenAllSettingsAreConfigured()
     {
         // Arrange
@@ -196,8 +157,7 @@ public sealed class ReadinessProperties
             SonarrBaseAddress: "http://localhost:8989",
             SonarrApiKey: "key",
             TvdbApiKey: "tvdb-key",
-            TmdbApiKey: "tmdb-key",
-            DownloadsRootDirectory: "/downloads");
+            TmdbApiKey: "tmdb-key");
 
         // Act
         bool result = settings.IsReady;
@@ -214,8 +174,7 @@ public sealed class ReadinessProperties
             SonarrBaseAddress: "http://localhost:8989",
             SonarrApiKey: "key",
             TvdbApiKey: "",
-            TmdbApiKey: "tmdb-key",
-            DownloadsRootDirectory: "/downloads");
+            TmdbApiKey: "tmdb-key");
 
         // Act
         bool result = settings.IsReady;
@@ -232,8 +191,7 @@ public sealed class ReadinessProperties
             SonarrBaseAddress: "http://localhost:8989",
             SonarrApiKey: "key",
             TvdbApiKey: "tvdb-key",
-            TmdbApiKey: "",
-            DownloadsRootDirectory: "/downloads");
+            TmdbApiKey: "");
 
         // Act
         bool result = settings.IsReady;
@@ -250,26 +208,7 @@ public sealed class ReadinessProperties
             SonarrBaseAddress: "",
             SonarrApiKey: "",
             TvdbApiKey: "tvdb-key",
-            TmdbApiKey: "tmdb-key",
-            DownloadsRootDirectory: "/downloads");
-
-        // Act
-        bool result = settings.IsReady;
-
-        // Assert
-        result.ShouldBeFalse();
-    }
-
-    [Fact]
-    public void IsReady_ReturnsFalse_WhenDownloadsIsNotConfigured()
-    {
-        // Arrange
-        RuvarrSettings settings = new(
-            SonarrBaseAddress: "http://localhost:8989",
-            SonarrApiKey: "key",
-            TvdbApiKey: "tvdb-key",
-            TmdbApiKey: "tmdb-key",
-            DownloadsRootDirectory: "");
+            TmdbApiKey: "tmdb-key");
 
         // Act
         bool result = settings.IsReady;

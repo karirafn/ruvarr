@@ -60,6 +60,13 @@
     font-size: 0.82rem;
 }
 
+.resolved-path {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-family: monospace;
+    margin-top: -0.1rem;
+}
+
 .settings-field input.has-error {
     border-color: #ff6b6b;
 }

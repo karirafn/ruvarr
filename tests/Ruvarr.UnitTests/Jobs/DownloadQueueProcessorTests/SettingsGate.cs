@@ -57,32 +57,12 @@ public sealed class SettingsGate
     }
 
     [Fact]
-    public async Task Skips_WhenDownloadsIsNotConfigured()
-    {
-        // Arrange
-        using RuvarrDbContext dbContext = CreateDbContext();
-        DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
-        _settingsStore.Current.Returns(new RuvarrSettings(
-            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            DownloadsRootDirectory: ""));
-        DownloadQueueProcessor sut = CreateJob(dbContext);
-
-        // Act
-        await sut.Execute(_context);
-
-        // Assert
-        item.Status.ShouldBe(DownloadQueueStatus.Pending);
-        _ = _sonarr.DidNotReceive().GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
     public async Task Skips_WhenSonarrIsNotConfigured()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
         DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
         _settingsStore.Current.Returns(new RuvarrSettings(
-            DownloadsRootDirectory: "/downloads",
             SonarrBaseAddress: "", SonarrApiKey: ""));
         DownloadQueueProcessor sut = CreateJob(dbContext);
 

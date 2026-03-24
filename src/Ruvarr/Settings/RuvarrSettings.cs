@@ -5,10 +5,11 @@ internal sealed record RuvarrSettings(
     string SonarrApiKey = "",
     string TvdbApiKey = "",
     string TmdbApiKey = "",
-    string DownloadsRootDirectory = "/downloads",
-    string EpisodeDownloadDirectory = "/downloads/tv",
-    string MovieDownloadDirectory = "/downloads/movies")
+    string EpisodeDownloadDirectory = "tv",
+    string MovieDownloadDirectory = "movies")
 {
+    public const string DownloadsRoot = "/downloads";
+
     public IReadOnlyList<string> IgnoredChannels { get; init; } = [];
 
     public bool IsTvdbConfigured => !string.IsNullOrWhiteSpace(TvdbApiKey);
@@ -17,9 +18,11 @@ internal sealed record RuvarrSettings(
 
     public bool IsSonarrConfigured => !string.IsNullOrWhiteSpace(SonarrBaseAddress) && !string.IsNullOrWhiteSpace(SonarrApiKey);
 
-    public bool IsDownloadsConfigured => !string.IsNullOrWhiteSpace(DownloadsRootDirectory);
+    public bool IsReady => IsTvdbConfigured && IsTmdbConfigured && IsSonarrConfigured;
 
-    public bool IsReady => IsTvdbConfigured && IsTmdbConfigured && IsSonarrConfigured && IsDownloadsConfigured;
+    public string ResolvedEpisodeDownloadDirectory => $"{DownloadsRoot}/{EpisodeDownloadDirectory}";
+
+    public string ResolvedMovieDownloadDirectory => $"{DownloadsRoot}/{MovieDownloadDirectory}";
 
     public static RuvarrSettings Empty => new();
 }

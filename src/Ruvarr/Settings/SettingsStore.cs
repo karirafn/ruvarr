@@ -71,6 +71,36 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
         }
 
         string content = File.ReadAllText(filePath);
-        return JsonSerializer.Deserialize<RuvarrSettings>(content) ?? RuvarrSettings.Empty;
+        RuvarrSettings settings = JsonSerializer.Deserialize<RuvarrSettings>(content) ?? RuvarrSettings.Empty;
+
+        return MigrateAbsolutePaths(settings);
+    }
+
+    private static RuvarrSettings MigrateAbsolutePaths(RuvarrSettings settings)
+    {
+        string prefix = RuvarrSettings.DownloadsRoot + "/";
+
+        string episodeDir = settings.EpisodeDownloadDirectory;
+        if (episodeDir.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            episodeDir = episodeDir[prefix.Length..];
+        }
+
+        string movieDir = settings.MovieDownloadDirectory;
+        if (movieDir.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            movieDir = movieDir[prefix.Length..];
+        }
+
+        if (episodeDir == settings.EpisodeDownloadDirectory && movieDir == settings.MovieDownloadDirectory)
+        {
+            return settings;
+        }
+
+        return settings with
+        {
+            EpisodeDownloadDirectory = episodeDir,
+            MovieDownloadDirectory = movieDir
+        };
     }
 }

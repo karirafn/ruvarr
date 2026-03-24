@@ -22,9 +22,9 @@ internal class DownloadQueueProcessor(
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsStore.Current.IsDownloadsConfigured || !settingsStore.Current.IsSonarrConfigured)
+        if (!settingsStore.Current.IsSonarrConfigured)
         {
-            logger.LogDebug("Skipping {JobName}: Downloads or Sonarr is not configured", nameof(DownloadQueueProcessor));
+            logger.LogDebug("Skipping {JobName}: Sonarr is not configured", nameof(DownloadQueueProcessor));
             return;
         }
 
@@ -48,25 +48,7 @@ internal class DownloadQueueProcessor(
         item.MarkDownloading();
         await dbContext.SaveChangesAsync();
 
-        string downloadsRootDirectory = settingsStore.Current.DownloadsRootDirectory;
-
-        if (string.IsNullOrEmpty(downloadsRootDirectory))
-        {
-            logger.LogWarning("Downloads root directory is not configured. Skipping download");
-            item.MarkFailed();
-            await dbContext.SaveChangesAsync();
-            return;
-        }
-
-        string episodeDownloadDirectory = settingsStore.Current.EpisodeDownloadDirectory;
-
-        if (string.IsNullOrEmpty(episodeDownloadDirectory))
-        {
-            logger.LogWarning("Episode download directory is not configured. Skipping download");
-            item.MarkFailed();
-            await dbContext.SaveChangesAsync();
-            return;
-        }
+        string episodeSubdirectory = settingsStore.Current.EpisodeDownloadDirectory;
 
         logger.LogInformation("Downloading {Episode}", item.Episode.ToString());
 
@@ -74,13 +56,13 @@ internal class DownloadQueueProcessor(
         try
         {
             string tentativePath = item.Episode.ToFilePath(
-                downloadsRootDirectory,
-                episodeDownloadDirectory,
+                RuvarrSettings.DownloadsRoot,
+                episodeSubdirectory,
                 fileAlreadyExists: false);
 
             filepath = item.Episode.ToFilePath(
-                downloadsRootDirectory,
-                episodeDownloadDirectory,
+                RuvarrSettings.DownloadsRoot,
+                episodeSubdirectory,
                 fileAlreadyExists: File.Exists(tentativePath));
 
             string? directory = Path.GetDirectoryName(filepath);
@@ -135,7 +117,7 @@ internal class DownloadQueueProcessor(
                 return;
             }
 
-            IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(episodeDownloadDirectory);
+            IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(settingsStore.Current.ResolvedEpisodeDownloadDirectory);
 
             ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
             ManualImportRequest request = new(
