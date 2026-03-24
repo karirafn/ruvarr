@@ -245,6 +245,20 @@ tbody tr:hover {
     background-color: rgba(253, 70, 70, 0.15);
 }
 
+.icon-button--danger {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.icon-button--danger:hover {
+    color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.1);
+}
+
+.icon-button--danger:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
 .queue-table th:nth-child(1), .queue-table td:nth-child(1) { width: 25%; }
 .sync-queue-table th:nth-child(1), .sync-queue-table td:nth-child(1) { width: auto; }
 .sync-queue-table th:nth-child(2), .sync-queue-table td:nth-child(2) { width: 1%; white-space: nowrap; text-align: right; }
@@ -252,6 +266,7 @@ tbody tr:hover {
 .queue-table th:nth-child(2), .queue-table td:nth-child(2) { width: auto; }
 .queue-table th:nth-child(3), .queue-table td:nth-child(3) { white-space: nowrap; width: 8rem; }
 .queue-table th:nth-child(4), .queue-table td:nth-child(4) { width: 5rem; text-align: center; }
+.queue-table th:nth-child(5), .queue-table td:nth-child(5) { width: 1%; white-space: nowrap; }
 
 .queue-status {
     font-size: 0.8rem;

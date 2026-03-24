@@ -3,6 +3,7 @@
 @namespace Ruvarr.Downloads.Components
 @using Ruvarr.Abstractions
 @using Ruvarr.Contracts
+@using Ruvarr.Downloads.Commands.DeleteDownloadQueueItem
 @using Ruvarr.Downloads.Events
 @using Ruvarr.Downloads.Queries.GetDownloadQueue
 @inject IServiceScopeFactory ScopeFactory
@@ -28,6 +29,7 @@ else
                 <th>Episode</th>
                 <th>Queued</th>
                 <th>Status</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -54,6 +56,17 @@ else
                                 break;
                         }
                     </td>
+                    <td>
+                        @if (item.Status is DownloadQueueStatus.Pending or DownloadQueueStatus.Failed)
+                        {
+                            <button class="icon-button icon-button--danger"
+                                    @onclick="() => DeleteAsync(item.EpisodeRuvId)"
+                                    disabled="@_deleting.Contains(item.EpisodeRuvId)"
+                                    title="Remove from queue">
+                                <Icon Type="IconType.Trash" Class="icon" AriaLabel="Remove from queue" />
+                            </button>
+                        }
+                    </td>
                 </tr>
             }
         </tbody>
@@ -62,6 +75,7 @@ else
 
 @code {
     private List<DownloadQueueItemSummary>? _items;
+    private readonly HashSet<string> _deleting = [];
     private readonly CancellationTokenSource _cts = new();
 
     protected override Task OnInitializedAsync()
@@ -70,6 +84,21 @@ else
         _ = WatchCompletedAsync();
         _ = LoadAsync();
         return Task.CompletedTask;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task DeleteAsync(string episodeRuvId)
+    {
+        _deleting.Add(episodeRuvId);
+
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<DeleteDownloadQueueItemCommand> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<DeleteDownloadQueueItemCommand>>();
+        await handler.Handle(new DeleteDownloadQueueItemCommand(episodeRuvId), _cts.Token);
+
+        _deleting.Remove(episodeRuvId);
+        _items = await QueryAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadAsync()

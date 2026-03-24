@@ -24,6 +24,7 @@ public sealed class IconTests : BunitContext
     [InlineData(IconType.LinkDiagonal)]
     [InlineData(IconType.Refresh)]
     [InlineData(IconType.Spinner)]
+    [InlineData(IconType.Trash)]
     [InlineData(IconType.Warning)]
     public void Renders_Svg_For_Each_IconType(IconType type)
     {

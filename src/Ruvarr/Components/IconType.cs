@@ -16,5 +16,6 @@ public enum IconType
     Plus,
     Refresh,
     Spinner,
+    Trash,
     Warning
 }
