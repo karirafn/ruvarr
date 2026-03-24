@@ -47,6 +47,8 @@ internal class DownloadQueueProcessor(
         if (string.IsNullOrEmpty(downloadsRootDirectory))
         {
             logger.LogWarning("Downloads root directory is not configured. Skipping download");
+            item.MarkFailed();
+            await dbContext.SaveChangesAsync();
             return;
         }
 
@@ -55,6 +57,8 @@ internal class DownloadQueueProcessor(
         if (string.IsNullOrEmpty(episodeDownloadDirectory))
         {
             logger.LogWarning("Episode download directory is not configured. Skipping download");
+            item.MarkFailed();
+            await dbContext.SaveChangesAsync();
             return;
         }
 
