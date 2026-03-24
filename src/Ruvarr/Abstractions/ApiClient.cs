@@ -11,7 +11,8 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, content);
+                string truncated = content.Length > 512 ? content[..512] : content;
+                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, truncated);
                 return default;
             }
 
@@ -38,7 +39,8 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, content);
+                string truncated = content.Length > 512 ? content[..512] : content;
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, truncated);
             }
         }
         catch (HttpRequestException ex)
@@ -56,7 +58,8 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, content);
+                string truncated = content.Length > 512 ? content[..512] : content;
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, truncated);
                 return default;
             }
 
