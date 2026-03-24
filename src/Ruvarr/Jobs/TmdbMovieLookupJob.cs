@@ -7,6 +7,7 @@ using Quartz;
 
 using Ruvarr.Infrastructure.Tmdb;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
 
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
@@ -16,10 +17,16 @@ using TMDbLib.Objects.Search;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TmdbClientProvider tmdbClientProvider) : IJob
+internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TmdbClientProvider tmdbClientProvider, ISettingsStore settingsStore) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        if (!settingsStore.Current.IsTmdbConfigured)
+        {
+            logger.LogDebug("Skipping {JobName}: TMDB is not configured", nameof(TmdbMovieLookupJob));
+            return;
+        }
+
         logger.LogDebug("Starting TMDB movie lookup job");
 
         TMDbClient tmdb = tmdbClientProvider.Client;

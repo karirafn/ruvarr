@@ -22,6 +22,12 @@ internal class DownloadQueueProcessor(
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        if (!settingsStore.Current.IsDownloadsConfigured || !settingsStore.Current.IsSonarrConfigured)
+        {
+            logger.LogDebug("Skipping {JobName}: Downloads or Sonarr is not configured", nameof(DownloadQueueProcessor));
+            return;
+        }
+
         logger.LogDebug("Starting download queue processor job");
 
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()

@@ -10,6 +10,7 @@ using Ruvarr.Extensions;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 namespace Ruvarr.TvdbSeriesLookup.Jobs;
@@ -20,10 +21,17 @@ internal sealed class TvdbSeriesLookupJob(
     RuvarrDbContext dbContext,
     ITvdbClient tvdb,
     TvdbSeriesLookupNotifier lookupQueue,
-    IDomainEventBroadcaster broadcaster) : IJob
+    IDomainEventBroadcaster broadcaster,
+    ISettingsStore settingsStore) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        if (!settingsStore.Current.IsTvdbConfigured)
+        {
+            logger.LogDebug("Skipping {JobName}: TVDB is not configured", nameof(TvdbSeriesLookupJob));
+            return;
+        }
+
         logger.LogDebug("Starting Tvdb series lookup job");
 
         if (!lookupQueue.TryDequeue(out int ruvId))

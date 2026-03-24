@@ -11,6 +11,7 @@ using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
 
 namespace Ruvarr.TvdbEpisodeLookup.Jobs;
@@ -22,10 +23,17 @@ internal sealed class TvdbEpisodeLookupJob(
     ITvdbClient tvdb,
     ISonarrClient sonarr,
     TvdbEpisodeLookupNotifier lookupQueue,
-    IDomainEventBroadcaster broadcaster) : IJob
+    IDomainEventBroadcaster broadcaster,
+    ISettingsStore settingsStore) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        if (!settingsStore.Current.IsTvdbConfigured || !settingsStore.Current.IsSonarrConfigured)
+        {
+            logger.LogDebug("Skipping {JobName}: TVDB or Sonarr is not configured", nameof(TvdbEpisodeLookupJob));
+            return;
+        }
+
         logger.LogDebug("Starting TVDB episode lookup job");
 
         if (!lookupQueue.TryDequeue(out int ruvId))
