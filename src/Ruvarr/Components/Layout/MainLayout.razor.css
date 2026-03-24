@@ -20,7 +20,7 @@
 
 .setup-banner__link {
     color: #f59e0b;
-    text-decoration: none;
+    text-decoration: underline;
     font-weight: 500;
     margin-left: auto;
 }
