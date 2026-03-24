@@ -26,30 +26,15 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
             return SettingsErrors.InvalidSonarrBaseAddress;
         }
 
-        if (!Directory.Exists(command.DownloadsRootDirectory))
+        if (Path.IsPathRooted(command.EpisodeDownloadDirectory))
         {
-            return SettingsErrors.DownloadsRootDirectoryNotFound;
+            return SettingsErrors.EpisodeSubdirectoryAbsolute;
         }
 
-        string resolvedRoot = Path.GetFullPath(command.DownloadsRootDirectory);
-
-        string resolvedEpisodeDir = Path.GetFullPath(command.EpisodeDownloadDirectory);
-        if (!resolvedEpisodeDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            && resolvedEpisodeDir != resolvedRoot)
+        if (Path.IsPathRooted(command.MovieDownloadDirectory))
         {
-            return SettingsErrors.EpisodeDownloadDirectoryNotUnderRoot;
+            return SettingsErrors.MovieSubdirectoryAbsolute;
         }
-
-        Directory.CreateDirectory(resolvedEpisodeDir);
-
-        string resolvedMovieDir = Path.GetFullPath(command.MovieDownloadDirectory);
-        if (!resolvedMovieDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            && resolvedMovieDir != resolvedRoot)
-        {
-            return SettingsErrors.MovieDownloadDirectoryNotUnderRoot;
-        }
-
-        Directory.CreateDirectory(resolvedMovieDir);
 
         string sonarrApiKey = command.SonarrApiKey == ApiKeySentinel
             ? store.Current.SonarrApiKey
@@ -68,7 +53,6 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
             sonarrApiKey,
             tvdbApiKey,
             tmdbApiKey,
-            command.DownloadsRootDirectory,
             command.EpisodeDownloadDirectory,
             command.MovieDownloadDirectory)
         {

@@ -18,7 +18,6 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
 
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.db");
     private readonly string _settingsPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}-settings.json");
-    private readonly string _downloadsRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -43,9 +42,8 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
 
             string settingsJson = JsonSerializer.Serialize(new
             {
-                DownloadsRootDirectory = _downloadsRoot,
-                EpisodeDownloadDirectory = Path.Combine(_downloadsRoot, "episodes"),
-                MovieDownloadDirectory = Path.Combine(_downloadsRoot, "movies"),
+                EpisodeDownloadDirectory = "episodes",
+                MovieDownloadDirectory = "movies",
             }, SerializerOptions);
             File.WriteAllText(_settingsPath, settingsJson);
 
@@ -72,11 +70,6 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         if (File.Exists(_settingsPath))
         {
             File.Delete(_settingsPath);
-        }
-
-        if (Directory.Exists(_downloadsRoot))
-        {
-            Directory.Delete(_downloadsRoot, recursive: true);
         }
 
         await base.DisposeAsync();

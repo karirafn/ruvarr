@@ -33,23 +33,9 @@ using (IServiceScope scope = app.Services.CreateScope())
 }
 
 RuvarrSettings settings = app.Services.GetRequiredService<ISettingsStore>().Current;
-Directory.CreateDirectory(settings.DownloadsRootDirectory);
-
-string resolvedRoot = Path.GetFullPath(settings.DownloadsRootDirectory);
-
-string resolvedEpisodeDir = Path.GetFullPath(settings.EpisodeDownloadDirectory);
-if (resolvedEpisodeDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-    || resolvedEpisodeDir == resolvedRoot)
-{
-    Directory.CreateDirectory(settings.EpisodeDownloadDirectory);
-}
-
-string resolvedMovieDir = Path.GetFullPath(settings.MovieDownloadDirectory);
-if (resolvedMovieDir.StartsWith(resolvedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-    || resolvedMovieDir == resolvedRoot)
-{
-    Directory.CreateDirectory(settings.MovieDownloadDirectory);
-}
+Directory.CreateDirectory(RuvarrSettings.DownloadsRoot);
+Directory.CreateDirectory(settings.ResolvedEpisodeDownloadDirectory);
+Directory.CreateDirectory(settings.ResolvedMovieDownloadDirectory);
 
 app.MapStaticAssets();
 app.UseAntiforgery();

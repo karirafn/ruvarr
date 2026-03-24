@@ -5,7 +5,6 @@ public sealed record SaveSettingsCommand(
     string SonarrApiKey,
     string TvdbApiKey,
     string TmdbApiKey,
-    string DownloadsRootDirectory,
     string EpisodeDownloadDirectory,
     string MovieDownloadDirectory,
     IReadOnlyList<string> IgnoredChannels);

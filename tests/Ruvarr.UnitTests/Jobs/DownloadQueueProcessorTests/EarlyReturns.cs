@@ -56,39 +56,19 @@ public sealed class EarlyReturns
     }
 
     [Fact]
-    public async Task MarksItemFailed_WhenDownloadsRootDirectoryIsEmpty()
+    public async Task PicksUpPendingItem_WhenSonarrIsConfigured()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
         DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
         _settingsStore.Current.Returns(new RuvarrSettings(
-            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            DownloadsRootDirectory: "/downloads"));
-        DownloadQueueProcessor sut = CreateJob(dbContext);
-
-        // Act — guard passes, defense-in-depth reads DownloadsRootDirectory
-        await sut.Execute(null!);
-
-        // Assert — item gets picked up and proceeds past the guard
-        item.Status.ShouldNotBe(DownloadQueueStatus.Pending);
-    }
-
-    [Fact]
-    public async Task MarksItemFailed_WhenEpisodeDownloadDirectoryIsEmpty()
-    {
-        // Arrange
-        using RuvarrDbContext dbContext = CreateDbContext();
-        DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
-        _settingsStore.Current.Returns(new RuvarrSettings(
-            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            DownloadsRootDirectory: "/downloads",
-            EpisodeDownloadDirectory: ""));
+            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key"));
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
         await sut.Execute(null!);
 
-        // Assert
-        item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        // Assert — item gets picked up and proceeds past the guard
+        item.Status.ShouldNotBe(DownloadQueueStatus.Pending);
     }
 }

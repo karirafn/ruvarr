@@ -18,7 +18,7 @@ public sealed class Handle
     public async Task ReturnsCurrentSettingsFromStore()
     {
         // Arrange
-        RuvarrSettings stored = new("http://localhost:8989", "key", "tvdb-key", "tmdb-key", "/downloads", "/episodes", "/movies");
+        RuvarrSettings stored = new("http://localhost:8989", "key", "tvdb-key", "tmdb-key", "episodes", "movies");
         _store.Current.Returns(stored);
         GetSettingsHandler sut = CreateHandler();
 
@@ -32,16 +32,15 @@ public sealed class Handle
         settings.SonarrApiKey.ShouldBe("****");
         settings.TvdbApiKey.ShouldBe("****");
         settings.TmdbApiKey.ShouldBe("****");
-        settings.DownloadsRootDirectory.ShouldBe("/downloads");
-        settings.EpisodeDownloadDirectory.ShouldBe("/episodes");
-        settings.MovieDownloadDirectory.ShouldBe("/movies");
+        settings.EpisodeDownloadDirectory.ShouldBe("episodes");
+        settings.MovieDownloadDirectory.ShouldBe("movies");
     }
 
     [Fact]
     public async Task DoesNotMaskApiKeysWhenEmpty()
     {
         // Arrange
-        RuvarrSettings stored = new("http://localhost:8989", "", "", "", "/downloads", "/episodes", "/movies");
+        RuvarrSettings stored = new("http://localhost:8989", "", "", "", "episodes", "movies");
         _store.Current.Returns(stored);
         GetSettingsHandler sut = CreateHandler();
 

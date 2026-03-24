@@ -44,9 +44,8 @@ public sealed class Constructor : IDisposable
         {
             "SonarrBaseAddress": "http://localhost:8989",
             "SonarrApiKey": "test-key",
-            "DownloadsRootDirectory": "/downloads",
-            "EpisodeDownloadDirectory": "/downloads/episodes",
-            "MovieDownloadDirectory": "/downloads/movies"
+            "EpisodeDownloadDirectory": "episodes",
+            "MovieDownloadDirectory": "movies"
         }
         """);
 
@@ -56,9 +55,8 @@ public sealed class Constructor : IDisposable
         // Assert
         store.Current.SonarrBaseAddress.ShouldBe("http://localhost:8989");
         store.Current.SonarrApiKey.ShouldBe("test-key");
-        store.Current.DownloadsRootDirectory.ShouldBe("/downloads");
-        store.Current.EpisodeDownloadDirectory.ShouldBe("/downloads/episodes");
-        store.Current.MovieDownloadDirectory.ShouldBe("/downloads/movies");
+        store.Current.EpisodeDownloadDirectory.ShouldBe("episodes");
+        store.Current.MovieDownloadDirectory.ShouldBe("movies");
     }
 
     [Fact]
@@ -74,8 +72,7 @@ public sealed class Constructor : IDisposable
         // Assert
         store.Current.SonarrBaseAddress.ShouldBeEmpty();
         store.Current.SonarrApiKey.ShouldBeEmpty();
-        store.Current.DownloadsRootDirectory.ShouldBe("/downloads");
-        store.Current.EpisodeDownloadDirectory.ShouldBe("/downloads/tv");
-        store.Current.MovieDownloadDirectory.ShouldBe("/downloads/movies");
+        store.Current.EpisodeDownloadDirectory.ShouldBe("tv");
+        store.Current.MovieDownloadDirectory.ShouldBe("movies");
     }
 }
