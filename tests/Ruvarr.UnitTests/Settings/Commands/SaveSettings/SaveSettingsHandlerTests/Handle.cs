@@ -1,6 +1,9 @@
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
+using Ruvarr.Jobs;
 using Ruvarr.Settings;
 using Ruvarr.Settings.Commands.SaveSettings;
 
@@ -11,11 +14,15 @@ namespace Ruvarr.UnitTests.Settings.Commands.SaveSettings.SaveSettingsHandlerTes
 public sealed class Handle : IDisposable
 {
     private readonly ISettingsStore _store = Substitute.For<ISettingsStore>();
+    private readonly ISchedulerFactory _schedulerFactory = Substitute.For<ISchedulerFactory>();
+    private readonly IScheduler _scheduler = Substitute.For<IScheduler>();
     private readonly string _tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
     public Handle()
     {
         Directory.CreateDirectory(_tempDirectory);
+        _store.Current.Returns(RuvarrSettings.Empty);
+        _schedulerFactory.GetScheduler(Arg.Any<CancellationToken>()).Returns(_scheduler);
     }
 
     public void Dispose()
@@ -26,7 +33,7 @@ public sealed class Handle : IDisposable
         }
     }
 
-    private SaveSettingsHandler CreateHandler() => new(_store);
+    private SaveSettingsHandler CreateHandler() => new(_store, _schedulerFactory);
 
     [Fact]
     public async Task ReturnsErrorWhenSonarrBaseAddressIsRelativeUri()
@@ -315,6 +322,75 @@ public sealed class Handle : IDisposable
                 s.DownloadsRootDirectory == _tempDirectory &&
                 s.EpisodeDownloadDirectory == _tempDirectory &&
                 s.MovieDownloadDirectory == _tempDirectory),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TriggersRuvEpisodesSyncJobWhenSonarrBecomesConfigured()
+    {
+        // Arrange
+        _store.Current.Returns(RuvarrSettings.Empty);
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
+
+        // Act
+        await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _scheduler.Received(1).TriggerJob(
+            Arg.Is<JobKey>(k => k.Name == nameof(RuvEpisodesSyncJob)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DoesNotTriggerRuvEpisodesSyncJobWhenSonarrWasAlreadyConfigured()
+    {
+        // Arrange
+        _store.Current.Returns(new RuvarrSettings(SonarrBaseAddress: "http://localhost:8989", SonarrApiKey: "existing-key"));
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
+
+        // Act
+        await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _scheduler.DidNotReceive().TriggerJob(
+            Arg.Any<JobKey>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DoesNotTriggerRuvEpisodesSyncJobWhenSonarrRemainsUnconfigured()
+    {
+        // Arrange
+        _store.Current.Returns(RuvarrSettings.Empty);
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
+
+        // Act
+        await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _scheduler.DidNotReceive().TriggerJob(
+            Arg.Any<JobKey>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task DoesNotTriggerRuvEpisodesSyncJobOnValidationFailure()
+    {
+        // Arrange
+        _store.Current.Returns(RuvarrSettings.Empty);
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", "", "", _tempDirectory, _tempDirectory, _tempDirectory, []);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        await _scheduler.DidNotReceive().TriggerJob(
+            Arg.Any<JobKey>(),
             Arg.Any<CancellationToken>());
     }
 }
