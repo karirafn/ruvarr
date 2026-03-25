@@ -1,14 +1,15 @@
 services:
   ruvarr:
     build: .
+    user: "0:0"
     ports:
       - "8080:8080"
     env_file:
       - path: .env
         required: false
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
     volumes:
-      - ruvarr-data:/app/data
-      # - /path/to/downloads:/downloads
-
-volumes:
-  ruvarr-data:
+      - ./data:/app/data
+      - ./downloads:/downloads
