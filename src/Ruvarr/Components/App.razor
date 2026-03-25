@@ -14,7 +14,25 @@
     <script>
         window.showDialog = (el) => el.showModal();
         window.closeDialog = (el) => el.close();
-        window.copyToClipboard = async (text) => { try { await navigator.clipboard.writeText(text); } catch {} };
+        window.copyToClipboard = async (text) => {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return success;
+            } catch {
+                return false;
+            }
+        };
         window.focusElement = (el) => { if (el) el.focus(); };
         window._trackedScrollY = 0;
         window._scrollTracker = null;
