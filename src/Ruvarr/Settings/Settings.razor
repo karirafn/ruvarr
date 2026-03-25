@@ -251,6 +251,10 @@ else
         IRequestHandler<GetDistinctChannelsQuery, List<string>> channelsHandler =
             scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDistinctChannelsQuery, List<string>>>();
         _allChannels = await channelsHandler.Handle(new GetDistinctChannelsQuery(), _cts.Token);
+        _allChannels = _allChannels
+            .Union(_ignoredChannelsList, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c)
+            .ToList();
         UpdateAvailableChannels();
 
         _loading = false;

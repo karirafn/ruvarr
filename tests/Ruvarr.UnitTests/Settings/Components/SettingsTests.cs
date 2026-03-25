@@ -126,6 +126,32 @@ public sealed class SettingsTests : BunitContext
     }
 
     [Fact]
+    public async Task RemovedChannelReappearsInDropdownEvenWhenNotInDatabase()
+    {
+        // Arrange — ignored channel "RUV Aukaras" has no programs in the DB,
+        // so GetDistinctChannels does not return it
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV Aukaras", "RUV2"] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["RUV1"]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Act — remove "RUV Aukaras" from the ignored list
+        IElement removeButton = cut.Find("button[aria-label='Remove RUV Aukaras']");
+        await removeButton.ClickAsync(new MouseEventArgs());
+
+        // Assert — "RUV Aukaras" should appear in the dropdown alongside "RUV1"
+        IReadOnlyList<IElement> options = cut.FindAll("select[aria-label='Available channels'] option:not([disabled])");
+        options.Count.ShouldBe(2);
+        options.ShouldContain(o => o.TextContent.Contains("RUV Aukaras"));
+        options.ShouldContain(o => o.TextContent.Contains("RUV1"));
+
+        // "RUV2" is still ignored, so it should not be in the dropdown
+        options.ShouldNotContain(o => o.TextContent.Contains("RUV2"));
+    }
+
+    [Fact]
     public async Task ShowsConfirmationWhenSavingWithNewlyIgnoredChannels()
     {
         // Arrange
