@@ -31,7 +31,13 @@ public sealed class Constructor : IDisposable
         using SettingsStore store = new(filePath);
 
         // Assert
-        store.Current.ShouldBe(RuvarrSettings.Empty);
+        store.Current.SonarrBaseAddress.ShouldBeEmpty();
+        store.Current.SonarrApiKey.ShouldBeEmpty();
+        store.Current.TvdbApiKey.ShouldBeEmpty();
+        store.Current.TmdbApiKey.ShouldBeEmpty();
+        store.Current.EpisodeDownloadDirectory.ShouldBe("tv");
+        store.Current.MovieDownloadDirectory.ShouldBe("movies");
+        store.Current.IgnoredChannels.ShouldBe(RuvarrSettings.Empty.IgnoredChannels);
         File.Exists(filePath).ShouldBeTrue();
     }
 

@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 using NSubstitute;
 
 using Quartz;
@@ -23,7 +25,15 @@ public sealed class Handle
         _schedulerFactory.GetScheduler(Arg.Any<CancellationToken>()).Returns(_scheduler);
     }
 
-    private SaveSettingsHandler CreateHandler() => new(_store, _schedulerFactory);
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "DbContext lifetime managed by test scope")]
+    private SaveSettingsHandler CreateHandler()
+    {
+        DbContextOptions<RuvarrDbContext> options = new DbContextOptionsBuilder<RuvarrDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        RuvarrDbContext dbContext = new(options, Substitute.For<IServiceProvider>());
+        return new SaveSettingsHandler(_store, _schedulerFactory, dbContext);
+    }
 
     [Fact]
     public async Task ReturnsErrorWhenSonarrBaseAddressIsRelativeUri()

@@ -137,14 +137,68 @@ else
             </div>
         </section>
 
-        <div class="settings-actions">
-            <button class="save-button" @onclick="SaveSettings" disabled="@_isSaving" aria-busy="@_isSaving">
-                @if (_isSaving)
+        <section class="settings-section">
+            <h2 class="settings-section-title">Ignored Channels</h2>
+
+            <div class="channel-tags" role="list">
+                @foreach (string channel in _ignoredChannelsList)
                 {
-                    <span class="button-spinner"></span>
+                    <span class="channel-tag" role="listitem">
+                        @channel
+                        <button class="channel-tag-remove"
+                                aria-label="Remove @channel"
+                                @onclick="() => RemoveChannel(channel)">
+                            &times;
+                        </button>
+                    </span>
                 }
-                Save Settings
-            </button>
+            </div>
+
+            <div class="channel-add-row">
+                <input type="text"
+                       aria-label="Channel name"
+                       @bind="_newChannelName"
+                       @bind:event="oninput"
+                       @onkeydown="OnChannelInputKeyDown"
+                       @onfocus="ClearDuplicateWarning"
+                       placeholder="Channel name" />
+                <button class="add-channel-button"
+                        @onclick="AddChannel"
+                        disabled="@string.IsNullOrWhiteSpace(_newChannelName)">
+                    Add
+                </button>
+            </div>
+            @if (_showDuplicateChannelWarning)
+            {
+                <span class="field-error" role="alert">Channel already in list</span>
+            }
+        </section>
+
+        <div class="settings-actions">
+            @if (_confirmingSave)
+            {
+                <span class="save-warning" role="alert">Programs for newly ignored channels will be permanently deleted.</span>
+                <button class="save-button save-button--danger" @onclick="ConfirmSave" disabled="@_isSaving" aria-busy="@_isSaving">
+                    @if (_isSaving)
+                    {
+                        <span class="button-spinner"></span>
+                    }
+                    Confirm Save
+                </button>
+                <button class="cancel-button" @onclick="CancelSave">
+                    Cancel
+                </button>
+            }
+            else
+            {
+                <button class="save-button" @onclick="SaveSettings" disabled="@_isSaving" aria-busy="@_isSaving">
+                    @if (_isSaving)
+                    {
+                        <span class="button-spinner"></span>
+                    }
+                    Save Settings
+                </button>
+            }
             @if (_showSaveConfirmation)
             {
                 <span class="save-confirmation" role="status">Settings saved successfully</span>
@@ -159,6 +213,8 @@ else
     private bool _isSaving;
     private bool _isTesting;
     private bool _showSaveConfirmation;
+    private bool _confirmingSave;
+    private bool _showDuplicateChannelWarning;
     private RuvarrResult? _testResult;
     private Dictionary<string, string> _fieldErrors = [];
 
@@ -168,7 +224,9 @@ else
     private string _tmdbApiKey = string.Empty;
     private string _episodeDownloadDirectory = string.Empty;
     private string _movieDownloadDirectory = string.Empty;
-    private IReadOnlyList<string> _ignoredChannels = [];
+    private List<string> _ignoredChannelsList = [];
+    private HashSet<string> _originalIgnoredChannels = new(StringComparer.OrdinalIgnoreCase);
+    private string _newChannelName = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,20 +245,48 @@ else
             _tmdbApiKey = settings.TmdbApiKey;
             _episodeDownloadDirectory = settings.EpisodeDownloadDirectory;
             _movieDownloadDirectory = settings.MovieDownloadDirectory;
-            _ignoredChannels = settings.IgnoredChannels;
+            _ignoredChannelsList = [.. settings.IgnoredChannels];
+            _originalIgnoredChannels = new HashSet<string>(settings.IgnoredChannels, StringComparer.OrdinalIgnoreCase);
         }
 
         _loading = false;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task SaveSettings()
+    private void SaveSettings()
     {
         if (_isSaving)
         {
             return;
         }
 
+        bool hasNewlyIgnored = _ignoredChannelsList.Exists(
+            c => !_originalIgnoredChannels.Contains(c));
+
+        if (hasNewlyIgnored)
+        {
+            _confirmingSave = true;
+            return;
+        }
+
+        _ = ExecuteSaveAsync();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task ConfirmSave()
+    {
+        _confirmingSave = false;
+        await ExecuteSaveAsync();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private void CancelSave()
+    {
+        _confirmingSave = false;
+    }
+
+    private async Task ExecuteSaveAsync()
+    {
         _isSaving = true;
         _fieldErrors = [];
         _showSaveConfirmation = false;
@@ -216,7 +302,7 @@ else
             _tmdbApiKey,
             _episodeDownloadDirectory,
             _movieDownloadDirectory,
-            _ignoredChannels);
+            _ignoredChannelsList);
 
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<SaveSettingsCommand> handler =
@@ -231,6 +317,7 @@ else
             return;
         }
 
+        _originalIgnoredChannels = new HashSet<string>(_ignoredChannelsList, StringComparer.OrdinalIgnoreCase);
         _showSaveConfirmation = true;
         StateHasChanged();
 
@@ -265,6 +352,46 @@ else
         _testResult = await handler.Handle(query, _cts.Token);
 
         _isTesting = false;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private void AddChannel()
+    {
+        _showDuplicateChannelWarning = false;
+        string trimmed = _newChannelName.Trim();
+
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return;
+        }
+
+        if (_ignoredChannelsList.Exists(c => string.Equals(c, trimmed, StringComparison.OrdinalIgnoreCase)))
+        {
+            _showDuplicateChannelWarning = true;
+            return;
+        }
+
+        _ignoredChannelsList.Add(trimmed);
+        _newChannelName = string.Empty;
+    }
+
+    private void ClearDuplicateWarning()
+    {
+        _showDuplicateChannelWarning = false;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private void RemoveChannel(string channel)
+    {
+        _ignoredChannelsList.Remove(channel);
+    }
+
+    private void OnChannelInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddChannel();
+        }
     }
 
     public void Dispose()
