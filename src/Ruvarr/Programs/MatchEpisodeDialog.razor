@@ -227,12 +227,13 @@
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private void AddEntry()
     {
-        int? previousSeason = _matchEntries.Count > 0 ? _matchEntries[^1].SelectedSeason : null;
+        MatchEntry? lastEntry = _matchEntries.Count > 0 ? _matchEntries[^1] : null;
         MatchEntry entry = new();
-        if (previousSeason is not null)
+        if (lastEntry?.SelectedSeason is not null)
         {
-            entry.SelectedSeason = previousSeason;
-            entry.SeasonEpisodes = [.. _allEpisodes.Where(e => e.SeasonNumber == previousSeason)];
+            entry.SelectedSeason = lastEntry.SelectedSeason;
+            entry.SeasonEpisodes = [.. _allEpisodes.Where(e => e.SeasonNumber == lastEntry.SelectedSeason)];
+            entry.SelectedEpisodeId = GetNextEpisodeId(entry.SeasonEpisodes, lastEntry.SelectedEpisodeId);
         }
         _matchEntries.Add(entry);
     }
@@ -271,6 +272,23 @@
         }
 
         return int.TryParse(parts[1], out number);
+    }
+
+    internal static int? GetNextEpisodeId(List<TvdbSeriesEpisode> seasonEpisodes, int? currentEpisodeId)
+    {
+        if (currentEpisodeId is null)
+        {
+            return null;
+        }
+
+        int currentIndex = seasonEpisodes.FindIndex(e => e.TvdbId == currentEpisodeId);
+
+        if (currentIndex < 0 || currentIndex >= seasonEpisodes.Count - 1)
+        {
+            return null;
+        }
+
+        return seasonEpisodes[currentIndex + 1].TvdbId;
     }
 
     internal static int? ResolveAutoSelectedSeason(List<EpisodeSummary> siblingEpisodes, List<int> availableSeasons)
