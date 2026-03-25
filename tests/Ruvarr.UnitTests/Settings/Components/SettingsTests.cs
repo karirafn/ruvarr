@@ -10,6 +10,7 @@ using NSubstitute;
 using Ruvarr.Abstractions;
 using Ruvarr.Settings;
 using Ruvarr.Settings.Commands.SaveSettings;
+using Ruvarr.Settings.Queries.GetDistinctChannels;
 using Ruvarr.Settings.Queries.GetSettings;
 using Ruvarr.Settings.Queries.TestSonarrConnection;
 
@@ -26,6 +27,7 @@ public sealed class SettingsTests : BunitContext
         RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["RUV1", "RUV2", "RUV3"]);
 
         // Act
         IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
@@ -38,64 +40,29 @@ public sealed class SettingsTests : BunitContext
     }
 
     [Fact]
-    public async Task AddsChannelViaInputAndButton()
+    public async Task AddsChannelViaDropdownAndButton()
     {
         // Arrange
         RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["ChannelA", "ChannelB"]);
 
         IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
 
         // Act
-        IElement input = cut.Find("input[aria-label='Channel name']");
-        await input.InputAsync(new ChangeEventArgs { Value = "NewChannel" });
+        IElement select = cut.Find("select[aria-label='Available channels']");
+        await select.ChangeAsync(new ChangeEventArgs { Value = "ChannelA" });
         await cut.Find("button.add-channel-button").ClickAsync(new MouseEventArgs());
 
         // Assert
         IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
         tags.Count.ShouldBe(1);
-        tags[0].TextContent.ShouldContain("NewChannel");
-    }
+        tags[0].TextContent.ShouldContain("ChannelA");
 
-    [Fact]
-    public async Task DoesNotAddDuplicateChannel()
-    {
-        // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"] });
-        RegisterSaveSettingsHandler();
-        RegisterTestConnectionHandler();
-
-        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
-
-        // Act
-        IElement input = cut.Find("input[aria-label='Channel name']");
-        await input.InputAsync(new ChangeEventArgs { Value = "ruv1" });
-        await cut.Find("button.add-channel-button").ClickAsync(new MouseEventArgs());
-
-        // Assert
-        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
-        tags.Count.ShouldBe(1);
-    }
-
-    [Fact]
-    public async Task DoesNotAddEmptyOrWhitespaceChannel()
-    {
-        // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [] });
-        RegisterSaveSettingsHandler();
-        RegisterTestConnectionHandler();
-
-        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
-
-        // Act
-        IElement input = cut.Find("input[aria-label='Channel name']");
-        await input.InputAsync(new ChangeEventArgs { Value = "   " });
-        await cut.Find("button.add-channel-button").ClickAsync(new MouseEventArgs());
-
-        // Assert
-        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
-        tags.Count.ShouldBe(0);
+        IReadOnlyList<IElement> options = cut.FindAll("select[aria-label='Available channels'] option:not([disabled])");
+        options.Count.ShouldBe(1);
+        options[0].TextContent.ShouldContain("ChannelB");
     }
 
     [Fact]
@@ -105,6 +72,7 @@ public sealed class SettingsTests : BunitContext
         RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["RUV1", "RUV2", "RUV3"]);
 
         IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
 
@@ -119,44 +87,42 @@ public sealed class SettingsTests : BunitContext
     }
 
     [Fact]
-    public async Task ShowsDuplicateWarningWhenAddingExistingChannel()
+    public void DisablesDropdownWhenAllChannelsIgnored()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
-
-        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+        RegisterGetDistinctChannelsHandler(["RUV1", "RUV2"]);
 
         // Act
-        IElement input = cut.Find("input[aria-label='Channel name']");
-        await input.InputAsync(new ChangeEventArgs { Value = "ruv1" });
-        await cut.Find("button.add-channel-button").ClickAsync(new MouseEventArgs());
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
 
         // Assert
-        cut.Find(".field-error[role='alert']").TextContent.ShouldContain("Channel already in list");
+        IElement select = cut.Find("select[aria-label='Available channels']");
+        select.HasAttribute("disabled").ShouldBeTrue();
     }
 
     [Fact]
-    public async Task ClearsDuplicateWarningOnInputFocus()
+    public async Task RemovedChannelReappearsInDropdown()
     {
         // Arrange
         RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["RUV1", "RUV2"]);
 
         IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
 
-        IElement input = cut.Find("input[aria-label='Channel name']");
-        await input.InputAsync(new ChangeEventArgs { Value = "ruv1" });
-        await cut.Find("button.add-channel-button").ClickAsync(new MouseEventArgs());
-
         // Act
-        await input.FocusAsync(new FocusEventArgs());
+        IElement removeButton = cut.Find("button[aria-label='Remove RUV1']");
+        await removeButton.ClickAsync(new MouseEventArgs());
 
         // Assert
-        cut.FindAll(".field-error[role='alert']")
-            .ShouldAllBe(e => !e.TextContent.Contains("Channel already in list"));
+        IReadOnlyList<IElement> options = cut.FindAll("select[aria-label='Available channels'] option:not([disabled])");
+        options.Count.ShouldBe(2);
+        options.ShouldContain(o => o.TextContent.Contains("RUV1"));
+        options.ShouldContain(o => o.TextContent.Contains("RUV2"));
     }
 
     [Fact]
@@ -166,11 +132,12 @@ public sealed class SettingsTests : BunitContext
         RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["NewChannel"]);
 
         IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
 
-        IElement input = cut.Find("input[aria-label='Channel name']");
-        await input.InputAsync(new ChangeEventArgs { Value = "NewChannel" });
+        IElement select = cut.Find("select[aria-label='Available channels']");
+        await select.ChangeAsync(new ChangeEventArgs { Value = "NewChannel" });
         await cut.Find("button.add-channel-button").ClickAsync(new MouseEventArgs());
 
         // Act
@@ -190,11 +157,12 @@ public sealed class SettingsTests : BunitContext
         RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["NewChannel"]);
 
         IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
 
-        IElement input = cut.Find("input[aria-label='Channel name']");
-        await input.InputAsync(new ChangeEventArgs { Value = "NewChannel" });
+        IElement select = cut.Find("select[aria-label='Available channels']");
+        await select.ChangeAsync(new ChangeEventArgs { Value = "NewChannel" });
         await cut.Find("button.add-channel-button").ClickAsync(new MouseEventArgs());
         await cut.Find("button.save-button").ClickAsync(new MouseEventArgs());
 
@@ -213,6 +181,7 @@ public sealed class SettingsTests : BunitContext
         IRequestHandler<SaveSettingsCommand> saveHandler = RegisterSaveSettingsHandler();
         RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"] });
         RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["RUV1", "RUV2"]);
 
         IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
 
@@ -249,6 +218,15 @@ public sealed class SettingsTests : BunitContext
             Substitute.For<IRequestHandler<TestSonarrConnectionQuery>>();
         handler.Handle(Arg.Any<TestSonarrConnectionQuery>(), Arg.Any<CancellationToken>())
             .Returns(RuvarrResult.Success);
+        Services.AddSingleton(handler);
+    }
+
+    private void RegisterGetDistinctChannelsHandler(List<string> channels)
+    {
+        IRequestHandler<GetDistinctChannelsQuery, List<string>> handler =
+            Substitute.For<IRequestHandler<GetDistinctChannelsQuery, List<string>>>();
+        handler.Handle(Arg.Any<GetDistinctChannelsQuery>(), Arg.Any<CancellationToken>())
+            .Returns(channels);
         Services.AddSingleton(handler);
     }
 }

@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using Ruvarr.Abstractions
 @using Ruvarr.Settings.Commands.SaveSettings
+@using Ruvarr.Settings.Queries.GetDistinctChannels
 @using Ruvarr.Settings.Queries.GetSettings
 @using Ruvarr.Settings.Queries.TestSonarrConnection
 @inject IServiceScopeFactory ScopeFactory
@@ -155,23 +156,21 @@ else
             </div>
 
             <div class="channel-add-row">
-                <input type="text"
-                       aria-label="Channel name"
-                       @bind="_newChannelName"
-                       @bind:event="oninput"
-                       @onkeydown="OnChannelInputKeyDown"
-                       @onfocus="ClearDuplicateWarning"
-                       placeholder="Channel name" />
+                <select aria-label="Available channels"
+                        @bind="_selectedChannel"
+                        disabled="@(!_availableChannels.Any())">
+                    <option value="" disabled selected>Select a channel...</option>
+                    @foreach (string channel in _availableChannels)
+                    {
+                        <option value="@channel">@channel</option>
+                    }
+                </select>
                 <button class="add-channel-button"
                         @onclick="AddChannel"
-                        disabled="@string.IsNullOrWhiteSpace(_newChannelName)">
+                        disabled="@(string.IsNullOrEmpty(_selectedChannel) || !_availableChannels.Any())">
                     Add
                 </button>
             </div>
-            @if (_showDuplicateChannelWarning)
-            {
-                <span class="field-error" role="alert">Channel already in list</span>
-            }
         </section>
 
         <div class="settings-actions">
@@ -214,7 +213,9 @@ else
     private bool _isTesting;
     private bool _showSaveConfirmation;
     private bool _confirmingSave;
-    private bool _showDuplicateChannelWarning;
+    private string _selectedChannel = "";
+    private List<string> _allChannels = [];
+    private List<string> _availableChannels = [];
     private RuvarrResult? _testResult;
     private Dictionary<string, string> _fieldErrors = [];
 
@@ -226,15 +227,13 @@ else
     private string _movieDownloadDirectory = string.Empty;
     private List<string> _ignoredChannelsList = [];
     private HashSet<string> _originalIgnoredChannels = new(StringComparer.OrdinalIgnoreCase);
-    private string _newChannelName = string.Empty;
-
     protected override async Task OnInitializedAsync()
     {
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
-        IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>> handler =
+        IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>> settingsHandler =
             scope.ServiceProvider.GetRequiredService<IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>>>();
 
-        Result<RuvarrSettings> result = await handler.Handle(new GetSettingsQuery(), _cts.Token);
+        Result<RuvarrSettings> result = await settingsHandler.Handle(new GetSettingsQuery(), _cts.Token);
 
         if (result.IsSuccess)
         {
@@ -248,6 +247,11 @@ else
             _ignoredChannelsList = [.. settings.IgnoredChannels];
             _originalIgnoredChannels = new HashSet<string>(settings.IgnoredChannels, StringComparer.OrdinalIgnoreCase);
         }
+
+        IRequestHandler<GetDistinctChannelsQuery, List<string>> channelsHandler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDistinctChannelsQuery, List<string>>>();
+        _allChannels = await channelsHandler.Handle(new GetDistinctChannelsQuery(), _cts.Token);
+        UpdateAvailableChannels();
 
         _loading = false;
     }
@@ -357,41 +361,29 @@ else
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private void AddChannel()
     {
-        _showDuplicateChannelWarning = false;
-        string trimmed = _newChannelName.Trim();
-
-        if (string.IsNullOrWhiteSpace(trimmed))
+        if (string.IsNullOrEmpty(_selectedChannel))
         {
             return;
         }
 
-        if (_ignoredChannelsList.Exists(c => string.Equals(c, trimmed, StringComparison.OrdinalIgnoreCase)))
-        {
-            _showDuplicateChannelWarning = true;
-            return;
-        }
-
-        _ignoredChannelsList.Add(trimmed);
-        _newChannelName = string.Empty;
-    }
-
-    private void ClearDuplicateWarning()
-    {
-        _showDuplicateChannelWarning = false;
+        _ignoredChannelsList.Add(_selectedChannel);
+        _selectedChannel = "";
+        UpdateAvailableChannels();
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private void RemoveChannel(string channel)
     {
         _ignoredChannelsList.Remove(channel);
+        UpdateAvailableChannels();
     }
 
-    private void OnChannelInputKeyDown(KeyboardEventArgs e)
+    private void UpdateAvailableChannels()
     {
-        if (e.Key == "Enter")
-        {
-            AddChannel();
-        }
+        HashSet<string> ignored = new(_ignoredChannelsList, StringComparer.OrdinalIgnoreCase);
+        _availableChannels = _allChannels
+            .Where(c => !ignored.Contains(c))
+            .ToList();
     }
 
     public void Dispose()
