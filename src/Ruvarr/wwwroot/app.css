@@ -608,6 +608,11 @@ dialog input[type="number"]:focus {
     color: #4ade80;
 }
 
+.copy-button--failed {
+    opacity: 1;
+    color: #f87171;
+}
+
 .col-duration {
     white-space: nowrap;
     width: 5rem;

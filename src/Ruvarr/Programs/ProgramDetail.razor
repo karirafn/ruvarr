@@ -155,6 +155,12 @@ else
                                         <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
                                     </span>
                                 }
+                                else if (_copyFailed.Contains(titleKey))
+                                {
+                                    <span class="icon-button copy-button copy-button--failed">
+                                        <Icon Type="IconType.Warning" Class="icon" AriaLabel="Copy failed" />
+                                    </span>
+                                }
                                 else
                                 {
                                     <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeTitle, titleKey)" title="Copy title">
@@ -172,6 +178,12 @@ else
                                 {
                                     <span class="icon-button copy-button copy-button--copied">
                                         <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
+                                    </span>
+                                }
+                                else if (_copyFailed.Contains(descKey))
+                                {
+                                    <span class="icon-button copy-button copy-button--failed">
+                                        <Icon Type="IconType.Warning" Class="icon" AriaLabel="Copy failed" />
                                     </span>
                                 }
                                 else
@@ -241,6 +253,7 @@ else
     private readonly HashSet<string> _failed = [];
     private readonly HashSet<int> _pendingRefresh = [];
     private readonly HashSet<string> _copied = [];
+    private readonly HashSet<string> _copyFailed = [];
     private Dictionary<int, ProgramRefreshStatus> _refreshQueue = [];
     private readonly CancellationTokenSource _cts = new();
 
@@ -533,17 +546,34 @@ else
         }
         catch (JSException)
         {
-            return;
+            success = false;
         }
 
-        if (!success)
+        if (success)
         {
-            return;
+            _copied.Add(key);
+            StateHasChanged();
+            await ClearAfterDelayAsync(key, _copied);
         }
+        else
+        {
+            _copyFailed.Add(key);
+            StateHasChanged();
+            await ClearAfterDelayAsync(key, _copyFailed);
+        }
+    }
 
-        _copied.Add(key);
-        StateHasChanged();
-        await Task.Delay(1500);
-        _copied.Remove(key);
+    private async Task ClearAfterDelayAsync(string key, HashSet<string> set)
+    {
+        try
+        {
+            await Task.Delay(1500, _cts.Token);
+            set.Remove(key);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // Component disposed, discard the delayed UI update
+        }
     }
 }
