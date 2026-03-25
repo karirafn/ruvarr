@@ -492,6 +492,104 @@ public sealed class SearchTvdbAsync
     }
 
     [Fact]
+    public async Task IncludesYearSuffixedIcelandicTranslationVariant_InDisambiguation()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(1)
+            .WithName("Strumparnir")
+            .WithForeignName(null)
+            .Build();
+        program.TryAddEpisode("ep1", new Uri("http://test.com"), "Gaddaveri", "desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Datum theSmurfs = new DatumBuilder()
+            .WithName("The Smurfs")
+            .WithTvdbId("100")
+            .WithTranslations(new Dictionary<string, string> { ["isl"] = "Strumparnir" })
+            .Build();
+        Datum strumparnirDuplicate = new DatumBuilder()
+            .WithName("Strumparnir")
+            .WithTvdbId("101")
+            .WithTranslations(new Dictionary<string, string> { ["isl"] = "Strumparnir" })
+            .Build();
+        Datum theSmurfs2021 = new DatumBuilder()
+            .WithName("The Smurfs (2021)")
+            .WithTvdbId("200")
+            .WithTranslations(new Dictionary<string, string> { ["isl"] = "Strumparnir (2021)" })
+            .Build();
+
+        _tvdb.SearchAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns(CreateSearchResponse(theSmurfs, strumparnirDuplicate, theSmurfs2021));
+
+        // the-smurfs (100) — no matching episode translations
+        Episode tvdbEp100 = new TvdbEpisodeDataBuilder()
+            .WithId(10)
+            .WithName("Smurf Episode")
+            .WithNameTranslations("isl")
+            .WithSeasonNumber(1)
+            .WithNumber(1)
+            .Build();
+        SeriesData series100 = new TvdbSeriesDataBuilder()
+            .WithId(100)
+            .WithName("The Smurfs")
+            .WithEpisodes(tvdbEp100)
+            .Build();
+        _tvdb.GetSeriesAsync(100, Arg.Any<CancellationToken>())
+            .Returns(series100);
+        _tvdb.GetEpisodeTranslationAsync(10, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Ótengdur", "", "isl", false));
+
+        // strumparnir duplicate (101) — no matching episode translations
+        Episode tvdbEp101 = new TvdbEpisodeDataBuilder()
+            .WithId(11)
+            .WithName("Another Episode")
+            .WithNameTranslations("isl")
+            .WithSeasonNumber(1)
+            .WithNumber(1)
+            .Build();
+        SeriesData series101 = new TvdbSeriesDataBuilder()
+            .WithId(101)
+            .WithName("Strumparnir")
+            .WithEpisodes(tvdbEp101)
+            .Build();
+        _tvdb.GetSeriesAsync(101, Arg.Any<CancellationToken>())
+            .Returns(series101);
+        _tvdb.GetEpisodeTranslationAsync(11, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Ótengdur", "", "isl", false));
+
+        // the-smurfs-2021 (200) — HAS matching episode translation
+        Episode tvdbEp200 = new TvdbEpisodeDataBuilder()
+            .WithId(20)
+            .WithName("Smurfy")
+            .WithNameTranslations("isl")
+            .WithSeasonNumber(1)
+            .WithNumber(1)
+            .Build();
+        SeriesData series200 = new TvdbSeriesDataBuilder()
+            .WithId(200)
+            .WithName("The Smurfs (2021)")
+            .WithEpisodes(tvdbEp200)
+            .Build();
+        _tvdb.GetSeriesAsync(200, Arg.Any<CancellationToken>())
+            .Returns(series200);
+        _tvdb.GetEpisodeTranslationAsync(20, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("Gaddaveri", "", "isl", false));
+
+        _lookupQueue.Enqueue(1, program.Name);
+        TvdbSeriesLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        program.Series.ShouldNotBeNull();
+        program.Series.TvdbId.ShouldBe(200);
+    }
+
+    [Fact]
     public async Task FallsBackToForeignName_WhenIcelandicNameIsAmbiguous()
     {
         // Arrange
