@@ -1,11 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+
 using Quartz;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Jobs;
+using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Settings.Commands.SaveSettings;
 
-internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactory schedulerFactory) : IRequestHandler<SaveSettingsCommand>
+internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactory schedulerFactory, RuvarrDbContext dbContext) : IRequestHandler<SaveSettingsCommand>
 {
     private const string ApiKeySentinel = "****";
 
@@ -81,6 +84,18 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
         {
             IgnoredChannels = command.IgnoredChannels
         };
+
+        HashSet<string> newlyIgnored = [.. command.IgnoredChannels.Except(store.Current.IgnoredChannels, StringComparer.OrdinalIgnoreCase)];
+
+        if (newlyIgnored.Count > 0)
+        {
+            List<RuvProgram> programsToDelete = await dbContext.Set<RuvProgram>()
+                .Where(p => newlyIgnored.Contains(p.Channel))
+                .ToListAsync(cancellationToken);
+
+            dbContext.Set<RuvProgram>().RemoveRange(programsToDelete);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         await store.SaveAsync(settings, cancellationToken);
 

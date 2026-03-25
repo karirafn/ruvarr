@@ -68,6 +68,12 @@ public sealed class Handle
         // Assert
         result.IsSuccess.ShouldBeTrue();
         RuvarrSettings settings = result.FromResult();
-        settings.ShouldBe(RuvarrSettings.Empty);
+        settings.SonarrBaseAddress.ShouldBeEmpty();
+        settings.SonarrApiKey.ShouldBeEmpty();
+        settings.TvdbApiKey.ShouldBeEmpty();
+        settings.TmdbApiKey.ShouldBeEmpty();
+        settings.EpisodeDownloadDirectory.ShouldBe("tv");
+        settings.MovieDownloadDirectory.ShouldBe("movies");
+        settings.IgnoredChannels.ShouldBe(RuvarrSettings.Empty.IgnoredChannels);
     }
 }
