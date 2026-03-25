@@ -1,3 +1,14 @@
+:root {
+    --color-ruv: #0073A0;
+    --color-tvdb: #4AB648;
+    --color-blue: #60a5fa;
+    --color-green: #4ade80;
+    --color-teal: #2dd4bf;
+    --color-amber: #f59e0b;
+    --color-red: #fd4646;
+    --color-red-light: #ff6b6b;
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
 }
@@ -237,11 +248,11 @@ tbody tr:hover {
 }
 
 .icon-button--error {
-    color: #fd4646;
+    color: var(--color-red);
 }
 
 .icon-button--error:hover {
-    color: #ff6b6b;
+    color: var(--color-red-light);
     background-color: rgba(253, 70, 70, 0.15);
 }
 
@@ -250,7 +261,7 @@ tbody tr:hover {
 }
 
 .icon-button--danger:hover {
-    color: #ff6b6b;
+    color: var(--color-red-light);
     background-color: rgba(255, 107, 107, 0.1);
 }
 
@@ -260,7 +271,7 @@ tbody tr:hover {
 }
 
 .icon-button--confirming {
-    color: #ff6b6b;
+    color: var(--color-red-light);
     background-color: rgba(255, 107, 107, 0.15);
     animation: pulse 1s ease-in-out infinite;
 }
@@ -271,7 +282,7 @@ tbody tr:hover {
 }
 
 .queue-delete-error {
-    color: #ff6b6b;
+    color: var(--color-red-light);
     font-size: 0.75rem;
     margin-left: 0.25rem;
 }
@@ -297,9 +308,9 @@ tbody tr:hover {
 }
 
 .queue-status--pending { color: rgba(255, 255, 255, 0.4); }
-.queue-status--processing { color: #60a5fa; }
-.queue-status--downloading { color: #60a5fa; }
-.queue-status--complete { color: #4ade80; }
+.queue-status--processing { color: var(--color-blue); }
+.queue-status--downloading { color: var(--color-blue); }
+.queue-status--complete { color: var(--color-green); }
 
 .filter-panel {
     display: flex;
@@ -350,7 +361,7 @@ tbody tr:hover {
 
 .filter-chip--active,
 .filter-chip--active:hover {
-    color: #60a5fa;
+    color: var(--color-blue);
     background: rgba(96, 165, 250, 0.15);
     border-color: rgba(96, 165, 250, 0.5);
 }
@@ -601,7 +612,7 @@ dialog input[type="number"]:focus {
 
 .copy-button--copied {
     opacity: 1;
-    color: #4ade80;
+    color: var(--color-green);
 }
 
 .copy-button--failed {
@@ -632,7 +643,7 @@ dialog input[type="number"]:focus {
 }
 
 .program-link:hover {
-    color: #60a5fa;
+    color: var(--color-blue);
 }
 
 /* Series link in programs table */
@@ -667,11 +678,11 @@ dialog input[type="number"]:focus {
 }
 
 /* Monitored / missing icons */
-.icon--monitored { color: #2dd4bf; }
+.icon--monitored { color: var(--color-teal); }
 .icon--unmonitored { color: rgba(255, 255, 255, 0.2); }
-.icon--missing { color: #f59e0b; }
-.icon--matched-all { color: #2dd4bf; }
-.icon--matched-partial { color: #f59e0b; }
+.icon--missing { color: var(--color-amber); }
+.icon--matched-all { color: var(--color-teal); }
+.icon--matched-partial { color: var(--color-amber); }
 .icon--matched-none { color: rgba(255, 255, 255, 0.2); }
 
 /* Status pills (detail page) */
@@ -686,7 +697,7 @@ dialog input[type="number"]:focus {
 }
 
 .status-pill--monitored {
-    color: #2dd4bf;
+    color: var(--color-teal);
     background: rgba(45, 212, 191, 0.1);
     border: 1px solid rgba(45, 212, 191, 0.25);
 }
@@ -770,8 +781,8 @@ dialog input[type="number"]:focus {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     border-radius: 4px;
-    border: 1px solid #4AB648;
-    color: #4AB648;
+    border: 1px solid var(--color-tvdb);
+    color: var(--color-tvdb);
     text-decoration: none;
     margin-bottom: 0.5rem;
 }
@@ -788,8 +799,8 @@ dialog input[type="number"]:focus {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     border-radius: 4px;
-    border: 1px solid #0073A0;
-    color: #0073A0;
+    border: 1px solid var(--color-ruv);
+    color: var(--color-ruv);
     text-decoration: none;
     margin-bottom: 0.5rem;
 }
@@ -808,8 +819,8 @@ dialog input[type="number"]:focus {
     text-transform: uppercase;
     letter-spacing: 0.06em;
     border-radius: 4px;
-    border: 1px dashed #4AB648;
-    color: #4AB648;
+    border: 1px dashed var(--color-tvdb);
+    color: var(--color-tvdb);
     background: none;
     cursor: pointer;
     margin-bottom: 0.5rem;
@@ -880,7 +891,7 @@ dialog input[type="number"]:focus {
 }
 
 .dialog-error {
-    color: #fd4646;
+    color: var(--color-red);
     font-size: 0.85rem;
     margin: 0.5rem 0 0;
 }
@@ -928,7 +939,7 @@ dialog input[type="number"]:focus {
 }
 
 .match-entry-remove:hover {
-    color: #fd4646;
+    color: var(--color-red);
 }
 
 .match-entry-remove:focus-visible {
