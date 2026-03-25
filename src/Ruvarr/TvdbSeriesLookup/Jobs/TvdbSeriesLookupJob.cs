@@ -171,6 +171,13 @@ internal sealed class TvdbSeriesLookupJob(
         if (checkTranslations)
         {
             matches.AddRange(data.Where(x => x.Translations.TryGetValue("isl", out string? islName) && islName.EqualsSanitized(searchText)));
+
+            HashSet<string> matchIds = [.. matches.Select(m => m.TvdbId)];
+            matches.AddRange(data.Where(x =>
+                !matchIds.Contains(x.TvdbId)
+                && x.Translations.TryGetValue("isl", out string? islName)
+                && islName.HasYearSuffix()
+                && islName.WithoutYearSuffix()!.EqualsSanitized(searchText)));
         }
 
         if (matches is [])
