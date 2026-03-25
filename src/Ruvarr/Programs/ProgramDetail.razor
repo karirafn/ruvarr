@@ -514,7 +514,7 @@ else
         string clipboardText = $"Name: {_program!.ProgramName}\nNetwork: RÚV\nRemote ID: {_program.ProgramRuvId} (RÚV)";
         try
         {
-            await Js.InvokeVoidAsync("copyToClipboard", clipboardText);
+            await Js.InvokeAsync<bool>("copyToClipboard", clipboardText);
         }
         catch (JSException)
         {
@@ -526,11 +526,17 @@ else
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task CopyToClipboard(string text, string key)
     {
+        bool success;
         try
         {
-            await Js.InvokeVoidAsync("copyToClipboard", text);
+            success = await Js.InvokeAsync<bool>("copyToClipboard", text);
         }
         catch (JSException)
+        {
+            return;
+        }
+
+        if (!success)
         {
             return;
         }
