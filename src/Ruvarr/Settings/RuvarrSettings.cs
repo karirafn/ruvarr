@@ -10,7 +10,7 @@ internal sealed record RuvarrSettings(
 {
     public const string DownloadsRoot = "/downloads";
 
-    public IReadOnlyList<string> IgnoredChannels { get; init; } = ["Fréttastofa sjónvarps", "Íþróttadeild", "Rás 1"];
+    public IReadOnlyList<string> IgnoredChannels { get; init; } = ["Fréttastofa sjónvarps", "Íþróttadeild", "Rás 1", "Sameiginleg markaðsmál", "Rás 2"];
 
     public bool IsTvdbConfigured => !string.IsNullOrWhiteSpace(TvdbApiKey);
 
