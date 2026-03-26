@@ -13,8 +13,10 @@ using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Settings;
+using Ruvarr.TvdbEpisodeLookup;
 using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
+using Ruvarr.TvdbEpisodeLookup.Strategies;
 using Ruvarr.TvdbSeriesLookup.Jobs;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
@@ -35,6 +37,12 @@ public static class ServiceCollectionExtensions
         services.AddTvdb();
         services.AddSonarr();
         services.AddRuv();
+        // Episode matching strategies — ORDER MATTERS: translation first, then episode number, then part-one sibling
+        services.AddScoped<IEpisodeMatchingStrategy, TranslationMatchingStrategy>();
+        services.AddScoped<IEpisodeMatchingStrategy, EpisodeNumberMatchingStrategy>();
+        services.AddScoped<IEpisodeMatchingStrategy, PartOneSiblingMatchingStrategy>();
+        services.AddScoped<ITvdbEpisodeMatcher, TvdbEpisodeMatcher>();
+
         services.AddPrograms();
         services.AddDownloads();
 

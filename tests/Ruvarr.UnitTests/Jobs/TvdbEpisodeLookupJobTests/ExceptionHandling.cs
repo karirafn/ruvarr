@@ -21,6 +21,7 @@ public sealed class ExceptionHandling
 {
     private readonly ITvdbClient _tvdb = Substitute.For<ITvdbClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
+    private readonly ITvdbEpisodeMatcher _matcher = Substitute.For<ITvdbEpisodeMatcher>();
     private readonly TvdbEpisodeLookupNotifier _notifier = new();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
@@ -42,7 +43,7 @@ public sealed class ExceptionHandling
 
     private TvdbEpisodeLookupJob CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<TvdbEpisodeLookupJob>.Instance,
-        dbContext, _tvdb, _sonarr, _notifier, new DomainEventBroadcaster(), _settingsStore);
+        dbContext, _tvdb, _sonarr, _notifier, new DomainEventBroadcaster(), _settingsStore, _matcher);
 
     [Fact]
     public async Task MarksComplete_WhenTvdbClientThrows()
