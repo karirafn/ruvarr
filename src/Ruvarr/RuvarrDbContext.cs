@@ -40,6 +40,8 @@ public sealed class RuvarrDbContext(DbContextOptions<RuvarrDbContext> options, I
             entry.Entity.ClearDomainEvents();
         }
 
+        int result = await base.SaveChangesAsync(cancellationToken);
+
         foreach (IDomainEvent @event in events)
         {
             Type handlerType = typeof(IDomainEventHandler<>).MakeGenericType(@event.GetType());
@@ -49,6 +51,11 @@ public sealed class RuvarrDbContext(DbContextOptions<RuvarrDbContext> options, I
             }
         }
 
-        return await base.SaveChangesAsync(cancellationToken);
+        if (ChangeTracker.HasChanges())
+        {
+            result += await base.SaveChangesAsync(cancellationToken);
+        }
+
+        return result;
     }
 }
