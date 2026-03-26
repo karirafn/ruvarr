@@ -20,6 +20,7 @@ public sealed class SettingsGate
 {
     private readonly ITvdbClient _tvdb = Substitute.For<ITvdbClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
+    private readonly ITvdbEpisodeMatcher _matcher = Substitute.For<ITvdbEpisodeMatcher>();
     private readonly TvdbEpisodeLookupNotifier _lookupQueue = new();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
@@ -39,7 +40,7 @@ public sealed class SettingsGate
 
     private TvdbEpisodeLookupJob CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<TvdbEpisodeLookupJob>.Instance,
-        dbContext, _tvdb, _sonarr, _lookupQueue, new DomainEventBroadcaster(), _settingsStore);
+        dbContext, _tvdb, _sonarr, _lookupQueue, new DomainEventBroadcaster(), _settingsStore, _matcher);
 
     [Fact]
     public async Task Skips_WhenTvdbIsNotConfigured()
