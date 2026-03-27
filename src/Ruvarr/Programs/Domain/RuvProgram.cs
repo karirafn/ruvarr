@@ -195,13 +195,7 @@ internal sealed class RuvProgram
 
         if (SeasonNumber > 0)
         {
-            int namedSeasonCount = nonSpecials.Count(x => x.SeasonNumber == SeasonNumber);
-            bool otherSeasonSharesCount = nonSpecials
-                .Where(x => x.SeasonNumber != SeasonNumber)
-                .GroupBy(x => x.SeasonNumber)
-                .Any(g => g.Count() == namedSeasonCount);
-
-            return otherSeasonSharesCount ? 0 : SeasonNumber;
+            return SeasonNumber;
         }
 
         int matchingSeasonCount = nonSpecials
