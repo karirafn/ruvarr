@@ -182,6 +182,7 @@ td:last-child {
     display: flex;
     gap: 0.25rem;
     justify-content: flex-end;
+    align-items: center;
 }
 
 th {
