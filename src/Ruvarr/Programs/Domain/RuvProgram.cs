@@ -61,25 +61,37 @@ internal sealed class RuvProgram
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(Name))
+            int season = ParseSeasonFromSuffix(Name);
+
+            if (season > 0)
             {
-                return 0;
+                return season;
             }
 
-            string suffix = Name.Split(' ')[^1];
+            return ParseSeasonFromSuffix(ForeignName);
+        }
+    }
 
-            if (RomanNumeral.TryParse(suffix, out RomanNumeral? rn) && rn.Number > 0)
-            {
-                return rn.Number;
-            }
-
-            if (int.TryParse(suffix, out int n) && n > 0)
-            {
-                return n;
-            }
-
+    private static int ParseSeasonFromSuffix(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
             return 0;
         }
+
+        string suffix = name.Split(' ')[^1];
+
+        if (RomanNumeral.TryParse(suffix, out RomanNumeral? rn) && rn.Number > 0)
+        {
+            return rn.Number;
+        }
+
+        if (int.TryParse(suffix, out int n) && n > 0)
+        {
+            return n;
+        }
+
+        return 0;
     }
 
     public static RuvProgram Create(int id, string channel, string name, string? foreignName, bool multipleEpisodes, string? slug = null, Uri? imageUrl = null, string? description = null)

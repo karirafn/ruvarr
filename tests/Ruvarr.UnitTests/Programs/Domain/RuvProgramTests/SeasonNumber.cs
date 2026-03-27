@@ -76,4 +76,95 @@ public sealed class SeasonNumber
         // Assert
         sut.SeasonNumber.ShouldBe(5);
     }
+
+    [Fact]
+    public void FallsBackToForeignNameRomanNumeral()
+    {
+        // Arrange / Act
+        RuvProgram sut = new RuvProgramBuilder()
+            .WithName("Lögregluvaktin")
+            .WithForeignName("Chicago PD IX")
+            .Build();
+
+        // Assert
+        sut.SeasonNumber.ShouldBe(9);
+    }
+
+    [Fact]
+    public void FallsBackToForeignNameInteger()
+    {
+        // Arrange / Act
+        RuvProgram sut = new RuvProgramBuilder()
+            .WithName("Lögregluvaktin")
+            .WithForeignName("Chicago PD 9")
+            .Build();
+
+        // Assert
+        sut.SeasonNumber.ShouldBe(9);
+    }
+
+    [Fact]
+    public void ForeignNameRomanNumeralX()
+    {
+        // Arrange / Act
+        RuvProgram sut = new RuvProgramBuilder()
+            .WithName("Séra Brown")
+            .WithForeignName("Father Brown X")
+            .Build();
+
+        // Assert
+        sut.SeasonNumber.ShouldBe(10);
+    }
+
+    [Fact]
+    public void ForeignNameRomanNumeralIII()
+    {
+        // Arrange / Act
+        RuvProgram sut = new RuvProgramBuilder()
+            .WithName("Kúlugúbbarnir")
+            .WithForeignName("Bubble Guppies III")
+            .Build();
+
+        // Assert
+        sut.SeasonNumber.ShouldBe(3);
+    }
+
+    [Fact]
+    public void NameTakesPrecedenceOverForeignName()
+    {
+        // Arrange / Act
+        RuvProgram sut = new RuvProgramBuilder()
+            .WithName("Dagskrá II")
+            .WithForeignName("Show IX")
+            .Build();
+
+        // Assert
+        sut.SeasonNumber.ShouldBe(2);
+    }
+
+    [Fact]
+    public void ReturnsZeroWhenBothNamesLackSeason()
+    {
+        // Arrange / Act
+        RuvProgram sut = new RuvProgramBuilder()
+            .WithName("Dagskrá")
+            .WithForeignName("Some Show")
+            .Build();
+
+        // Assert
+        sut.SeasonNumber.ShouldBe(0);
+    }
+
+    [Fact]
+    public void ReturnsZeroWhenForeignNameIsNull()
+    {
+        // Arrange / Act
+        RuvProgram sut = new RuvProgramBuilder()
+            .WithName("Dagskrá")
+            .WithForeignName(null)
+            .Build();
+
+        // Assert
+        sut.SeasonNumber.ShouldBe(0);
+    }
 }
