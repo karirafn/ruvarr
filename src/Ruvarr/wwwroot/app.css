@@ -684,7 +684,7 @@ dialog input[type="number"]:focus {
 .icon--matched-all { color: var(--color-teal); }
 .icon--matched-partial { color: var(--color-amber); }
 .icon--matched-none { color: rgba(255, 255, 255, 0.2); }
-.icon--isl { color: var(--color-blue); }
+.flag--dimmed { opacity: 0.2; }
 
 /* Status pills (detail page) */
 .status-pill {
