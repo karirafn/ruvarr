@@ -103,6 +103,12 @@ public static class ServiceCollectionExtensions
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
+
+            JobKey tvdbIslTranslationBackfill = new(nameof(TvdbIslTranslationBackfillJob));
+            options.AddJob<TvdbIslTranslationBackfillJob>(x => x.WithIdentity(tvdbIslTranslationBackfill))
+                .AddTrigger(trigger => trigger
+                    .ForJob(tvdbIslTranslationBackfill)
+                    .StartNow());
         });
         services.AddQuartzHostedService(x => x.WaitForJobsToComplete = true);
 

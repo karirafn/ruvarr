@@ -14,7 +14,9 @@ internal sealed class TvdbEpisode
 
     public bool IsMissing { get; internal set; }
 
-    internal static TvdbEpisode Create(int tvdbId, int seasonNumber, int episodeNumber, bool isMissing)
+    public bool HasIslTranslation { get; internal set; }
+
+    internal static TvdbEpisode Create(int tvdbId, int seasonNumber, int episodeNumber, bool isMissing, bool hasIslTranslation = false)
     {
         return new TvdbEpisode
         {
@@ -22,6 +24,7 @@ internal sealed class TvdbEpisode
             SeasonNumber = seasonNumber,
             EpisodeNumber = episodeNumber,
             IsMissing = isMissing,
+            HasIslTranslation = hasIslTranslation,
         };
     }
 }

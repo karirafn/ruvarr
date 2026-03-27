@@ -148,9 +148,9 @@ internal sealed partial class RuvEpisode
         return Path.Join(directory, filename);
     }
 
-    public void Match(int tvdbId, int season, int episode, bool isMissing)
+    public void Match(int tvdbId, int season, int episode, bool isMissing, bool hasIslTranslation = false)
     {
-        MatchMultiple([TvdbEpisode.Create(tvdbId, season, episode, isMissing)]);
+        MatchMultiple([TvdbEpisode.Create(tvdbId, season, episode, isMissing, hasIslTranslation)]);
     }
 
     public void MatchMultiple(IReadOnlyList<TvdbEpisode> tvdbEpisodes)

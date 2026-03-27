@@ -35,7 +35,7 @@ internal sealed class EpisodeNumberMatchingStrategy(
                             continue;
                         }
 
-                        unmatchedEpisode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, context.MissingTvdbIds.Contains(tvdbEpisode.Id));
+                        unmatchedEpisode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, context.MissingTvdbIds.Contains(tvdbEpisode.Id), tvdbEpisode.NameTranslations?.Contains("isl") ?? false);
                         logger.LogInformation(
                             "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' S{TvdbSeason:D2}E{TvdbEpisode:D2} '{TvdbEpisodeName}' via season/episode fallback",
                             unmatchedEpisode.ToString(),

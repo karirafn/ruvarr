@@ -50,7 +50,7 @@ internal sealed class MatchEpisodeHandler(
                 return TvdbErrors.EpisodeNotFound;
             }
 
-            tvdbEpisodes.Add(TvdbEpisode.Create(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id)));
+            tvdbEpisodes.Add(TvdbEpisode.Create(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id), tvdbEpisode.NameTranslations?.Contains("isl") ?? false));
         }
 
         episode.MatchMultiple(tvdbEpisodes);
