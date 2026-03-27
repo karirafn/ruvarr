@@ -139,13 +139,7 @@ else
                 {
                     <tr>
                         <td class="col-number col-center">@FormatSeasons(episode.TvdbMatches)</td>
-                        <td class="col-number col-center">
-                            @FormatEpisodes(episode.TvdbMatches)
-                            @if (episode.TvdbMatches.Any(m => m.HasIslTranslation))
-                            {
-                                <span class="badge--isl" title="Icelandic translation on TVDB" aria-label="Has Icelandic translation">ISL</span>
-                            }
-                        </td>
+                        <td class="col-number col-center">@FormatEpisodes(episode.TvdbMatches)</td>
                         <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
                         <td class="col-duration">
                             @((int)Math.Round(episode.Duration.TotalMinutes, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
@@ -202,6 +196,9 @@ else
                         </td>
                         <td>
                             <div class="row-actions">
+                                <span title="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation on TVDB" : "No Icelandic translation on TVDB")">
+                                    <Icon Type="IconType.Flag" Class="@($"icon {(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "icon--isl" : "icon--unmonitored")}")" AriaLabel="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation" : "No Icelandic translation")" />
+                                </span>
                                 @if (episode.RuvUrl is not null)
                                 {
                                     <a class="icon-button" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer" title="View on RÚV">
