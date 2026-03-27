@@ -684,6 +684,7 @@ dialog input[type="number"]:focus {
 .icon--matched-all { color: var(--color-teal); }
 .icon--matched-partial { color: var(--color-amber); }
 .icon--matched-none { color: rgba(255, 255, 255, 0.2); }
+.icon--isl { color: var(--color-blue); }
 
 /* Status pills (detail page) */
 .status-pill {
@@ -807,20 +808,6 @@ dialog input[type="number"]:focus {
 
 .badge--ruv:hover {
     opacity: 0.8;
-}
-
-.badge--isl {
-    display: inline-block;
-    padding: 0.15rem 0.4rem;
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    border-radius: 4px;
-    border: 1px solid var(--color-blue);
-    color: var(--color-blue);
-    margin-left: 0.35rem;
-    vertical-align: middle;
 }
 
 .badge--tvdb-create {

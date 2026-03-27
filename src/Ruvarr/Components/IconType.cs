@@ -10,6 +10,7 @@ public enum IconType
     Download,
     ExternalLink,
     Eye,
+    Flag,
     EyeOff,
     Link,
     LinkDiagonal,
