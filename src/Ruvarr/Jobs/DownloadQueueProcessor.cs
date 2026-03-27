@@ -95,35 +95,26 @@ internal class DownloadQueueProcessor(
 
         try
         {
-            IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
-            Dictionary<int, MissingEpisode> missingByTvdbId = missingEpisodes.ToDictionary(x => x.TvdbId);
-
-            List<int> episodeIds = [.. item.Episode.TvdbEpisodes
-                .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
-                .OfType<MissingEpisode>()
-                .Select(m => m.Id)];
-
-            int? seriesId = item.Episode.TvdbEpisodes
-                .Select(e => missingByTvdbId.GetValueOrDefault(e.TvdbId))
-                .OfType<MissingEpisode>()
-                .Select(m => (int?)m.SeriesId)
-                .FirstOrDefault();
-
-            if (episodeIds.Count == 0 || seriesId is null)
-            {
-                logger.LogError(
-                    "{Episode} was scheduled for manual import into Sonarr but none of its matched episodes were found in missing episodes.",
-                    item.Episode.ToString());
-                return;
-            }
-
             IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(settingsStore.Current.ResolvedEpisodeDownloadDirectory);
 
             ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
+
+            if (file.Series is null)
+            {
+                logger.LogWarning("Sonarr did not match {Episode} to a series. Skipping import", item.Episode.ToString());
+                return;
+            }
+
+            if (file.Episodes.Count == 0)
+            {
+                logger.LogWarning("Sonarr matched {Episode} to series {SeriesId} but found no episodes. Skipping import", item.Episode.ToString(), file.Series.Id);
+                return;
+            }
+
             ManualImportRequest request = new(
                 Path: file.Path,
-                SeriesId: seriesId.Value,
-                EpisodeIds: episodeIds,
+                SeriesId: file.Series.Id,
+                EpisodeIds: file.Episodes.Select(e => e.Id).ToList(),
                 Quality: file.Quality,
                 Languages: file.Languages,
                 ReleaseGroup: "RUV");
