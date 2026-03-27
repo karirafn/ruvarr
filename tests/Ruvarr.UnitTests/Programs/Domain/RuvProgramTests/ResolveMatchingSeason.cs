@@ -82,7 +82,7 @@ public sealed class ResolveMatchingSeason
     }
 
     [Fact]
-    public void SeasonNumbered_AnotherSeasonSharesEpisodeCount_ReturnsZero()
+    public void SeasonNumbered_AnotherSeasonSharesEpisodeCount_ReturnsSeasonNumber()
     {
         // Arrange
         RuvProgram sut = new RuvProgramBuilder().WithName("Show II").Build();
@@ -95,7 +95,7 @@ public sealed class ResolveMatchingSeason
         int result = sut.ResolveMatchingSeason([s2e1, s4e1]);
 
         // Assert
-        result.ShouldBe(0);
+        result.ShouldBe(2);
     }
 
     [Fact]

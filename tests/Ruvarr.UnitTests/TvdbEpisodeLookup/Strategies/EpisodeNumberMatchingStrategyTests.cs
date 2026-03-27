@@ -149,7 +149,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
     }
 
     [Fact]
-    public async Task SkipsWhenOtherSeasonHasSameEpisodeCount()
+    public async Task MatchesWhenOtherSeasonSharesEpisodeCount()
     {
         // Arrange
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show II").Build();
@@ -168,6 +168,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
         await sut.MatchAsync(context, CancellationToken.None);
 
         // Assert
-        program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(201);
+        program.Episodes[0].TvdbEpisodes[0].SeasonNumber.ShouldBe(2);
     }
 }
