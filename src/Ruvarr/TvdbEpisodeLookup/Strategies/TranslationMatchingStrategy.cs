@@ -57,7 +57,7 @@ internal sealed class TranslationMatchingStrategy(
 
             RuvEpisode episode = episodes[0];
 
-            episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number, context.MissingTvdbIds.Contains(translatedEpisode.Id));
+            episode.Match(translatedEpisode.Id, translatedEpisode.SeasonNumber, translatedEpisode.Number, context.MissingTvdbIds.Contains(translatedEpisode.Id), hasIslTranslation: true);
             logger.LogInformation(
                 "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' - '{TvdbEpisodeName}'",
                 episode.ToString(),

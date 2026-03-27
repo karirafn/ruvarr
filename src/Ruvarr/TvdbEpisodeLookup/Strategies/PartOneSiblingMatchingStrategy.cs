@@ -59,7 +59,7 @@ internal sealed class PartOneSiblingMatchingStrategy(
                 continue;
             }
 
-            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, context.MissingTvdbIds.Contains(tvdbPartTwoEpisode.Id));
+            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, context.MissingTvdbIds.Contains(tvdbPartTwoEpisode.Id), tvdbPartTwoEpisode.NameTranslations?.Contains("isl") ?? false);
             logger.LogInformation(
                 "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' S{TvdbSeason:D2}E{TvdbEpisode:D2} '{TvdbEpisodeName}' via part-one sibling fallback",
                 partTwoEpisode.ToString(),

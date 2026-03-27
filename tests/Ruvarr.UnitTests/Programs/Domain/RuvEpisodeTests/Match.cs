@@ -104,6 +104,32 @@ public sealed class Match
     }
 
     [Fact]
+    public void SetsHasIslTranslationTrue()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false, hasIslTranslation: true);
+
+        // Assert
+        sut.TvdbEpisodes[0].HasIslTranslation.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void SetsHasIslTranslationFalse()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false, hasIslTranslation: false);
+
+        // Assert
+        sut.TvdbEpisodes[0].HasIslTranslation.ShouldBeFalse();
+    }
+
+    [Fact]
     public void ReplacesExistingMatches()
     {
         // Arrange

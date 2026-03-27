@@ -139,7 +139,13 @@ else
                 {
                     <tr>
                         <td class="col-number col-center">@FormatSeasons(episode.TvdbMatches)</td>
-                        <td class="col-number col-center">@FormatEpisodes(episode.TvdbMatches)</td>
+                        <td class="col-number col-center">
+                            @FormatEpisodes(episode.TvdbMatches)
+                            @if (episode.TvdbMatches.Any(m => m.HasIslTranslation))
+                            {
+                                <span class="badge--isl" title="Icelandic translation on TVDB" aria-label="Has Icelandic translation">ISL</span>
+                            }
+                        </td>
                         <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
                         <td class="col-duration">
                             @((int)Math.Round(episode.Duration.TotalMinutes, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
