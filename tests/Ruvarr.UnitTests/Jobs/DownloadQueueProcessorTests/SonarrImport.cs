@@ -14,19 +14,34 @@ using Ruvarr.Testing.Builders;
 
 namespace Ruvarr.UnitTests.Jobs.DownloadQueueProcessorTests;
 
-public sealed class SonarrImport
+public sealed class SonarrImport : IDisposable
 {
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly string _tempDownloadsRoot;
 
     public SonarrImport()
     {
+        _tempDownloadsRoot = Path.Combine(Path.GetTempPath(), $"ruvarr-test-{Guid.NewGuid()}");
+        Directory.CreateDirectory(_tempDownloadsRoot);
+        RuvarrSettings.DownloadsRoot = _tempDownloadsRoot;
+
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
             EpisodeDownloadDirectory: "episodes"));
+    }
+
+    public void Dispose()
+    {
+        RuvarrSettings.DownloadsRoot = "/downloads";
+
+        if (Directory.Exists(_tempDownloadsRoot))
+        {
+            Directory.Delete(_tempDownloadsRoot, recursive: true);
+        }
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -195,7 +210,7 @@ public sealed class SonarrImport
                 Id: id)).ToList();
 
         return new ManualImportFile(
-            Path: $"/downloads/episodes/test/{filename}",
+            Path: $"{RuvarrSettings.DownloadsRoot}/episodes/test/{filename}",
             RelativePath: $"test/{filename}",
             Name: filename,
             Size: 1000,
