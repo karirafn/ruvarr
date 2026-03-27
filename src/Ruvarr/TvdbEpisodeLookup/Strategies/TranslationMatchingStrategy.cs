@@ -46,7 +46,9 @@ internal sealed class TranslationMatchingStrategy(
                 continue;
             }
 
-            List<RuvEpisode> episodes = [.. context.Program.Episodes.Where(x => x.IsMatch(translation.Name))];
+            List<RuvEpisode> episodes = [.. context.Program.Episodes
+                .Where(x => x.TvdbEpisodes.Count == 0)
+                .Where(x => x.IsMatch(translation.Name))];
 
             if (episodes.Count != 1)
             {

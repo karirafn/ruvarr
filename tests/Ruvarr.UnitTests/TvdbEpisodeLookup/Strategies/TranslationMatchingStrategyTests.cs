@@ -181,6 +181,38 @@ public sealed class TranslationMatchingStrategyTests
     }
 
     [Fact]
+    public async Task DoesNotOverwriteAlreadyMatchedEpisodeWhenTranslationNameCollides()
+    {
+        // Arrange
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "MH-MR", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
+        program.Episodes[0].Match(200, 2026, 3, false);
+
+        Episode tvdbEpisode = new TvdbEpisodeDataBuilder()
+            .WithId(101)
+            .WithSeasonNumber(1990)
+            .WithNumber(2)
+            .WithNameTranslations("isl")
+            .Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
+        _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeTranslation("MH-MR", "", "isl", true));
+
+        EpisodeMatchingContext context = new(program, seriesData, []);
+        TranslationMatchingStrategy sut = CreateSut();
+
+        // Act
+        await sut.MatchAsync(context, CancellationToken.None);
+
+        // Assert
+        program.Episodes[0].TvdbEpisodes.Count.ShouldBe(1);
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(200);
+        program.Episodes[0].TvdbEpisodes[0].SeasonNumber.ShouldBe(2026);
+        program.Episodes[0].TvdbEpisodes[0].EpisodeNumber.ShouldBe(3);
+    }
+
+    [Fact]
     public async Task SkipsTranslationLookupForAlreadyMatchedEpisodes()
     {
         // Arrange
