@@ -1,0 +1,30 @@
+@namespace Ruvarr.Components
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 18"
+     width="@Width" height="@Height"
+     class="@Class"
+     aria-label="@AriaLabel" aria-hidden="@(AriaLabel is null ? "true" : null)"
+     style="border-radius: 2px;">
+    <!-- Blue background -->
+    <rect width="24" height="18" fill="#003897" />
+    <!-- White cross -->
+    <rect x="7" y="0" width="4" height="18" fill="#FFFFFF" />
+    <rect x="0" y="7" width="24" height="4" fill="#FFFFFF" />
+    <!-- Red cross -->
+    <rect x="8" y="0" width="2" height="18" fill="#D72828" />
+    <rect x="0" y="8" width="24" height="2" fill="#D72828" />
+</svg>
+
+@code {
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    [Parameter]
+    public string Width { get; set; } = "20";
+
+    [Parameter]
+    public string Height { get; set; } = "15";
+}

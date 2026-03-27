@@ -197,7 +197,8 @@ else
                         <td>
                             <div class="row-actions">
                                 <span title="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation on TVDB" : "No Icelandic translation on TVDB")">
-                                    <Icon Type="IconType.Flag" Class="@($"icon {(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "icon--isl" : "icon--unmonitored")}")" AriaLabel="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation" : "No Icelandic translation")" />
+                                    <IcelandicFlag Class="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? null : "flag--dimmed")"
+                                                   AriaLabel="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation" : "No Icelandic translation")" />
                                 </span>
                                 @if (episode.RuvUrl is not null)
                                 {
