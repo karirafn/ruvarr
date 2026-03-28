@@ -137,6 +137,7 @@ else
                     <th>Program</th>
                     <th>Channel</th>
                     <th>TVDB Series</th>
+                    <th class="col-center">Episodes</th>
                     <th class="col-center"></th>
                     <th class="col-center"></th>
                     <th class="col-center"></th>
@@ -162,6 +163,7 @@ else
                                 <span class="unmatched-dash">—</span>
                             }
                         </td>
+                        <td class="col-center">@program.EpisodeCount</td>
                         <td class="col-center">
                             @if (program.HasMissingEpisodes)
                             {

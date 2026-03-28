@@ -30,6 +30,7 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 SeriesSlug = x.Series!.Slug,
                 SeriesTvdbId = (int?)x.Series!.TvdbId,
                 HasSeries = x.Series != null,
+                EpisodeCount = x.Episodes.Count,
                 HasAnyEpisodes = x.Episodes.Any(),
                 AllEpisodesMatched = x.Episodes.All(e => e.TvdbEpisodes.Any()),
                 AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbEpisodes.Any()),
@@ -49,7 +50,8 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 DeriveEpisodeMatchStatus(x.HasSeries, x.HasAnyEpisodes, x.AllEpisodesMatched, x.AnyEpisodeMatched),
                 null,
                 x.HasMovie,
-                null));
+                null,
+                x.EpisodeCount));
 
         await foreach (ProgramSummary summary in results.WithCancellation(cancellationToken))
         {

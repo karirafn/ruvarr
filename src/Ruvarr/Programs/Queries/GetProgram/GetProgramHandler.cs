@@ -27,6 +27,7 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
                 HasSeries = x.Series != null,
                 x.ImageUrl,
                 x.Description,
+                EpisodeCount = x.Episodes.Count,
                 HasAnyEpisodes = x.Episodes.Any(),
                 AllEpisodesMatched = x.Episodes.All(e => e.TvdbEpisodes.Any()),
                 AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbEpisodes.Any()),
@@ -55,7 +56,8 @@ internal sealed class GetProgramHandler(RuvarrDbContext dbContext) : IRequestHan
             matchStatus,
             projected.ImageUrl,
             projected.HasMovie,
-            projected.Description);
+            projected.Description,
+            projected.EpisodeCount);
     }
 
     private static EpisodeMatchStatus DeriveEpisodeMatchStatus(bool hasSeries, bool hasAnyEpisodes, bool allEpisodesMatched, bool anyEpisodeMatched)

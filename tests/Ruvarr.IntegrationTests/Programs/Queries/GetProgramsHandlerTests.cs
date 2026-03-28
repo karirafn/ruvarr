@@ -51,6 +51,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         found.Channel.ShouldBe("RÚV1");
         found.ProgramName.ShouldBe("Test Program");
         found.SeriesName.ShouldBeNull();
+        found.EpisodeCount.ShouldBe(1);
     }
 
     [Fact]
@@ -820,5 +821,62 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         // Assert
         result.ShouldContain(p => p.ProgramRuvId == 40005);
         result.ShouldNotContain(p => p.ProgramRuvId == 40006);
+    }
+
+    [Fact]
+    public async Task ReturnsEpisodeCount()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(50001, "RÚV1", "Episode Count Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("EC-EP1", new Uri("https://example.com/ec-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("EC-EP2", new Uri("https://example.com/ec-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("EC-EP3", new Uri("https://example.com/ec-ep3.mp4"), "Episode 3", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 50001);
+        found.ShouldNotBeNull();
+        found.EpisodeCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task ReturnsZeroEpisodeCountWhenProgramHasNoEpisodes()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> handler =
+            scope.ServiceProvider.GetRequiredService<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();
+
+        RuvProgram program = RuvProgram.Create(50002, "RÚV1", "Zero Episode Count Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<ProgramSummary> result = await handler
+            .Handle(new GetProgramsQuery(null, null, null, null, null, null, null), cancellationToken)
+            .ToListAsync(cancellationToken);
+
+        // Assert
+        ProgramSummary? found = result.FirstOrDefault(p => p.ProgramRuvId == 50002);
+        found.ShouldNotBeNull();
+        found.EpisodeCount.ShouldBe(0);
     }
 }

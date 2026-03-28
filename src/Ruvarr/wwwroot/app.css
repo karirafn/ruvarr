@@ -584,7 +584,10 @@ dialog input[type="number"]:focus {
 .programs-table td:nth-child(6) { width: 1%; white-space: nowrap; text-align: center; }
 
 .programs-table th:nth-child(7),
-.programs-table td:nth-child(7) { width: 1%; white-space: nowrap; }
+.programs-table td:nth-child(7) { width: 1%; white-space: nowrap; text-align: center; }
+
+.programs-table th:nth-child(8),
+.programs-table td:nth-child(8) { width: 1%; white-space: nowrap; }
 
 .col-center { text-align: center; }
 .col-center svg { display: block; margin: 0 auto; }
