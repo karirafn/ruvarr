@@ -14,40 +14,40 @@
 
 @if (_data is null)
 {
-    <div class="spinner"></div>
+    <div class="spinner" role="status" aria-label="Loading"></div>
 }
 else
 {
-    <section class="stats-grid" aria-label="Statistics">
+    <dl class="stats-grid" aria-label="Statistics">
         <div class="stat-card">
-            <span class="stat-value">@_data.Statistics.TotalPrograms</span>
-            <span class="stat-label">Programs</span>
+            <dd>@_data.Statistics.TotalPrograms</dd>
+            <dt>Programs</dt>
         </div>
         <div class="stat-card">
-            <span class="stat-value">@_data.Statistics.TotalEpisodes</span>
-            <span class="stat-label">Episodes</span>
+            <dd>@_data.Statistics.TotalEpisodes</dd>
+            <dt>Episodes</dt>
         </div>
         <div class="stat-card">
-            <span class="stat-value">@_data.Statistics.UnmatchedEpisodeCount</span>
-            <span class="stat-label">Unmatched</span>
+            <dd>@_data.Statistics.UnmatchedEpisodeCount</dd>
+            <dt>Unmatched</dt>
         </div>
         <div class="stat-card">
-            <span class="stat-value">@_data.Statistics.MissingTranslationCount</span>
-            <span class="stat-label">Missing Translation</span>
+            <dd>@_data.Statistics.MissingTranslationCount</dd>
+            <dt>Missing Translation</dt>
         </div>
         <div class="stat-card">
-            <span class="stat-value">@_data.Statistics.ActiveDownloadQueueDepth</span>
-            <span class="stat-label">Download Queue</span>
+            <dd>@_data.Statistics.ActiveDownloadQueueDepth</dd>
+            <dt>Download Queue</dt>
         </div>
         <div class="stat-card">
-            <span class="stat-value">@_data.Statistics.ProgramsWithMissingEpisodes</span>
-            <span class="stat-label">Missing Episodes</span>
+            <dd>@_data.Statistics.ProgramsWithMissingEpisodes</dd>
+            <dt>Missing Episodes</dt>
         </div>
         <div class="stat-card">
-            <span class="stat-value">@_data.Statistics.DownloadsCompletedLast7Days</span>
-            <span class="stat-label">Downloads (7d)</span>
+            <dd>@_data.Statistics.DownloadsCompletedLast7Days</dd>
+            <dt>Downloads (7d)</dt>
         </div>
-    </section>
+    </dl>
 
     <section class="dashboard-section" aria-label="Recently Added Episodes">
         <h2 class="dashboard-section-title">Recently Added Episodes</h2>
@@ -165,8 +165,11 @@ else
 }
 
 @code {
+    private const int DebounceDelayMs = 500;
+
     private DashboardData? _data;
     private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _debounceTokenSource;
 
     private IReadOnlyList<(string Name, DashboardQueueInfo Info)> _taskRows =>
         _data is null
@@ -206,12 +209,37 @@ else
     {
         await foreach (T _ in events)
         {
+            await DebouncedLoadDataAsync();
+        }
+    }
+
+    private async Task DebouncedLoadDataAsync()
+    {
+        if (_debounceTokenSource is not null)
+        {
+            await _debounceTokenSource.CancelAsync();
+            _debounceTokenSource.Dispose();
+        }
+        _debounceTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(DebounceDelayMs, _debounceTokenSource.Token);
             await LoadDataAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Debounce reset or component disposed, discard
         }
     }
 
     public async ValueTask DisposeAsync()
     {
+        if (_debounceTokenSource is not null)
+        {
+            await _debounceTokenSource.CancelAsync();
+            _debounceTokenSource.Dispose();
+        }
         await _cts.CancelAsync();
         _cts.Dispose();
     }

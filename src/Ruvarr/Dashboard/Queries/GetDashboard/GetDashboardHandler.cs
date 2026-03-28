@@ -18,6 +18,7 @@ internal sealed class GetDashboardHandler(
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int RecentEpisodeLimit = 25;
+    private const int LikelyDownloadedCandidateLimit = 50;
     private const int SevenDays = 7;
 
     public async Task<DashboardData> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
@@ -67,6 +68,7 @@ internal sealed class GetDashboardHandler(
             .Where(e => e.Program.Series != null)
             .Where(e => e.TvdbEpisodes.Count == 0)
             .OrderByDescending(e => e.FirstRun)
+            .Take(LikelyDownloadedCandidateLimit)
             .Select(e => new DashboardEpisodeItem(
                 e.Program.Name,
                 e.Program.RuvId,
