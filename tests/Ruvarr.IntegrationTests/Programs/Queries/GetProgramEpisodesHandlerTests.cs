@@ -167,6 +167,40 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
     }
 
     [Fact]
+    public async Task OrdersUnmatchedEpisodesByFirstRun()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
+
+        RuvProgram program = RuvProgram.Create(30008, "RÚV1", "Unmatched Order Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        DateTime thirdRun = new(2025, 3, 3, 12, 0, 0, DateTimeKind.Utc);
+        DateTime firstRun = new(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime secondRun = new(2025, 2, 2, 12, 0, 0, DateTimeKind.Utc);
+
+        program.TryAddEpisode("UM-EP3", new Uri("https://example.com/ep3.mp4"), "Episode 3", "Desc", thirdRun, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("UM-EP1", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", firstRun, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("UM-EP2", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", secondRun, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<EpisodeSummary> result = await handler.Handle(new GetProgramEpisodesQuery(30008), cancellationToken);
+
+        // Assert
+        result.Count.ShouldBe(3);
+        result[0].EpisodeRuvId.ShouldBe("UM-EP1");
+        result[1].EpisodeRuvId.ShouldBe("UM-EP2");
+        result[2].EpisodeRuvId.ShouldBe("UM-EP3");
+    }
+
+    [Fact]
     public async Task ReturnsNullRuvUrlWhenSlugAbsent()
     {
         // Arrange
