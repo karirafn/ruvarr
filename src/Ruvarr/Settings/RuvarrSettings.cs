@@ -8,7 +8,7 @@ internal sealed record RuvarrSettings(
     string EpisodeDownloadDirectory = "tv",
     string MovieDownloadDirectory = "movies")
 {
-    public static string DownloadsRoot { get; internal set; } = "/downloads";
+    public string DownloadsRoot { get; init; } = "/downloads";
 
     public bool IslTranslationBackfillComplete { get; init; }
 

@@ -59,9 +59,12 @@ public sealed class ResolvedPaths
     }
 
     [Fact]
-    public void DownloadsRoot_IsCorrectConstant()
+    public void DownloadsRoot_DefaultsToDownloads()
     {
+        // Arrange
+        RuvarrSettings settings = new();
+
         // Act & Assert
-        RuvarrSettings.DownloadsRoot.ShouldBe("/downloads");
+        settings.DownloadsRoot.ShouldBe("/downloads");
     }
 }

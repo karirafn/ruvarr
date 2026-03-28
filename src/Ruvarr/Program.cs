@@ -35,7 +35,7 @@ using (IServiceScope scope = app.Services.CreateScope())
 try
 {
     RuvarrSettings settings = app.Services.GetRequiredService<ISettingsStore>().Current;
-    Directory.CreateDirectory(RuvarrSettings.DownloadsRoot);
+    Directory.CreateDirectory(settings.DownloadsRoot);
     Directory.CreateDirectory(settings.ResolvedEpisodeDownloadDirectory);
     Directory.CreateDirectory(settings.ResolvedMovieDownloadDirectory);
 }

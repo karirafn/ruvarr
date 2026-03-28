@@ -78,7 +78,7 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
 
     private static RuvarrSettings MigrateAbsolutePaths(RuvarrSettings settings)
     {
-        string prefix = RuvarrSettings.DownloadsRoot + "/";
+        string prefix = settings.DownloadsRoot + "/";
 
         string episodeDir = settings.EpisodeDownloadDirectory;
         if (episodeDir.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))

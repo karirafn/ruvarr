@@ -55,13 +55,15 @@ internal class DownloadQueueProcessor(
         string filepath;
         try
         {
+            string downloadsRoot = settingsStore.Current.DownloadsRoot;
+
             string tentativePath = item.Episode.ToFilePath(
-                RuvarrSettings.DownloadsRoot,
+                downloadsRoot,
                 episodeSubdirectory,
                 fileAlreadyExists: false);
 
             filepath = item.Episode.ToFilePath(
-                RuvarrSettings.DownloadsRoot,
+                downloadsRoot,
                 episodeSubdirectory,
                 fileAlreadyExists: File.Exists(tentativePath));
 

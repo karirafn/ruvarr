@@ -6,6 +6,7 @@
 @using Ruvarr.Settings.Queries.GetSettings
 @using Ruvarr.Settings.Queries.TestSonarrConnection
 @inject IServiceScopeFactory ScopeFactory
+@inject ISettingsStore SettingsStore
 @implements IDisposable
 
 <h1>Settings</h1>
@@ -89,7 +90,7 @@ else
                 <label for="episode-download-dir">Episode Subdirectory</label>
                 <input id="episode-download-dir" type="text" @bind="_episodeDownloadDirectory" @bind:event="oninput" aria-describedby="episode-download-dir-resolved episode-download-dir-error" />
                 @{ var episodeTrimmed = _episodeDownloadDirectory.Trim('/'); }
-                <span id="episode-download-dir-resolved" class="resolved-path">@(string.IsNullOrEmpty(episodeTrimmed) ? RuvarrSettings.DownloadsRoot : System.IO.Path.Join(RuvarrSettings.DownloadsRoot, episodeTrimmed))</span>
+                <span id="episode-download-dir-resolved" class="resolved-path">@(string.IsNullOrEmpty(episodeTrimmed) ? SettingsStore.Current.DownloadsRoot : System.IO.Path.Join(SettingsStore.Current.DownloadsRoot, episodeTrimmed))</span>
                 @{
                     string? episodeDirError = null;
                     if (_fieldErrors.TryGetValue(SettingsErrors.EpisodeSubdirectoryAbsoluteCode, out string? e1))
@@ -115,7 +116,7 @@ else
                 <label for="movie-download-dir">Movie Subdirectory</label>
                 <input id="movie-download-dir" type="text" @bind="_movieDownloadDirectory" @bind:event="oninput" aria-describedby="movie-download-dir-resolved movie-download-dir-error" />
                 @{ var movieTrimmed = _movieDownloadDirectory.Trim('/'); }
-                <span id="movie-download-dir-resolved" class="resolved-path">@(string.IsNullOrEmpty(movieTrimmed) ? RuvarrSettings.DownloadsRoot : System.IO.Path.Join(RuvarrSettings.DownloadsRoot, movieTrimmed))</span>
+                <span id="movie-download-dir-resolved" class="resolved-path">@(string.IsNullOrEmpty(movieTrimmed) ? SettingsStore.Current.DownloadsRoot : System.IO.Path.Join(SettingsStore.Current.DownloadsRoot, movieTrimmed))</span>
                 @{
                     string? movieDirError = null;
                     if (_fieldErrors.TryGetValue(SettingsErrors.MovieSubdirectoryAbsoluteCode, out string? m1))

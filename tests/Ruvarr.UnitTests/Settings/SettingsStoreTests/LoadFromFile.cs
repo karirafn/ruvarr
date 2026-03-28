@@ -9,13 +9,9 @@ namespace Ruvarr.UnitTests.Settings.SettingsStoreTests;
 public sealed class LoadFromFile : IDisposable
 {
     private readonly string _tempDir;
-    private readonly string _originalDownloadsRoot;
 
     public LoadFromFile()
     {
-        _originalDownloadsRoot = RuvarrSettings.DownloadsRoot;
-        RuvarrSettings.DownloadsRoot = "/downloads";
-
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(_tempDir);
     }
@@ -163,8 +159,6 @@ public sealed class LoadFromFile : IDisposable
 
     public void Dispose()
     {
-        RuvarrSettings.DownloadsRoot = _originalDownloadsRoot;
-
         if (Directory.Exists(_tempDir))
         {
             Directory.Delete(_tempDir, recursive: true);
