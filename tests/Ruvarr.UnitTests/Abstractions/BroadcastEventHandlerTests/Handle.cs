@@ -1,11 +1,8 @@
 using Ruvarr.Abstractions;
-using Ruvarr.Programs.Domain;
-using Ruvarr.Programs.Events;
-using Ruvarr.Testing.Builders;
 
 using Shouldly;
 
-namespace Ruvarr.UnitTests.Programs.EpisodeMatchedEventHandlerTests;
+namespace Ruvarr.UnitTests.Abstractions.BroadcastEventHandlerTests;
 
 public sealed class Handle
 {
@@ -14,17 +11,16 @@ public sealed class Handle
     {
         // Arrange
         DomainEventBroadcaster broadcaster = new();
-        EpisodeMatchedEventHandler sut = new(broadcaster);
-        RuvEpisode episode = new RuvEpisodeBuilder().Build();
-        EpisodeMatchedEvent @event = new(episode);
+        BroadcastEventHandler<TestEvent> sut = new(broadcaster);
+        TestEvent @event = new("test-value");
 
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
 
-        EpisodeMatchedEvent? received = null;
-        IAsyncEnumerable<EpisodeMatchedEvent> subscription = broadcaster.Subscribe<EpisodeMatchedEvent>(cts.Token);
+        TestEvent? received = null;
+        IAsyncEnumerable<TestEvent> subscription = broadcaster.Subscribe<TestEvent>(cts.Token);
         Task watchTask = Task.Run(async () =>
         {
-            await foreach (EpisodeMatchedEvent e in subscription)
+            await foreach (TestEvent e in subscription)
             {
                 received = e;
                 await cts.CancelAsync();
@@ -39,4 +35,6 @@ public sealed class Handle
         received.ShouldNotBeNull();
         received.ShouldBe(@event);
     }
+
+    private sealed record TestEvent(string Value) : IDomainEvent;
 }
