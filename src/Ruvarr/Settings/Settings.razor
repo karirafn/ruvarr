@@ -148,7 +148,7 @@ else
                     <span class="channel-tag" role="listitem">
                         @channel
                         <button class="channel-tag-remove"
-                                aria-label="Remove @channel"
+                                aria-label="@($"Remove {channel}")"
                                 @onclick="() => RemoveChannel(channel)">
                             &times;
                         </button>
@@ -183,7 +183,7 @@ else
                     <span class="channel-tag" role="listitem">
                         @program
                         <button class="channel-tag-remove"
-                                aria-label="Remove @program"
+                                aria-label="@($"Remove {program}")"
                                 @onclick="() => RemoveProgram(program)">
                             &times;
                         </button>
@@ -195,14 +195,18 @@ else
                 <input type="text"
                        placeholder="Program title..."
                        aria-label="Program title to ignore"
-                       @bind="_newProgramTitle"
-                       @bind:event="oninput"
+                       value="@_newProgramTitle"
+                       @oninput="HandleProgramInput"
                        @onkeydown="HandleProgramKeyDown" />
                 <button class="add-channel-button"
                         @onclick="AddProgram"
                         disabled="@(string.IsNullOrWhiteSpace(_newProgramTitle))">
                     Add
                 </button>
+                @if (_addProgramError is not null)
+                {
+                    <span class="field-error" role="alert">@_addProgramError</span>
+                }
             </div>
         </section>
 
@@ -262,6 +266,7 @@ else
     private List<string> _ignoredChannelsList = [];
     private HashSet<string> _originalIgnoredChannels = new(StringComparer.OrdinalIgnoreCase);
     private string _newProgramTitle = string.Empty;
+    private string? _addProgramError;
     private List<string> _ignoredProgramsList = [];
     private HashSet<string> _originalIgnoredPrograms = new(StringComparer.OrdinalIgnoreCase);
     protected override async Task OnInitializedAsync()
@@ -436,17 +441,26 @@ else
 
         if (_ignoredProgramsList.Exists(p => string.Equals(p, trimmed, StringComparison.OrdinalIgnoreCase)))
         {
+            _addProgramError = "Already ignored";
             return;
         }
 
         _ignoredProgramsList.Add(trimmed);
         _newProgramTitle = string.Empty;
+        _addProgramError = null;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private void RemoveProgram(string title)
     {
         _ignoredProgramsList.Remove(title);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @oninput")]
+    private void HandleProgramInput(ChangeEventArgs e)
+    {
+        _newProgramTitle = e.Value?.ToString() ?? string.Empty;
+        _addProgramError = null;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onkeydown")]
