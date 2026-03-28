@@ -2,7 +2,6 @@
 
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
-using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
@@ -55,8 +54,7 @@ internal sealed class MatchProgramEpisodesHandler(
             return ProgramErrors.ProgramEpisodeCountMismatch;
         }
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync(cancellationToken: cancellationToken);
-        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+        HashSet<int> missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
 
         foreach (RuvEpisode episode in program.Episodes)
         {
