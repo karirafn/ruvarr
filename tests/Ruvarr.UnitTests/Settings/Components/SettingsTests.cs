@@ -235,6 +235,49 @@ public sealed class SettingsTests : BunitContext
     }
 
     [Fact]
+    public async Task ShowsErrorWhenAddingDuplicateProgram()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["Fréttir"] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Act
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = "fréttir" });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Assert
+        IElement error = cut.Find(".field-error");
+        error.TextContent.ShouldContain("Already ignored");
+    }
+
+    [Fact]
+    public async Task ClearsDuplicateErrorWhenInputChanges()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["Fréttir"] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = "fréttir" });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Act
+        await input.InputAsync(new ChangeEventArgs { Value = "Something else" });
+
+        // Assert
+        cut.FindAll(".field-error").Count.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task ShowsConfirmationWhenSavingWithNewlyIgnoredPrograms()
     {
         // Arrange

@@ -80,6 +80,7 @@ internal sealed class RuvProgramRefreshJob(
         List<int> ruvIds = [.. programs.Select(x => x.Id)];
 
         List<RuvProgram> existingTvPrograms = await dbContext.Set<RuvProgram>()
+            .IgnoreAutoIncludes()
             .Where(x => ruvIds.Contains(x.RuvId))
             .ToListAsync();
         logger.LogDebug("Found {Count} RÚV programs in database", existingTvPrograms.Count);

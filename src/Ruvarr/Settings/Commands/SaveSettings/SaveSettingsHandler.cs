@@ -95,6 +95,7 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
         if (newlyIgnoredChannels.Count > 0)
         {
             List<RuvProgram> channelPrograms = await dbContext.Set<RuvProgram>()
+                .IgnoreAutoIncludes()
                 .Where(p => newlyIgnoredChannels.Contains(p.Channel))
                 .ToListAsync(cancellationToken);
             programsToDelete.AddRange(channelPrograms);
@@ -102,10 +103,14 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
 
         if (newlyIgnoredPrograms.Count > 0)
         {
-            HashSet<string> ignoredTitles = new(newlyIgnoredPrograms, StringComparer.OrdinalIgnoreCase);
+            List<string> upperIgnoredPrograms = [.. newlyIgnoredPrograms.Select(p => p.ToUpperInvariant())];
+#pragma warning disable CA1304, CA1311 // ToUpper() is translated to SQL UPPER() — culture is irrelevant
             List<RuvProgram> titlePrograms = await dbContext.Set<RuvProgram>()
+                .IgnoreAutoIncludes()
+                .Where(p => upperIgnoredPrograms.Contains(p.Name.ToUpper()))
                 .ToListAsync(cancellationToken);
-            programsToDelete.AddRange(titlePrograms.Where(p => ignoredTitles.Contains(p.Name)));
+#pragma warning restore CA1304, CA1311
+            programsToDelete.AddRange(titlePrograms);
         }
 
         if (programsToDelete.Count > 0)
