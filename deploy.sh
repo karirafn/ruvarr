@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO=/mnt/user/appdata/ruvarr
+REPO=/mnt/user/appdata/ruvarr-src
 LOG_PREFIX="$(date '+%Y-%m-%d %H:%M:%S')"
 
 cd "$REPO"
