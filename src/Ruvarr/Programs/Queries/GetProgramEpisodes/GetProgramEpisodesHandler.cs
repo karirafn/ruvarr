@@ -15,6 +15,7 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
             .Where(x => x.Program.RuvId == request.ProgramRuvId)
             .OrderBy(x => x.TvdbEpisodes.Min(e => (int?)e.SeasonNumber))
             .ThenBy(x => x.TvdbEpisodes.Min(e => (int?)e.EpisodeNumber))
+            .ThenBy(x => x.FirstRun)
             .Select(x => new
             {
                 x.Title,
