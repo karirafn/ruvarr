@@ -83,18 +83,34 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
             command.EpisodeDownloadDirectory,
             command.MovieDownloadDirectory)
         {
-            IgnoredChannels = command.IgnoredChannels
+            IgnoredChannels = command.IgnoredChannels,
+            IgnoredPrograms = command.IgnoredPrograms
         };
 
-        HashSet<string> newlyIgnored = [.. command.IgnoredChannels.Except(store.Current.IgnoredChannels, StringComparer.OrdinalIgnoreCase)];
+        HashSet<string> newlyIgnoredChannels = [.. command.IgnoredChannels.Except(store.Current.IgnoredChannels, StringComparer.OrdinalIgnoreCase)];
+        HashSet<string> newlyIgnoredPrograms = [.. command.IgnoredPrograms.Except(store.Current.IgnoredPrograms, StringComparer.OrdinalIgnoreCase)];
 
-        if (newlyIgnored.Count > 0)
+        List<RuvProgram> programsToDelete = [];
+
+        if (newlyIgnoredChannels.Count > 0)
         {
-            List<RuvProgram> programsToDelete = await dbContext.Set<RuvProgram>()
-                .Where(p => newlyIgnored.Contains(p.Channel))
+            List<RuvProgram> channelPrograms = await dbContext.Set<RuvProgram>()
+                .Where(p => newlyIgnoredChannels.Contains(p.Channel))
                 .ToListAsync(cancellationToken);
+            programsToDelete.AddRange(channelPrograms);
+        }
 
-            dbContext.Set<RuvProgram>().RemoveRange(programsToDelete);
+        if (newlyIgnoredPrograms.Count > 0)
+        {
+            HashSet<string> ignoredTitles = new(newlyIgnoredPrograms, StringComparer.OrdinalIgnoreCase);
+            List<RuvProgram> titlePrograms = await dbContext.Set<RuvProgram>()
+                .ToListAsync(cancellationToken);
+            programsToDelete.AddRange(titlePrograms.Where(p => ignoredTitles.Contains(p.Name)));
+        }
+
+        if (programsToDelete.Count > 0)
+        {
+            dbContext.Set<RuvProgram>().RemoveRange(programsToDelete.DistinctBy(p => p.RuvId));
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 

@@ -24,7 +24,7 @@ public sealed class SettingsTests : BunitContext
     public void RendersExistingIgnoredChannelsAsTags()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["RUV1", "RUV2", "RUV3"]);
@@ -43,7 +43,7 @@ public sealed class SettingsTests : BunitContext
     public async Task AddsChannelViaDropdownAndButton()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["ChannelA", "ChannelB"]);
@@ -69,7 +69,7 @@ public sealed class SettingsTests : BunitContext
     public async Task RemovesChannelWhenRemoveButtonClicked()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["RUV1", "RUV2", "RUV3"]);
@@ -90,7 +90,7 @@ public sealed class SettingsTests : BunitContext
     public void DisablesDropdownWhenAllChannelsIgnored()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1", "RUV2"], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["RUV1", "RUV2"]);
@@ -107,7 +107,7 @@ public sealed class SettingsTests : BunitContext
     public async Task RemovedChannelReappearsInDropdown()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["RUV1", "RUV2"]);
@@ -130,7 +130,7 @@ public sealed class SettingsTests : BunitContext
     {
         // Arrange — ignored channel "RUV Aukaras" has no programs in the DB,
         // so GetDistinctChannels does not return it
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV Aukaras", "RUV2"] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV Aukaras", "RUV2"], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["RUV1"]);
@@ -152,10 +152,143 @@ public sealed class SettingsTests : BunitContext
     }
 
     [Fact]
+    public void RendersExistingIgnoredProgramsAsTags()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["Fréttir", "Kastljós"] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        // Act
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Assert
+        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
+        tags.Count.ShouldBe(2);
+        tags[0].TextContent.ShouldContain("Fréttir");
+        tags[1].TextContent.ShouldContain("Kastljós");
+    }
+
+    [Fact]
+    public async Task AddsProgramViaTextInputAndButton()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Act
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = "New Program" });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Assert
+        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
+        tags.Count.ShouldBe(1);
+        tags[0].TextContent.ShouldContain("New Program");
+    }
+
+    [Fact]
+    public async Task RemovesProgramWhenRemoveButtonClicked()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["Fréttir", "Kastljós"] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Act
+        IElement removeButton = cut.Find("button[aria-label='Remove Fréttir']");
+        await removeButton.ClickAsync(new MouseEventArgs());
+
+        // Assert
+        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
+        tags.Count.ShouldBe(1);
+        tags[0].TextContent.ShouldContain("Kastljós");
+    }
+
+    [Fact]
+    public async Task DoesNotAddDuplicateProgramCaseInsensitive()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["Fréttir"] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Act
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = "fréttir" });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Assert
+        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
+        tags.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ShowsConfirmationWhenSavingWithNewlyIgnoredPrograms()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = "New Show" });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Act
+        await cut.Find("button.save-button").ClickAsync(new MouseEventArgs());
+
+        // Assert
+        cut.Find(".save-warning[role='alert']").TextContent
+            .ShouldContain("Matching programs will be permanently deleted.");
+    }
+
+    [Fact]
+    public async Task ShowsCombinedWarningWhenBothChannelsAndProgramsNewlyIgnored()
+    {
+        // Arrange
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler(["NewChannel"]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        IElement select = cut.Find("select[aria-label='Available channels']");
+        await select.ChangeAsync(new ChangeEventArgs { Value = "NewChannel" });
+        await cut.FindAll("button.add-channel-button")[0].ClickAsync(new MouseEventArgs());
+
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = "New Show" });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Act
+        await cut.Find("button.save-button").ClickAsync(new MouseEventArgs());
+
+        // Assert
+        cut.Find(".save-warning[role='alert']").TextContent
+            .ShouldContain("Programs for newly ignored channels and matching ignored programs will be permanently deleted.");
+    }
+
+    [Fact]
     public async Task ShowsConfirmationWhenSavingWithNewlyIgnoredChannels()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["NewChannel"]);
@@ -180,7 +313,7 @@ public sealed class SettingsTests : BunitContext
     public async Task CancelSaveHidesConfirmation()
     {
         // Arrange
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
         RegisterSaveSettingsHandler();
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["NewChannel"]);
@@ -205,7 +338,7 @@ public sealed class SettingsTests : BunitContext
     {
         // Arrange
         IRequestHandler<SaveSettingsCommand> saveHandler = RegisterSaveSettingsHandler();
-        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"] });
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = ["RUV1"], IgnoredPrograms = [] });
         RegisterTestConnectionHandler();
         RegisterGetDistinctChannelsHandler(["RUV1", "RUV2"]);
 

@@ -44,7 +44,8 @@ public sealed class SaveSettingsHandlerTests(IntegrationTestFactory factory)
             "tmdbkey",
             "tv",
             "movies",
-            ["IgnoreMe"]);
+            ["IgnoreMe"],
+            []);
 
         // Act
         await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
@@ -88,7 +89,8 @@ public sealed class SaveSettingsHandlerTests(IntegrationTestFactory factory)
             "tmdbkey",
             "tv",
             "movies",
-            ["IgnoreMe"]);
+            ["IgnoreMe"],
+            []);
 
         // Act
         await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
@@ -131,7 +133,8 @@ public sealed class SaveSettingsHandlerTests(IntegrationTestFactory factory)
             "tmdbkey",
             "tv",
             "movies",
-            ["AlreadyIgnored"]);
+            ["AlreadyIgnored"],
+            []);
 
         // Act
         await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
@@ -168,7 +171,134 @@ public sealed class SaveSettingsHandlerTests(IntegrationTestFactory factory)
             "tmdbkey",
             "tv",
             "movies",
+            [],
             []);
+
+        // Act
+        await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
+        IRequestHandler<SaveSettingsCommand> handler =
+            actScope.ServiceProvider.GetRequiredService<IRequestHandler<SaveSettingsCommand>>();
+        RuvarrResult result = await handler.Handle(command, cancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+
+        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        int count = await verifyContext.Set<RuvProgram>().CountAsync(cancellationToken);
+        count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task DeletesProgramsForNewlyIgnoredProgramTitles()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope arrangeScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        ISettingsStore store = arrangeScope.ServiceProvider.GetRequiredService<ISettingsStore>();
+
+        RuvarrSettings preExisting = store.Current with { IgnoredPrograms = [] };
+        await store.SaveAsync(preExisting, cancellationToken);
+
+        RuvProgram program = RuvProgram.Create(1, "RUV", "Test Show", null, multipleEpisodes: true);
+        arrangeContext.Set<RuvProgram>().Add(program);
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        SaveSettingsCommand command = new(
+            new Uri("http://localhost:8989"),
+            "apikey",
+            "tvdbkey",
+            "tmdbkey",
+            "tv",
+            "movies",
+            [],
+            ["Test Show"]);
+
+        // Act
+        await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
+        IRequestHandler<SaveSettingsCommand> handler =
+            actScope.ServiceProvider.GetRequiredService<IRequestHandler<SaveSettingsCommand>>();
+        RuvarrResult result = await handler.Handle(command, cancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+
+        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        int count = await verifyContext.Set<RuvProgram>().CountAsync(cancellationToken);
+        count.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DeletesProgramsForNewlyIgnoredProgramTitlesCaseInsensitive()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope arrangeScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        ISettingsStore store = arrangeScope.ServiceProvider.GetRequiredService<ISettingsStore>();
+
+        RuvarrSettings preExisting = store.Current with { IgnoredPrograms = [] };
+        await store.SaveAsync(preExisting, cancellationToken);
+
+        RuvProgram program = RuvProgram.Create(1, "RUV", "test show", null, multipleEpisodes: true);
+        arrangeContext.Set<RuvProgram>().Add(program);
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        SaveSettingsCommand command = new(
+            new Uri("http://localhost:8989"),
+            "apikey",
+            "tvdbkey",
+            "tmdbkey",
+            "tv",
+            "movies",
+            [],
+            ["Test Show"]);
+
+        // Act
+        await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
+        IRequestHandler<SaveSettingsCommand> handler =
+            actScope.ServiceProvider.GetRequiredService<IRequestHandler<SaveSettingsCommand>>();
+        RuvarrResult result = await handler.Handle(command, cancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+
+        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        int count = await verifyContext.Set<RuvProgram>().CountAsync(cancellationToken);
+        count.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DoesNotDeleteProgramsForPreviouslyIgnoredProgramTitles()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope arrangeScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        ISettingsStore store = arrangeScope.ServiceProvider.GetRequiredService<ISettingsStore>();
+
+        RuvProgram program = RuvProgram.Create(1, "RUV", "Test Show", null, multipleEpisodes: true);
+        arrangeContext.Set<RuvProgram>().Add(program);
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        RuvarrSettings preExisting = store.Current with { IgnoredPrograms = ["Test Show"] };
+        await store.SaveAsync(preExisting, cancellationToken);
+
+        SaveSettingsCommand command = new(
+            new Uri("http://localhost:8989"),
+            "apikey",
+            "tvdbkey",
+            "tmdbkey",
+            "tv",
+            "movies",
+            [],
+            ["Test Show"]);
 
         // Act
         await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();

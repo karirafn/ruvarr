@@ -263,6 +263,22 @@
     cursor: not-allowed;
 }
 
+.channel-add-row input {
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: #fff;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.channel-add-row input:focus {
+    outline: 2px solid #60a5fa;
+    outline-offset: 1px;
+    border-color: #60a5fa;
+}
+
 .add-channel-button {
     display: inline-flex;
     align-items: center;
