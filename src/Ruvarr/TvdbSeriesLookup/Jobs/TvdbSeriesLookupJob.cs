@@ -24,6 +24,8 @@ internal sealed class TvdbSeriesLookupJob(
     IDomainEventBroadcaster broadcaster,
     ISettingsStore settingsStore) : IJob
 {
+    private const int MaxDegreeOfParallelism = 3;
+
     public async Task Execute(IJobExecutionContext context)
     {
         if (!IsTvdbConfigured())
@@ -254,7 +256,7 @@ internal sealed class TvdbSeriesLookupJob(
             {
                 await Parallel.ForEachAsync(
                     translatedEpisodes,
-                    new ParallelOptions { MaxDegreeOfParallelism = 3, CancellationToken = linkedCts.Token },
+                    new ParallelOptions { MaxDegreeOfParallelism = MaxDegreeOfParallelism, CancellationToken = linkedCts.Token },
                     async (translatedEpisode, loopToken) =>
                     {
                         EpisodeTranslation? translation = await tvdb.GetEpisodeTranslationAsync(translatedEpisode.Id, cancellationToken: loopToken);
