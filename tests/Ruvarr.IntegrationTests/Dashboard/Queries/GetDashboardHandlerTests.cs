@@ -141,6 +141,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
             .Build();
         program.MatchTvdb(new TvdbSeriesBuilder().WithName("Monitored Series").Build());
         program.SetMonitoredStatus(true);
+        program.SetHasMissingEpisodes(true);
         program.TryAddEpisode("ep-named", new Uri("http://test.com"), "Named Episode", "Desc", new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep-generic", new Uri("http://test.com"), "Þáttur 4 af 6", "Desc", new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
 
@@ -153,6 +154,46 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         // Assert
         result.LikelyDownloadedOnceMatchedEpisodes.Count.ShouldBe(1);
         result.LikelyDownloadedOnceMatchedEpisodes[0].EpisodeTitle.ShouldBe("Named Episode");
+    }
+
+    [Fact]
+    public async Task LikelyDownloadedOnceMatched_ExcludesProgramsWithNoMissingEpisodes()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram programWithMissing = new RuvProgramBuilder()
+            .WithRuvId(3101)
+            .WithName("Has Missing")
+            .WithMultipleEpisodes()
+            .Build();
+        programWithMissing.MatchTvdb(new TvdbSeriesBuilder().WithName("Has Missing Series").Build());
+        programWithMissing.SetMonitoredStatus(true);
+        programWithMissing.SetHasMissingEpisodes(true);
+        programWithMissing.TryAddEpisode("ep-missing", new Uri("http://test.com"), "Missing Episode", "Desc", new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        RuvProgram programWithoutMissing = new RuvProgramBuilder()
+            .WithRuvId(3102)
+            .WithName("No Missing")
+            .WithMultipleEpisodes()
+            .Build();
+        programWithoutMissing.MatchTvdb(new TvdbSeriesBuilder().WithName("No Missing Series").Build());
+        programWithoutMissing.SetMonitoredStatus(true);
+        programWithoutMissing.TryAddEpisode("ep-no-missing", new Uri("http://test.com"), "No Missing Episode", "Desc", new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().AddRange(programWithMissing, programWithoutMissing);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.LikelyDownloadedOnceMatchedEpisodes.Count.ShouldBe(1);
+        result.LikelyDownloadedOnceMatchedEpisodes[0].ProgramName.ShouldBe("Has Missing");
     }
 
     [Fact]
