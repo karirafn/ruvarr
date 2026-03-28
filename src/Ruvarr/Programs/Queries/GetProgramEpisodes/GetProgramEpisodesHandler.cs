@@ -35,11 +35,16 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
             x.Title,
             x.RuvId,
             x.Description,
-            x.TvdbEpisodes.Select(e => new TvdbEpisodeSummary(
-                e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.IsMissing, e.HasIslTranslation,
-                string.IsNullOrEmpty(x.SeriesSlug)
-                    ? null
-                    : new Uri($"https://thetvdb.com/series/{x.SeriesSlug}/episodes/{e.TvdbId}")))
+            x.TvdbEpisodes.Select(e =>
+            {
+                Uri? seriesUrl = x.SeriesSlug is { Length: > 0 }
+                    ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(x.SeriesSlug)}")
+                    : null;
+
+                return new TvdbEpisodeSummary(
+                    e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.IsMissing, e.HasIslTranslation,
+                    seriesUrl is not null ? new Uri($"{seriesUrl}/episodes/{e.TvdbId}") : null);
+            })
                 .ToList(),
             x.FirstRun,
             string.IsNullOrEmpty(x.ProgramSlug)
