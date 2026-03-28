@@ -174,10 +174,42 @@ else
             </div>
         </section>
 
+        <section class="settings-section">
+            <h2 class="settings-section-title">Ignored Programs</h2>
+
+            <div class="channel-tags" role="list">
+                @foreach (string program in _ignoredProgramsList)
+                {
+                    <span class="channel-tag" role="listitem">
+                        @program
+                        <button class="channel-tag-remove"
+                                aria-label="Remove @program"
+                                @onclick="() => RemoveProgram(program)">
+                            &times;
+                        </button>
+                    </span>
+                }
+            </div>
+
+            <div class="channel-add-row">
+                <input type="text"
+                       placeholder="Program title..."
+                       aria-label="Program title to ignore"
+                       @bind="_newProgramTitle"
+                       @bind:event="oninput"
+                       @onkeydown="HandleProgramKeyDown" />
+                <button class="add-channel-button"
+                        @onclick="AddProgram"
+                        disabled="@(string.IsNullOrWhiteSpace(_newProgramTitle))">
+                    Add
+                </button>
+            </div>
+        </section>
+
         <div class="settings-actions">
             @if (_confirmingSave)
             {
-                <span class="save-warning" role="alert">Programs for newly ignored channels will be permanently deleted.</span>
+                <span class="save-warning" role="alert">@_saveWarningMessage</span>
                 <button class="save-button save-button--danger" @onclick="ConfirmSave" disabled="@_isSaving" aria-busy="@_isSaving">
                     @if (_isSaving)
                     {
@@ -219,6 +251,7 @@ else
     private List<string> _availableChannels = [];
     private RuvarrResult? _testResult;
     private Dictionary<string, string> _fieldErrors = [];
+    private string _saveWarningMessage = string.Empty;
 
     private string _sonarrBaseAddress = string.Empty;
     private string _sonarrApiKey = string.Empty;
@@ -228,6 +261,9 @@ else
     private string _movieDownloadDirectory = string.Empty;
     private List<string> _ignoredChannelsList = [];
     private HashSet<string> _originalIgnoredChannels = new(StringComparer.OrdinalIgnoreCase);
+    private string _newProgramTitle = string.Empty;
+    private List<string> _ignoredProgramsList = [];
+    private HashSet<string> _originalIgnoredPrograms = new(StringComparer.OrdinalIgnoreCase);
     protected override async Task OnInitializedAsync()
     {
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
@@ -247,6 +283,8 @@ else
             _movieDownloadDirectory = settings.MovieDownloadDirectory;
             _ignoredChannelsList = [.. settings.IgnoredChannels];
             _originalIgnoredChannels = new HashSet<string>(settings.IgnoredChannels, StringComparer.OrdinalIgnoreCase);
+            _ignoredProgramsList = [.. settings.IgnoredPrograms];
+            _originalIgnoredPrograms = new HashSet<string>(settings.IgnoredPrograms, StringComparer.OrdinalIgnoreCase);
         }
 
         IRequestHandler<GetDistinctChannelsQuery, List<string>> channelsHandler =
@@ -269,11 +307,20 @@ else
             return;
         }
 
-        bool hasNewlyIgnored = _ignoredChannelsList.Exists(
+        bool hasNewlyIgnoredChannels = _ignoredChannelsList.Exists(
             c => !_originalIgnoredChannels.Contains(c));
+        bool hasNewlyIgnoredPrograms = _ignoredProgramsList.Exists(
+            p => !_originalIgnoredPrograms.Contains(p));
 
-        if (hasNewlyIgnored)
+        if (hasNewlyIgnoredChannels || hasNewlyIgnoredPrograms)
         {
+            _saveWarningMessage = (hasNewlyIgnoredChannels, hasNewlyIgnoredPrograms) switch
+            {
+                (true, true) => "Programs for newly ignored channels and matching ignored programs will be permanently deleted.",
+                (true, false) => "Programs for newly ignored channels will be permanently deleted.",
+                (false, true) => "Matching programs will be permanently deleted.",
+                _ => string.Empty
+            };
             _confirmingSave = true;
             return;
         }
@@ -311,7 +358,8 @@ else
             _tmdbApiKey,
             _episodeDownloadDirectory,
             _movieDownloadDirectory,
-            _ignoredChannelsList);
+            _ignoredChannelsList,
+            _ignoredProgramsList);
 
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<SaveSettingsCommand> handler =
@@ -327,6 +375,7 @@ else
         }
 
         _originalIgnoredChannels = new HashSet<string>(_ignoredChannelsList, StringComparer.OrdinalIgnoreCase);
+        _originalIgnoredPrograms = new HashSet<string>(_ignoredProgramsList, StringComparer.OrdinalIgnoreCase);
         _showSaveConfirmation = true;
         StateHasChanged();
 
@@ -374,6 +423,39 @@ else
         _ignoredChannelsList.Add(_selectedChannel);
         _selectedChannel = "";
         UpdateAvailableChannels();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private void AddProgram()
+    {
+        string trimmed = _newProgramTitle.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return;
+        }
+
+        if (_ignoredProgramsList.Exists(p => string.Equals(p, trimmed, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        _ignoredProgramsList.Add(trimmed);
+        _newProgramTitle = string.Empty;
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private void RemoveProgram(string title)
+    {
+        _ignoredProgramsList.Remove(title);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onkeydown")]
+    private void HandleProgramKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddProgram();
+        }
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]

@@ -63,8 +63,11 @@ internal sealed class RuvProgramRefreshJob(
         List<RuvTvProgram> combinedPrograms = [.. featuredPrograms, .. kidsPrograms];
         logger.LogDebug("Found {Count} total RÚV programs", combinedPrograms.Count);
 
+        HashSet<string> ignoredPrograms = new(settingsStore.Current.IgnoredPrograms, StringComparer.OrdinalIgnoreCase);
+
         List<RuvTvProgram> programs = [.. combinedPrograms
             .Where(x => !settingsStore.Current.IgnoredChannels.Contains(x.Channel))
+            .Where(x => !ignoredPrograms.Contains(x.Title))
             .Where(x => x.WebAvailableEpisodes > 0)
             .DistinctBy(x => x.Id)];
         logger.LogDebug("Found {Count} distinct RÚV programs", programs.Count);

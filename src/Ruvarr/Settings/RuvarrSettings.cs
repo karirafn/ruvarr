@@ -14,6 +14,8 @@ internal sealed record RuvarrSettings(
 
     public IReadOnlyList<string> IgnoredChannels { get; init; } = ["Fréttastofa sjónvarps", "Íþróttadeild", "Rás 1", "Sameiginleg markaðsmál", "Rás 2"];
 
+    public IReadOnlyList<string> IgnoredPrograms { get; init; } = ["Fréttir", "Kastljós"];
+
     public bool IsTvdbConfigured => !string.IsNullOrWhiteSpace(TvdbApiKey);
 
     public bool IsTmdbConfigured => !string.IsNullOrWhiteSpace(TmdbApiKey);

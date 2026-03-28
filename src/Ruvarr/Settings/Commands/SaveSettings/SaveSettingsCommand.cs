@@ -7,4 +7,5 @@ public sealed record SaveSettingsCommand(
     string TmdbApiKey,
     string EpisodeDownloadDirectory,
     string MovieDownloadDirectory,
-    IReadOnlyList<string> IgnoredChannels);
+    IReadOnlyList<string> IgnoredChannels,
+    IReadOnlyList<string> IgnoredPrograms);

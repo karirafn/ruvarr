@@ -40,7 +40,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", "", "", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -59,7 +59,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri(url), "api-key", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri(url), "api-key", "", "", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -75,7 +75,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "/absolute/path", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "/absolute/path", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -90,7 +90,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "/absolute/path", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "/absolute/path", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -108,7 +108,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", value, "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", value, "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -127,7 +127,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", value, []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", value, [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -146,7 +146,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", value, "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", value, "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -165,7 +165,7 @@ public sealed class Handle
     {
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", value, []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", value, [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -182,7 +182,7 @@ public sealed class Handle
         // Arrange
         _store.Current.Returns(RuvarrSettings.Empty);
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "test-api-key", "", "", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -197,7 +197,7 @@ public sealed class Handle
         // Arrange
         _store.Current.Returns(new RuvarrSettings(SonarrApiKey: "real-secret-key"));
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "****", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "****", "", "", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -215,7 +215,7 @@ public sealed class Handle
         // Arrange
         _store.Current.Returns(new RuvarrSettings(TvdbApiKey: "real-tvdb-key"));
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "****", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "****", "", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -233,7 +233,7 @@ public sealed class Handle
         // Arrange
         _store.Current.Returns(new RuvarrSettings(TmdbApiKey: "real-tmdb-key"));
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "", "****", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "", "****", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -251,7 +251,7 @@ public sealed class Handle
         // Arrange
         SaveSettingsHandler sut = CreateHandler();
         Uri baseUrl = new("http://localhost:8989");
-        SaveSettingsCommand command = new(baseUrl, "api-key", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(baseUrl, "api-key", "", "", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
@@ -268,12 +268,32 @@ public sealed class Handle
     }
 
     [Fact]
+    public async Task SavesIgnoredProgramsToSettings()
+    {
+        // Arrange
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", [], ["Fréttir", "Kastljós"]);
+
+        // Act
+        RuvarrResult result = await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        await _store.Received(1).SaveAsync(
+            Arg.Is<RuvarrSettings>(s =>
+                s.IgnoredPrograms.Count == 2 &&
+                s.IgnoredPrograms[0] == "Fréttir" &&
+                s.IgnoredPrograms[1] == "Kastljós"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task TriggersRuvEpisodesSyncJobWhenSonarrBecomesConfigured()
     {
         // Arrange
         _store.Current.Returns(RuvarrSettings.Empty);
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", [], []);
 
         // Act
         await sut.Handle(command, CancellationToken.None);
@@ -290,7 +310,7 @@ public sealed class Handle
         // Arrange
         _store.Current.Returns(new RuvarrSettings(SonarrBaseAddress: "http://localhost:8989", SonarrApiKey: "existing-key"));
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", [], []);
 
         // Act
         await sut.Handle(command, CancellationToken.None);
@@ -307,7 +327,7 @@ public sealed class Handle
         // Arrange
         _store.Current.Returns(RuvarrSettings.Empty);
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "", "", "", "tv", "movies", [], []);
 
         // Act
         await sut.Handle(command, CancellationToken.None);
@@ -324,7 +344,7 @@ public sealed class Handle
         // Arrange
         _store.Current.Returns(RuvarrSettings.Empty);
         SaveSettingsHandler sut = CreateHandler();
-        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", "", "", "tv", "movies", []);
+        SaveSettingsCommand command = new(new Uri("/relative/path", UriKind.Relative), "api-key", "", "", "tv", "movies", [], []);
 
         // Act
         RuvarrResult result = await sut.Handle(command, CancellationToken.None);
