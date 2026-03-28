@@ -23,12 +23,12 @@ internal static class ServiceCollectionExtensions
 {
     internal static IServiceCollection AddPrograms(this IServiceCollection services)
     {
-        services.AddTransient<IDomainEventHandler<ProgramCreatedEvent>, ProgramCreatedEventHandler>();
+        services.AddTransient<IDomainEventHandler<ProgramCreatedEvent>, BroadcastEventHandler<ProgramCreatedEvent>>();
         services.AddTransient<IDomainEventHandler<ProgramMatchedTvdbEvent>, ProgramMatchedTvdbEventHandler>();
-        services.AddTransient<IDomainEventHandler<ProgramMatchedTmdbEvent>, ProgramMatchedTmdbEventHandler>();
+        services.AddTransient<IDomainEventHandler<ProgramMatchedTmdbEvent>, BroadcastEventHandler<ProgramMatchedTmdbEvent>>();
         services.AddTransient<IDomainEventHandler<ProgramRefreshRequestedEvent>, ProgramRefreshRequestedEventHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeAddedToMatchedProgramEvent>, EpisodeAddedToMatchedProgramEventHandler>();
-        services.AddTransient<IDomainEventHandler<EpisodeMatchedEvent>, EpisodeMatchedEventHandler>();
+        services.AddTransient<IDomainEventHandler<EpisodeMatchedEvent>, BroadcastEventHandler<EpisodeMatchedEvent>>();
         services.AddTransient<IRequestHandler<GetProgramQuery, ProgramSummary?>, GetProgramHandler>();
         services.AddTransient<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>, GetProgramsHandler>();
         services.AddTransient<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>, GetProgramEpisodesHandler>();
