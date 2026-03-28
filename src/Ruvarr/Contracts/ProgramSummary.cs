@@ -13,4 +13,5 @@ public sealed record ProgramSummary(
     EpisodeMatchStatus EpisodeMatchStatus,
     Uri? ImageUrl,
     bool IsMovieMatch,
-    string? Description);
+    string? Description,
+    int EpisodeCount);

@@ -58,6 +58,7 @@ public sealed class GetProgramHandlerTests(IntegrationTestFactory factory) : ICl
         result.Channel.ShouldBe("RÚV1");
         result.SeriesName.ShouldBe("Detail Series");
         result.TvdbUrl.ShouldBe(new Uri("https://www.thetvdb.com/series/detail-series"));
+        result.EpisodeCount.ShouldBe(0);
     }
 
     [Fact]
@@ -217,6 +218,36 @@ public sealed class GetProgramHandlerTests(IntegrationTestFactory factory) : ICl
         // Assert
         result.ShouldNotBeNull();
         result.Description.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReturnsEpisodeCount()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(40040)
+            .WithMultipleEpisodes()
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("EP1", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("EP2", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40040), cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.EpisodeCount.ShouldBe(2);
     }
 
     [Fact]
