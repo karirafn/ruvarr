@@ -814,6 +814,11 @@ dialog input[type="number"]:focus {
     opacity: 0.8;
 }
 
+.row-actions .badge--tvdb,
+.row-actions .badge--ruv {
+    margin-bottom: 0;
+}
+
 .badge--tvdb-create {
     display: inline-flex;
     align-items: center;
