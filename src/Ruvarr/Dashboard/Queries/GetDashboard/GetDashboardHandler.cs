@@ -11,7 +11,7 @@ using Ruvarr.TvdbSeriesLookup.Notifiers;
 namespace Ruvarr.Dashboard.Queries.GetDashboard;
 
 internal sealed class GetDashboardHandler(
-    RuvarrDbContext dbContext,
+    IServiceScopeFactory serviceScopeFactory,
     TvdbSeriesLookupNotifier tvdbSeriesLookupNotifier,
     TvdbEpisodeLookupNotifier tvdbEpisodeLookupNotifier,
     ProgramRefreshNotifier programRefreshNotifier)
@@ -23,17 +23,27 @@ internal sealed class GetDashboardHandler(
 
     public async Task<DashboardData> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
-        IReadOnlyList<DashboardEpisodeItem> recentlyAdded = await GetRecentlyAddedEpisodesAsync(cancellationToken);
-        IReadOnlyList<DashboardEpisodeItem> requiresTranslation = await GetRequiresTranslationEpisodesAsync(cancellationToken);
-        IReadOnlyList<DashboardEpisodeItem> likelyDownloaded = await GetLikelyDownloadedOnceMatchedAsync(cancellationToken);
-        DashboardStatistics statistics = await GetStatisticsAsync(cancellationToken);
-        DashboardQueueStatus queueStatus = GetQueueStatus();
+        Task<IReadOnlyList<DashboardEpisodeItem>> recentlyAddedTask = GetRecentlyAddedEpisodesAsync(cancellationToken);
+        Task<IReadOnlyList<DashboardEpisodeItem>> requiresTranslationTask = GetRequiresTranslationEpisodesAsync(cancellationToken);
+        Task<IReadOnlyList<DashboardEpisodeItem>> likelyDownloadedTask = GetLikelyDownloadedOnceMatchedAsync(cancellationToken);
+        Task<DashboardStatistics> statisticsTask = GetStatisticsAsync(cancellationToken);
 
-        return new DashboardData(recentlyAdded, requiresTranslation, likelyDownloaded, statistics, queueStatus);
+        await Task.WhenAll(recentlyAddedTask, requiresTranslationTask, likelyDownloadedTask, statisticsTask);
+
+        DashboardQueueStatus queueStatus = await GetQueueStatusAsync(cancellationToken);
+
+        return new DashboardData(
+            await recentlyAddedTask,
+            await requiresTranslationTask,
+            await likelyDownloadedTask,
+            await statisticsTask,
+            queueStatus);
     }
 
     private async Task<IReadOnlyList<DashboardEpisodeItem>> GetRecentlyAddedEpisodesAsync(CancellationToken cancellationToken)
     {
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         return await dbContext.Set<RuvEpisode>()
             .Where(e => e.Program.Series != null || e.Program.Movie != null)
             .OrderByDescending(e => e.FirstRun)
@@ -48,6 +58,8 @@ internal sealed class GetDashboardHandler(
 
     private async Task<IReadOnlyList<DashboardEpisodeItem>> GetRequiresTranslationEpisodesAsync(CancellationToken cancellationToken)
     {
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         return await dbContext.Set<RuvEpisode>()
             .Where(e => e.TvdbEpisodes.Count > 0)
             .Where(e => !e.TvdbEpisodes.Any(te => te.HasIslTranslation))
@@ -63,6 +75,8 @@ internal sealed class GetDashboardHandler(
 
     private async Task<IReadOnlyList<DashboardEpisodeItem>> GetLikelyDownloadedOnceMatchedAsync(CancellationToken cancellationToken)
     {
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         List<DashboardEpisodeItem> candidates = await dbContext.Set<RuvEpisode>()
             .Where(e => e.Program.IsMonitored)
             .Where(e => e.Program.HasMissingEpisodes)
@@ -85,15 +99,20 @@ internal sealed class GetDashboardHandler(
 
     private async Task<DashboardStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
     {
-        ProgramStatistics programs = await GetProgramStatisticsAsync(cancellationToken);
-        EpisodeStatistics episodes = await GetEpisodeStatisticsAsync(cancellationToken);
-        DownloadStatistics downloads = await GetDownloadStatisticsAsync(cancellationToken);
+        Task<ProgramStatistics> programsTask = GetProgramStatisticsAsync(cancellationToken);
+        Task<EpisodeStatistics> episodesTask = GetEpisodeStatisticsAsync(cancellationToken);
+        Task<DownloadStatistics> downloadsTask = GetDownloadStatisticsAsync(cancellationToken);
 
-        return new DashboardStatistics(programs, episodes, downloads);
+        await Task.WhenAll(programsTask, episodesTask, downloadsTask);
+
+        return new DashboardStatistics(await programsTask, await episodesTask, await downloadsTask);
     }
 
     private async Task<ProgramStatistics> GetProgramStatisticsAsync(CancellationToken cancellationToken)
     {
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
         int total = await dbContext.Set<RuvProgram>()
             .CountAsync(cancellationToken);
 
@@ -114,6 +133,9 @@ internal sealed class GetDashboardHandler(
 
     private async Task<EpisodeStatistics> GetEpisodeStatisticsAsync(CancellationToken cancellationToken)
     {
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
         int total = await dbContext.Set<RuvEpisode>()
             .CountAsync(cancellationToken);
 
@@ -135,6 +157,9 @@ internal sealed class GetDashboardHandler(
 
     private async Task<DownloadStatistics> GetDownloadStatisticsAsync(CancellationToken cancellationToken)
     {
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
         int queueDepth = await dbContext.Set<DownloadQueueItem>()
             .Where(x => x.Status == DownloadQueueStatus.Pending || x.Status == DownloadQueueStatus.Downloading)
             .CountAsync(cancellationToken);
@@ -155,13 +180,13 @@ internal sealed class GetDashboardHandler(
         return new DownloadStatistics(queueDepth, downloading, completedLast7Days, failed);
     }
 
-    private DashboardQueueStatus GetQueueStatus()
+    private async Task<DashboardQueueStatus> GetQueueStatusAsync(CancellationToken cancellationToken)
     {
         return new DashboardQueueStatus(
             ToQueueInfo(tvdbSeriesLookupNotifier.Items),
             ToQueueInfo(tvdbEpisodeLookupNotifier.Items),
             ToQueueInfo(programRefreshNotifier.Items),
-            GetDownloadQueueInfo());
+            await GetDownloadQueueInfoAsync(cancellationToken));
     }
 
     private static DashboardQueueInfo ToQueueInfo<T>(IReadOnlyList<T> items) where T : IQueueItemSummary
@@ -170,15 +195,18 @@ internal sealed class GetDashboardHandler(
         return new DashboardQueueInfo(items.Count, activeItem?.ProgramName);
     }
 
-    private DashboardQueueInfo GetDownloadQueueInfo()
+    private async Task<DashboardQueueInfo> GetDownloadQueueInfoAsync(CancellationToken cancellationToken)
     {
-        int depth = dbContext.Set<DownloadQueueItem>()
-            .Count(x => x.Status == DownloadQueueStatus.Pending || x.Status == DownloadQueueStatus.Downloading);
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
-        string? activeItem = dbContext.Set<DownloadQueueItem>()
+        int depth = await dbContext.Set<DownloadQueueItem>()
+            .CountAsync(x => x.Status == DownloadQueueStatus.Pending || x.Status == DownloadQueueStatus.Downloading, cancellationToken);
+
+        string? activeItem = await dbContext.Set<DownloadQueueItem>()
             .Where(x => x.Status == DownloadQueueStatus.Downloading)
             .Select(x => x.Episode.Program.Name + " - " + x.Episode.Title)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(cancellationToken);
 
         return new DashboardQueueInfo(depth, activeItem);
     }
