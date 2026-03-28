@@ -160,7 +160,7 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
         // Assert
         result.Count.ShouldBe(2);
         EpisodeSummary matched = result.Single(x => x.EpisodeRuvId == "TVDB-EP1");
-        matched.TvdbMatches[0].TvdbUrl.ShouldBe(new Uri("https://thetvdb.com/series/tvdb-url-series/episodes/5001"));
+        matched.TvdbMatches[0].TvdbUrl.ShouldBe(new Uri("https://www.thetvdb.com/series/tvdb-url-series/episodes/5001"));
 
         EpisodeSummary unmatched = result.Single(x => x.EpisodeRuvId == "TVDB-EP2");
         unmatched.TvdbMatches.ShouldBeEmpty();
