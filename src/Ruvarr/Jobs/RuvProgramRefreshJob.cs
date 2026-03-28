@@ -28,6 +28,30 @@ internal sealed class RuvProgramRefreshJob(
     {
         logger.LogDebug("Starting RÚV programs refresh job");
 
+        List<RuvTvProgram> programs = await FetchRuvPrograms();
+
+        if (programs is [])
+        {
+            return;
+        }
+
+        List<RuvProgram> existingTvPrograms = await SyncPrograms(programs);
+
+        UpdateExistingProgramMetadata(existingTvPrograms, programs);
+
+        await dbContext.SaveChangesAsync();
+
+        EnqueueProgramRefreshes(programs);
+
+        await EnqueueUnmatchedProgramsForLookup();
+
+        await EnqueueSlugMissingProgramsForLookup();
+
+        broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
+    }
+
+    private async Task<List<RuvTvProgram>> FetchRuvPrograms()
+    {
         RuvFeaturedTv? kids = await ruv.GetKidsTvAsync();
         List<RuvTvProgram> kidsPograms = kids?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
         logger.LogDebug("Found {Count} Krakka RÚV programs", kidsPograms.Count);
@@ -45,12 +69,12 @@ internal sealed class RuvProgramRefreshJob(
             .DistinctBy(x => x.Id)];
         logger.LogDebug("Found {Count} distinct RÚV programs", programs.Count);
 
-        List<int> ruvIds = [.. programs.Select(x => x.Id)];
+        return programs;
+    }
 
-        if (ruvIds is [])
-        {
-            return;
-        }
+    private async Task<List<RuvProgram>> SyncPrograms(List<RuvTvProgram> programs)
+    {
+        List<int> ruvIds = [.. programs.Select(x => x.Id)];
 
         List<RuvProgram> existingTvPrograms = await dbContext.Set<RuvProgram>()
             .Where(x => ruvIds.Contains(x.RuvId))
@@ -80,6 +104,11 @@ internal sealed class RuvProgramRefreshJob(
         dbContext.Set<RuvProgram>()
             .AddRange(newPrograms);
 
+        return existingTvPrograms;
+    }
+
+    private static void UpdateExistingProgramMetadata(List<RuvProgram> existingTvPrograms, List<RuvTvProgram> programs)
+    {
         Dictionary<int, string> slugByRuvId = programs
             .Where(x => x.Slug is not null)
             .ToDictionary(x => x.Id, x => x.Slug);
@@ -105,9 +134,10 @@ internal sealed class RuvProgramRefreshJob(
                 existing.UpdateDescription(incomingDescription);
             }
         }
+    }
 
-        await dbContext.SaveChangesAsync();
-
+    private void EnqueueProgramRefreshes(List<RuvTvProgram> programs)
+    {
 #pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
         programs.Sort((a, b) => string.Compare(a.Title, b.Title, new CultureInfo("is-IS"), CompareOptions.None));
 #pragma warning restore CA1309
@@ -117,7 +147,10 @@ internal sealed class RuvProgramRefreshJob(
             syncQueue.Enqueue(program.Id, program.Title);
         }
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+    }
 
+    private async Task EnqueueUnmatchedProgramsForLookup()
+    {
         List<RuvProgram> unmatchedPrograms = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
             .Where(x => x.Series == null)
@@ -128,7 +161,10 @@ internal sealed class RuvProgramRefreshJob(
         {
             tvdbLookupQueue.Enqueue(program.RuvId, program.Name);
         }
+    }
 
+    private async Task EnqueueSlugMissingProgramsForLookup()
+    {
         List<RuvProgram> slugMissingPrograms = await dbContext.Set<RuvProgram>()
             .Include(x => x.Series)
             .Where(x => x.HasMultipleEpisodes)
@@ -147,7 +183,6 @@ internal sealed class RuvProgramRefreshJob(
 
             tvdbLookupQueue.Enqueue(program.RuvId, program.Name);
         }
-        broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
     }
 
     private static string? JoinDescription(IReadOnlyList<string> paragraphs)
