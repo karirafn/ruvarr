@@ -52,18 +52,18 @@ internal sealed class RuvProgramRefreshJob(
 
     private async Task<List<RuvTvProgram>> FetchRuvPrograms()
     {
-        RuvFeaturedTv? kids = await ruv.GetKidsTvAsync();
-        List<RuvTvProgram> kidsPograms = kids?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
-        logger.LogDebug("Found {Count} Krakka RÚV programs", kidsPograms.Count);
+        RuvFeaturedTv? kidsCategory = await ruv.GetKidsTvAsync();
+        List<RuvTvProgram> kidsPrograms = kidsCategory?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
+        logger.LogDebug("Found {Count} Krakka RÚV programs", kidsPrograms.Count);
 
         RuvFeaturedTv? featured = await ruv.GetFeaturedTv();
         List<RuvTvProgram> featuredPrograms = featured?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
         logger.LogDebug("Found {Count} featured RÚV programs", featuredPrograms.Count);
 
-        List<RuvTvProgram> allPrograms = [.. featuredPrograms, .. kidsPograms];
-        logger.LogDebug("Found {Count} total RÚV programs", allPrograms.Count);
+        List<RuvTvProgram> combinedPrograms = [.. featuredPrograms, .. kidsPrograms];
+        logger.LogDebug("Found {Count} total RÚV programs", combinedPrograms.Count);
 
-        List<RuvTvProgram> programs = [.. allPrograms
+        List<RuvTvProgram> programs = [.. combinedPrograms
             .Where(x => !settingsStore.Current.IgnoredChannels.Contains(x.Channel))
             .Where(x => x.WebAvailableEpisodes > 0)
             .DistinctBy(x => x.Id)];
