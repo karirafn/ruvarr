@@ -17,7 +17,7 @@
 @inject ProgramRefreshNotifier RefreshNotifier
 @inject IDomainEventBroadcaster Broadcaster
 
-<a class="detail-back" href="/">
+<a class="detail-back" href="/programs">
     <Icon Type="IconType.BackArrow" Width="14" Height="14" />
     Programs
 </a>
@@ -26,7 +26,7 @@
 {
     <div class="empty-state">
         <p>Program not found.</p>
-        <a class="detail-back" href="/">Back to programs</a>
+        <a class="detail-back" href="/programs">Back to programs</a>
     </div>
 }
 else if (_program is null)

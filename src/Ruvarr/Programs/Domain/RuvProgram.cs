@@ -7,7 +7,7 @@ using Ruvarr.RomanNumerals;
 
 namespace Ruvarr.Programs.Domain;
 
-internal sealed class RuvProgram
+internal sealed partial class RuvProgram
 {
     private const int MaxDescriptionLength = 4096;
     private static readonly Regex SlugPattern = new(@"^[a-z0-9\-]{1,128}$", RegexOptions.Compiled);
@@ -200,6 +200,12 @@ internal sealed class RuvProgram
     {
         _episodes.Remove(episode);
     }
+
+    public static bool IsGenericEpisodeTitle(string name) =>
+        GenericEpisodeTitlePattern().IsMatch(name);
+
+    [GeneratedRegex(@"^[Þþ]áttur \d+ af \d+$")]
+    private static partial Regex GenericEpisodeTitlePattern();
 
     public int ResolveMatchingSeason(IEnumerable<Episode> tvdbEpisodes)
     {

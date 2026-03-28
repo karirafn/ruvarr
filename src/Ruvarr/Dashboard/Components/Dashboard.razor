@@ -1,0 +1,218 @@
+@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@namespace Ruvarr.Dashboard.Components
+@implements IAsyncDisposable
+@using Ruvarr.Abstractions
+@using Ruvarr.Contracts
+@using Ruvarr.Dashboard.Queries.GetDashboard
+@using Ruvarr.Downloads.Events
+@using Ruvarr.Programs.Events
+@inject IServiceScopeFactory ScopeFactory
+@inject IDomainEventBroadcaster Broadcaster
+
+<h1>Dashboard</h1>
+
+@if (_data is null)
+{
+    <div class="spinner"></div>
+}
+else
+{
+    <section class="stats-grid" aria-label="Statistics">
+        <div class="stat-card">
+            <span class="stat-value">@_data.Statistics.TotalPrograms</span>
+            <span class="stat-label">Programs</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_data.Statistics.TotalEpisodes</span>
+            <span class="stat-label">Episodes</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_data.Statistics.UnmatchedEpisodeCount</span>
+            <span class="stat-label">Unmatched</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_data.Statistics.MissingTranslationCount</span>
+            <span class="stat-label">Missing Translation</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_data.Statistics.ActiveDownloadQueueDepth</span>
+            <span class="stat-label">Download Queue</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_data.Statistics.ProgramsWithMissingEpisodes</span>
+            <span class="stat-label">Missing Episodes</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@_data.Statistics.DownloadsCompletedLast7Days</span>
+            <span class="stat-label">Downloads (7d)</span>
+        </div>
+    </section>
+
+    <section class="dashboard-section" aria-label="Recently Added Episodes">
+        <h2 class="dashboard-section-title">Recently Added Episodes</h2>
+        @if (_data.RecentlyAddedEpisodes.Count == 0)
+        {
+            <p class="empty-message">No recently added episodes.</p>
+        }
+        else
+        {
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Program</th>
+                        <th>Episode</th>
+                        <th>First Run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (DashboardEpisodeItem episode in _data.RecentlyAddedEpisodes)
+                    {
+                        <tr>
+                            <td><a class="program-link" href="/program/@episode.ProgramRuvId">@episode.ProgramName</a></td>
+                            <td>@episode.EpisodeTitle</td>
+                            <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    <section class="dashboard-section" aria-label="Requires Translation">
+        <h2 class="dashboard-section-title">Requires Translation</h2>
+        @if (_data.RequiresTranslationEpisodes.Count == 0)
+        {
+            <p class="empty-message">All matched episodes have Icelandic translations.</p>
+        }
+        else
+        {
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Program</th>
+                        <th>Episode</th>
+                        <th>First Run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (DashboardEpisodeItem episode in _data.RequiresTranslationEpisodes)
+                    {
+                        <tr>
+                            <td><a class="program-link" href="/program/@episode.ProgramRuvId">@episode.ProgramName</a></td>
+                            <td>@episode.EpisodeTitle</td>
+                            <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    <section class="dashboard-section" aria-label="Likely Downloaded Once Matched">
+        <h2 class="dashboard-section-title">Likely Downloaded Once Matched</h2>
+        @if (_data.LikelyDownloadedOnceMatchedEpisodes.Count == 0)
+        {
+            <p class="empty-message">No unmatched episodes on monitored programs.</p>
+        }
+        else
+        {
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Program</th>
+                        <th>Episode</th>
+                        <th>First Run</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (DashboardEpisodeItem episode in _data.LikelyDownloadedOnceMatchedEpisodes)
+                    {
+                        <tr>
+                            <td><a class="program-link" href="/program/@episode.ProgramRuvId">@episode.ProgramName</a></td>
+                            <td>@episode.EpisodeTitle</td>
+                            <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    <section class="dashboard-section" aria-label="Currently Running Tasks">
+        <h2 class="dashboard-section-title">Currently Running Tasks</h2>
+        <div class="task-list">
+            @foreach ((string taskName, DashboardQueueInfo taskInfo) in _taskRows)
+            {
+                <div class="task-row">
+                    <span class="task-name">@taskName</span>
+                    <span class="task-depth">@taskInfo.Depth</span>
+                    @if (taskInfo.ActiveItem is not null)
+                    {
+                        <span class="task-active">
+                            <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
+                            @taskInfo.ActiveItem
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="task-idle">Idle</span>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    private DashboardData? _data;
+    private readonly CancellationTokenSource _cts = new();
+
+    private IReadOnlyList<(string Name, DashboardQueueInfo Info)> _taskRows =>
+        _data is null
+            ? []
+            : [
+                ("TVDB Series Lookup", _data.QueueStatus.TvdbSeriesLookup),
+                ("TVDB Episode Lookup", _data.QueueStatus.TvdbEpisodeLookup),
+                ("Program Refresh", _data.QueueStatus.ProgramRefresh),
+                ("Download", _data.QueueStatus.Download),
+            ];
+
+    protected override Task OnInitializedAsync()
+    {
+        _ = LoadDataAsync();
+        _ = WatchAsync(Broadcaster.Subscribe<ProgramCreatedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<ProgramMatchedTvdbEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<ProgramMatchedTmdbEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<EpisodeMatchedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadStartedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadCompletedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>>(_cts.Token));
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+        _data = await handler.Handle(new GetDashboardQuery(), _cts.Token);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task WatchAsync<T>(IAsyncEnumerable<T> events) where T : class
+    {
+        await foreach (T _ in events)
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _cts.Dispose();
+    }
+}
