@@ -11,6 +11,8 @@ internal sealed class TranslationMatchingStrategy(
     ITvdbClient tvdb,
     ILogger<TranslationMatchingStrategy> logger) : IEpisodeMatchingStrategy
 {
+    private const int MaxDegreeOfParallelism = 3;
+
     public async Task MatchAsync(EpisodeMatchingContext context, CancellationToken cancellationToken)
     {
         HashSet<int> matchedIds = [.. context.Program.Episodes.SelectMany(x => x.TvdbEpisodes).Select(x => x.TvdbId)];
@@ -25,7 +27,7 @@ internal sealed class TranslationMatchingStrategy(
 
         await Parallel.ForEachAsync(
             translatedEpisodes,
-            new ParallelOptions { MaxDegreeOfParallelism = 3, CancellationToken = cancellationToken },
+            new ParallelOptions { MaxDegreeOfParallelism = MaxDegreeOfParallelism, CancellationToken = cancellationToken },
             async (translatedEpisode, ct) =>
             {
                 logger.LogDebug(
