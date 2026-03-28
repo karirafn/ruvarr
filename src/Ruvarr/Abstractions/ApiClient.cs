@@ -11,8 +11,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                string truncated = content.Length > 512 ? content[..512] : content;
-                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, truncated);
+                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, Truncate(content));
                 return default;
             }
 
@@ -39,8 +38,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                string truncated = content.Length > 512 ? content[..512] : content;
-                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, truncated);
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, Truncate(content));
             }
         }
         catch (HttpRequestException ex)
@@ -58,8 +56,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                string truncated = content.Length > 512 ? content[..512] : content;
-                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, truncated);
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, Truncate(content));
                 return default;
             }
 
@@ -73,4 +70,9 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             return default;
         }
     }
+
+    private const int MaxLogContentLength = 512;
+
+    private static string Truncate(string value) =>
+        value.Length > MaxLogContentLength ? value[..MaxLogContentLength] : value;
 }
