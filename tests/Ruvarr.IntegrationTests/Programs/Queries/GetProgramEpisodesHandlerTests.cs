@@ -143,7 +143,7 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
             scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
 
         RuvProgram program = RuvProgram.Create(30007, "RÚV1", "TVDB URL Program", null, multipleEpisodes: true);
-        program.MatchTvdb(TvdbSeries.Create(9001, "TVDB URL Series"));
+        program.MatchTvdb(TvdbSeries.Create(9001, "TVDB URL Series", slug: "tvdb-url-series"));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -160,7 +160,7 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
         // Assert
         result.Count.ShouldBe(2);
         EpisodeSummary matched = result.Single(x => x.EpisodeRuvId == "TVDB-EP1");
-        matched.TvdbMatches[0].TvdbUrl.ShouldBe(new Uri("https://www.thetvdb.com/episodes/5001"));
+        matched.TvdbMatches[0].TvdbUrl.ShouldBe(new Uri("https://thetvdb.com/series/tvdb-url-series/episodes/5001"));
 
         EpisodeSummary unmatched = result.Single(x => x.EpisodeRuvId == "TVDB-EP2");
         unmatched.TvdbMatches.ShouldBeEmpty();
