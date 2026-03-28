@@ -26,9 +26,8 @@ internal sealed class TvdbSeriesLookupJob(
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!settingsStore.Current.IsTvdbConfigured)
+        if (!IsTvdbConfigured())
         {
-            logger.LogDebug("Skipping {JobName}: TVDB is not configured", nameof(TvdbSeriesLookupJob));
             return;
         }
 
@@ -59,29 +58,13 @@ internal sealed class TvdbSeriesLookupJob(
 
             if (program.Series is not null)
             {
-                SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId, cancellationToken: context.CancellationToken);
-
-                if (seriesData is null)
-                {
-                    logger.LogWarning("TVDB returned no series data for TvdbId '{TvdbId}'", program.Series.TvdbId);
-                    return;
-                }
-
-                program.Series.UpdateSlug(seriesData.Series.Slug);
-
-                await dbContext.SaveChangesAsync(context.CancellationToken);
-
+                await RefreshSeriesSlugAsync(program, context.CancellationToken);
                 return;
             }
 
-            IReadOnlyList<RuvEpisode> episodes = program.Episodes;
-
             CancellationToken cancellationToken = context.CancellationToken;
 
-            Datum? match = await SearchTvdbAsync(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
-                ?? await TryRemovingNumeralEnding(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
-                ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken)
-                ?? await TryRemovingNumeralEnding(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken);
+            Datum? match = await SearchAllStrategiesAsync(program, cancellationToken);
 
             if (match is null)
             {
@@ -122,6 +105,42 @@ internal sealed class TvdbSeriesLookupJob(
             lookupQueue.MarkComplete(ruvId);
             broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
         }
+    }
+
+    private bool IsTvdbConfigured()
+    {
+        if (!settingsStore.Current.IsTvdbConfigured)
+        {
+            logger.LogDebug("Skipping {JobName}: TVDB is not configured", nameof(TvdbSeriesLookupJob));
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task RefreshSeriesSlugAsync(RuvProgram program, CancellationToken cancellationToken)
+    {
+        SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series!.TvdbId, cancellationToken: cancellationToken);
+
+        if (seriesData is null)
+        {
+            logger.LogWarning("TVDB returned no series data for TvdbId '{TvdbId}'", program.Series.TvdbId);
+            return;
+        }
+
+        program.Series.UpdateSlug(seriesData.Series.Slug);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<Datum?> SearchAllStrategiesAsync(RuvProgram program, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<RuvEpisode> episodes = program.Episodes;
+
+        return await SearchTvdbAsync(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
+            ?? await TryRemovingNumeralEnding(program.Name, checkTranslations: true, episodes: episodes, cancellationToken)
+            ?? await SearchTvdbAsync(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken)
+            ?? await TryRemovingNumeralEnding(program.ForeignName, checkTranslations: false, episodes: episodes, cancellationToken);
     }
 
     private async Task ScheduleLookupAsync(RuvProgram program, CancellationToken cancellationToken)
