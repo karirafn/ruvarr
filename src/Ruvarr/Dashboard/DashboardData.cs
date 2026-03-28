@@ -14,13 +14,27 @@ internal sealed record DashboardEpisodeItem(
     DateTime FirstRun);
 
 internal sealed record DashboardStatistics(
-    int TotalPrograms,
-    int TotalEpisodes,
-    int UnmatchedEpisodeCount,
-    int MissingTranslationCount,
-    int ActiveDownloadQueueDepth,
-    int ProgramsWithMissingEpisodes,
-    int DownloadsCompletedLast7Days);
+    ProgramStatistics Programs,
+    EpisodeStatistics Episodes,
+    DownloadStatistics Downloads);
+
+internal sealed record ProgramStatistics(
+    int Total,
+    int Monitored,
+    int Matched,
+    int WithMissingEpisodes);
+
+internal sealed record EpisodeStatistics(
+    int Total,
+    int Matched,
+    int Unmatched,
+    int WithoutTranslation);
+
+internal sealed record DownloadStatistics(
+    int QueueDepth,
+    int Downloading,
+    int CompletedLast7Days,
+    int Failed);
 
 internal sealed record DashboardQueueStatus(
     DashboardQueueInfo TvdbSeriesLookup,
