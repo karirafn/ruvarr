@@ -65,6 +65,7 @@ internal sealed class GetDashboardHandler(
     {
         List<DashboardEpisodeItem> candidates = await dbContext.Set<RuvEpisode>()
             .Where(e => e.Program.IsMonitored)
+            .Where(e => e.Program.HasMissingEpisodes)
             .Where(e => e.Program.Series != null)
             .Where(e => e.TvdbEpisodes.Count == 0)
             .OrderByDescending(e => e.FirstRun)
