@@ -36,7 +36,7 @@ public sealed class DashboardTests : BunitContext
     }
 
     [Fact]
-    public void RendersStatistics()
+    public void RendersThreeStatRows()
     {
         // Arrange
         DashboardData data = CreateDashboardData();
@@ -47,19 +47,15 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IReadOnlyList<IElement> statValues = cut.FindAll(".stats-grid dd");
-        statValues.Count.ShouldBe(7);
-        statValues[0].TextContent.ShouldBe("10");
-        statValues[1].TextContent.ShouldBe("50");
-        statValues[2].TextContent.ShouldBe("5");
-        statValues[3].TextContent.ShouldBe("3");
-        statValues[4].TextContent.ShouldBe("2");
-        statValues[5].TextContent.ShouldBe("1");
-        statValues[6].TextContent.ShouldBe("7");
+        IReadOnlyList<IElement> rows = cut.FindAll("section.stat-row");
+        rows.Count.ShouldBe(3);
+        rows[0].ClassList.ShouldContain("stat-row--programs");
+        rows[1].ClassList.ShouldContain("stat-row--episodes");
+        rows[2].ClassList.ShouldContain("stat-row--downloads");
     }
 
     [Fact]
-    public void RendersStatCards_AsDefinitionList()
+    public void RendersProgramStatistics()
     {
         // Arrange
         DashboardData data = CreateDashboardData();
@@ -70,11 +66,76 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IElement dl = cut.Find("dl.stats-grid");
-        dl.ShouldNotBeNull();
-        IReadOnlyList<IElement> terms = cut.FindAll(".stats-grid dt");
-        terms.Count.ShouldBe(7);
-        terms[0].TextContent.ShouldBe("Programs");
+        IElement section = cut.Find("section.stat-row--programs");
+        section.QuerySelector("h2")!.TextContent.ShouldBe("Programs");
+        IReadOnlyList<IElement> values = cut.FindAll(".stat-row--programs .stat-row__card dd");
+        values.Count.ShouldBe(4);
+        values[0].TextContent.ShouldBe("10");
+        values[1].TextContent.ShouldBe("4");
+        values[2].TextContent.ShouldBe("6");
+        values[3].TextContent.ShouldBe("1");
+    }
+
+    [Fact]
+    public void RendersEpisodeStatistics()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData();
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section.stat-row--episodes");
+        section.QuerySelector("h2")!.TextContent.ShouldBe("Episodes");
+        IReadOnlyList<IElement> values = cut.FindAll(".stat-row--episodes .stat-row__card dd");
+        values.Count.ShouldBe(4);
+        values[0].TextContent.ShouldBe("50");
+        values[1].TextContent.ShouldBe("30");
+        values[2].TextContent.ShouldBe("5");
+        values[3].TextContent.ShouldBe("3");
+    }
+
+    [Fact]
+    public void RendersDownloadStatistics()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData();
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section.stat-row--downloads");
+        section.QuerySelector("h2")!.TextContent.ShouldBe("Downloads");
+        IReadOnlyList<IElement> values = cut.FindAll(".stat-row--downloads .stat-row__card dd");
+        values.Count.ShouldBe(4);
+        values[0].TextContent.ShouldBe("2");
+        values[1].TextContent.ShouldBe("1");
+        values[2].TextContent.ShouldBe("7");
+        values[3].TextContent.ShouldBe("0");
+    }
+
+    [Fact]
+    public void RendersStatCards_AsDefinitionLists()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData();
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> dls = cut.FindAll("dl.stat-row__grid");
+        dls.Count.ShouldBe(3);
+        IReadOnlyList<IElement> allCards = cut.FindAll(".stat-row__card");
+        allCards.Count.ShouldBe(12);
     }
 
     [Fact]
@@ -217,7 +278,10 @@ public sealed class DashboardTests : BunitContext
             recentlyAdded ?? [],
             requiresTranslation ?? [],
             likelyDownloaded ?? [],
-            statistics ?? new DashboardStatistics(10, 50, 5, 3, 2, 1, 7),
+            statistics ?? new DashboardStatistics(
+                new ProgramStatistics(10, 4, 6, 1),
+                new EpisodeStatistics(50, 30, 5, 3),
+                new DownloadStatistics(2, 1, 7, 0)),
             queueStatus ?? new DashboardQueueStatus(
                 new DashboardQueueInfo(0, null),
                 new DashboardQueueInfo(0, null),

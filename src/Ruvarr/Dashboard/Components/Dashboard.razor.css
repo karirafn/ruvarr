@@ -1,14 +1,45 @@
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-    gap: 0.75rem;
-    margin-top: 0;
+.stat-row {
+    border-left: 3px solid transparent;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-row:last-of-type {
     margin-bottom: 1.5rem;
+}
+
+.stat-row--programs {
+    border-left-color: #60a5fa;
+}
+
+.stat-row--episodes {
+    border-left-color: #2dd4bf;
+}
+
+.stat-row--downloads {
+    border-left-color: #f59e0b;
+}
+
+.stat-row__title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.65);
+    margin: 0 0 0.75rem;
+    border: none;
     padding: 0;
 }
 
-.stat-card {
-    background-color: #2a2a2a;
+.stat-row__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+}
+
+.stat-row__card {
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 1rem;
@@ -18,14 +49,38 @@
     gap: 0.25rem;
 }
 
-.stats-grid dd {
+.stat-row--programs .stat-row__card {
+    background-color: rgba(96, 165, 250, 0.06);
+}
+
+.stat-row--episodes .stat-row__card {
+    background-color: rgba(45, 212, 191, 0.06);
+}
+
+.stat-row--downloads .stat-row__card {
+    background-color: rgba(245, 158, 11, 0.06);
+}
+
+.stat-row__card dd {
     font-size: 1.75rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     margin: 0;
 }
 
-.stats-grid dt {
+.stat-row--programs .stat-row__card dd {
+    color: #60a5fa;
+}
+
+.stat-row--episodes .stat-row__card dd {
+    color: #2dd4bf;
+}
+
+.stat-row--downloads .stat-row__card dd {
+    color: #f59e0b;
+}
+
+.stat-row__card dt {
     font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -126,7 +181,7 @@
 }
 
 @media (max-width: 640px) {
-    .stats-grid {
+    .stat-row__grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }

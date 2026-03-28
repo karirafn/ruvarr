@@ -85,42 +85,74 @@ internal sealed class GetDashboardHandler(
 
     private async Task<DashboardStatistics> GetStatisticsAsync(CancellationToken cancellationToken)
     {
-        int totalPrograms = await dbContext.Set<RuvProgram>()
+        ProgramStatistics programs = await GetProgramStatisticsAsync(cancellationToken);
+        EpisodeStatistics episodes = await GetEpisodeStatisticsAsync(cancellationToken);
+        DownloadStatistics downloads = await GetDownloadStatisticsAsync(cancellationToken);
+
+        return new DashboardStatistics(programs, episodes, downloads);
+    }
+
+    private async Task<ProgramStatistics> GetProgramStatisticsAsync(CancellationToken cancellationToken)
+    {
+        int total = await dbContext.Set<RuvProgram>()
             .CountAsync(cancellationToken);
 
-        int totalEpisodes = await dbContext.Set<RuvEpisode>()
+        int monitored = await dbContext.Set<RuvProgram>()
+            .Where(p => p.IsMonitored)
             .CountAsync(cancellationToken);
 
-        int unmatchedEpisodeCount = await dbContext.Set<RuvEpisode>()
+        int matched = await dbContext.Set<RuvProgram>()
+            .Where(p => p.Series != null || p.Movie != null)
+            .CountAsync(cancellationToken);
+
+        int withMissingEpisodes = await dbContext.Set<RuvProgram>()
+            .Where(p => p.HasMissingEpisodes)
+            .CountAsync(cancellationToken);
+
+        return new ProgramStatistics(total, monitored, matched, withMissingEpisodes);
+    }
+
+    private async Task<EpisodeStatistics> GetEpisodeStatisticsAsync(CancellationToken cancellationToken)
+    {
+        int total = await dbContext.Set<RuvEpisode>()
+            .CountAsync(cancellationToken);
+
+        int matched = await dbContext.Set<RuvEpisode>()
+            .Where(e => e.TvdbEpisodes.Count > 0)
+            .CountAsync(cancellationToken);
+
+        int unmatched = await dbContext.Set<RuvEpisode>()
             .Where(e => e.TvdbEpisodes.Count == 0)
             .CountAsync(cancellationToken);
 
-        int missingTranslationCount = await dbContext.Set<RuvEpisode>()
+        int withoutTranslation = await dbContext.Set<RuvEpisode>()
             .Where(e => e.TvdbEpisodes.Count > 0)
             .Where(e => !e.TvdbEpisodes.Any(te => te.HasIslTranslation))
             .CountAsync(cancellationToken);
 
-        int activeDownloadQueueDepth = await dbContext.Set<DownloadQueueItem>()
-            .Where(x => x.Status != DownloadQueueStatus.Complete)
+        return new EpisodeStatistics(total, matched, unmatched, withoutTranslation);
+    }
+
+    private async Task<DownloadStatistics> GetDownloadStatisticsAsync(CancellationToken cancellationToken)
+    {
+        int queueDepth = await dbContext.Set<DownloadQueueItem>()
+            .Where(x => x.Status == DownloadQueueStatus.Pending || x.Status == DownloadQueueStatus.Downloading)
             .CountAsync(cancellationToken);
 
-        int programsWithMissingEpisodes = await dbContext.Set<RuvProgram>()
-            .Where(p => p.HasMissingEpisodes)
+        int downloading = await dbContext.Set<DownloadQueueItem>()
+            .Where(x => x.Status == DownloadQueueStatus.Downloading)
             .CountAsync(cancellationToken);
 
         DateTime sevenDaysAgo = DateTime.UtcNow.AddDays(-SevenDays);
-        int downloadsCompletedLast7Days = await dbContext.Set<DownloadQueueItem>()
+        int completedLast7Days = await dbContext.Set<DownloadQueueItem>()
             .Where(x => x.Status == DownloadQueueStatus.Complete && x.Downloaded >= sevenDaysAgo)
             .CountAsync(cancellationToken);
 
-        return new DashboardStatistics(
-            totalPrograms,
-            totalEpisodes,
-            unmatchedEpisodeCount,
-            missingTranslationCount,
-            activeDownloadQueueDepth,
-            programsWithMissingEpisodes,
-            downloadsCompletedLast7Days);
+        int failed = await dbContext.Set<DownloadQueueItem>()
+            .Where(x => x.Status == DownloadQueueStatus.Failed)
+            .CountAsync(cancellationToken);
+
+        return new DownloadStatistics(queueDepth, downloading, completedLast7Days, failed);
     }
 
     private DashboardQueueStatus GetQueueStatus()

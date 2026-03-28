@@ -40,13 +40,18 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         result.RecentlyAddedEpisodes.ShouldBeEmpty();
         result.RequiresTranslationEpisodes.ShouldBeEmpty();
         result.LikelyDownloadedOnceMatchedEpisodes.ShouldBeEmpty();
-        result.Statistics.TotalPrograms.ShouldBe(0);
-        result.Statistics.TotalEpisodes.ShouldBe(0);
-        result.Statistics.UnmatchedEpisodeCount.ShouldBe(0);
-        result.Statistics.MissingTranslationCount.ShouldBe(0);
-        result.Statistics.ActiveDownloadQueueDepth.ShouldBe(0);
-        result.Statistics.ProgramsWithMissingEpisodes.ShouldBe(0);
-        result.Statistics.DownloadsCompletedLast7Days.ShouldBe(0);
+        result.Statistics.Programs.Total.ShouldBe(0);
+        result.Statistics.Programs.Monitored.ShouldBe(0);
+        result.Statistics.Programs.Matched.ShouldBe(0);
+        result.Statistics.Programs.WithMissingEpisodes.ShouldBe(0);
+        result.Statistics.Episodes.Total.ShouldBe(0);
+        result.Statistics.Episodes.Matched.ShouldBe(0);
+        result.Statistics.Episodes.Unmatched.ShouldBe(0);
+        result.Statistics.Episodes.WithoutTranslation.ShouldBe(0);
+        result.Statistics.Downloads.QueueDepth.ShouldBe(0);
+        result.Statistics.Downloads.Downloading.ShouldBe(0);
+        result.Statistics.Downloads.CompletedLast7Days.ShouldBe(0);
+        result.Statistics.Downloads.Failed.ShouldBe(0);
     }
 
     [Fact]
@@ -229,10 +234,132 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
 
         // Assert
-        result.Statistics.TotalPrograms.ShouldBe(2);
-        result.Statistics.TotalEpisodes.ShouldBe(2);
-        result.Statistics.UnmatchedEpisodeCount.ShouldBe(2);
-        result.Statistics.ProgramsWithMissingEpisodes.ShouldBe(1);
+        result.Statistics.Programs.Total.ShouldBe(2);
+        result.Statistics.Programs.Matched.ShouldBe(1);
+        result.Statistics.Programs.WithMissingEpisodes.ShouldBe(1);
+        result.Statistics.Episodes.Total.ShouldBe(2);
+        result.Statistics.Episodes.Unmatched.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task ReturnsMonitoredAndMatchedProgramCounts()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram monitoredAndMatched = new RuvProgramBuilder()
+            .WithRuvId(6001)
+            .WithName("Monitored Matched")
+            .WithMultipleEpisodes()
+            .Build();
+        monitoredAndMatched.MatchTvdb(new TvdbSeriesBuilder().WithName("Series").Build());
+        monitoredAndMatched.SetMonitoredStatus(true);
+
+        RuvProgram unmonitoredMatched = new RuvProgramBuilder()
+            .WithRuvId(6002)
+            .WithName("Unmonitored Matched")
+            .WithMultipleEpisodes()
+            .Build();
+        unmonitoredMatched.MatchTvdb(new TvdbSeriesBuilder().WithName("Series 2").Build());
+
+        RuvProgram unmonitoredUnmatched = new RuvProgramBuilder()
+            .WithRuvId(6003)
+            .WithName("Unmonitored Unmatched")
+            .WithMultipleEpisodes()
+            .Build();
+
+        dbContext.Set<RuvProgram>().AddRange(monitoredAndMatched, unmonitoredMatched, unmonitoredUnmatched);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.Statistics.Programs.Total.ShouldBe(3);
+        result.Statistics.Programs.Monitored.ShouldBe(1);
+        result.Statistics.Programs.Matched.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task ReturnsDownloadingAndFailedCounts()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(7001)
+            .WithName("DL Program")
+            .WithMultipleEpisodes()
+            .Build();
+        program.MatchTvdb(new TvdbSeriesBuilder().WithName("DL Series").Build());
+        program.TryAddEpisode("dl-downloading", new Uri("http://test.com"), "Downloading Ep", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("dl-failed", new Uri("http://test.com"), "Failed Ep", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode downloadingEp = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "dl-downloading", cancellationToken);
+        DownloadQueueItem downloadingItem = DownloadQueueItem.Create(downloadingEp);
+        downloadingItem.MarkDownloading();
+
+        RuvEpisode failedEp = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "dl-failed", cancellationToken);
+        DownloadQueueItem failedItem = DownloadQueueItem.Create(failedEp);
+        failedItem.MarkDownloading();
+        failedItem.MarkFailed();
+
+        dbContext.Set<DownloadQueueItem>().AddRange(downloadingItem, failedItem);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.Statistics.Downloads.Downloading.ShouldBe(1);
+        result.Statistics.Downloads.Failed.ShouldBe(1);
+        result.Statistics.Downloads.QueueDepth.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ReturnsMatchedEpisodeCount()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(8001)
+            .WithName("Match Count Program")
+            .WithMultipleEpisodes()
+            .Build();
+        program.MatchTvdb(new TvdbSeriesBuilder().WithName("Match Count Series").Build());
+        program.TryAddEpisode("mc-matched", new Uri("http://test.com"), "Matched Ep", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("mc-unmatched", new Uri("http://test.com"), "Unmatched Ep", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode matchedEp = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "mc-matched", cancellationToken);
+        matchedEp.Match(tvdbId: 200, season: 1, episode: 1, isMissing: false, hasIslTranslation: true);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.Statistics.Episodes.Matched.ShouldBe(1);
+        result.Statistics.Episodes.Unmatched.ShouldBe(1);
+        result.Statistics.Episodes.Total.ShouldBe(2);
     }
 
     [Fact]
@@ -267,7 +394,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
 
         // Assert
-        result.Statistics.DownloadsCompletedLast7Days.ShouldBe(1);
+        result.Statistics.Downloads.CompletedLast7Days.ShouldBe(1);
     }
 
     [Fact]

@@ -18,36 +18,71 @@
 }
 else
 {
-    <dl class="stats-grid" aria-label="Statistics">
-        <div class="stat-card">
-            <dd>@_data.Statistics.TotalPrograms</dd>
-            <dt>Programs</dt>
-        </div>
-        <div class="stat-card">
-            <dd>@_data.Statistics.TotalEpisodes</dd>
-            <dt>Episodes</dt>
-        </div>
-        <div class="stat-card">
-            <dd>@_data.Statistics.UnmatchedEpisodeCount</dd>
-            <dt>Unmatched Episodes</dt>
-        </div>
-        <div class="stat-card">
-            <dd>@_data.Statistics.MissingTranslationCount</dd>
-            <dt>Episodes Without Translation</dt>
-        </div>
-        <div class="stat-card">
-            <dd>@_data.Statistics.ActiveDownloadQueueDepth</dd>
-            <dt>Download Queue</dt>
-        </div>
-        <div class="stat-card">
-            <dd>@_data.Statistics.ProgramsWithMissingEpisodes</dd>
-            <dt>Programs w/ Missing Episodes</dt>
-        </div>
-        <div class="stat-card">
-            <dd>@_data.Statistics.DownloadsCompletedLast7Days</dd>
-            <dt>Downloads (7d)</dt>
-        </div>
-    </dl>
+    <section class="stat-row stat-row--programs" aria-label="Program Statistics">
+        <h2 class="stat-row__title">Programs</h2>
+        <dl class="stat-row__grid">
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Programs.Total</dd>
+                <dt>Total</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Programs.Monitored</dd>
+                <dt>Monitored</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Programs.Matched</dd>
+                <dt>Matched</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Programs.WithMissingEpisodes</dd>
+                <dt>Missing Episodes</dt>
+            </div>
+        </dl>
+    </section>
+
+    <section class="stat-row stat-row--episodes" aria-label="Episode Statistics">
+        <h2 class="stat-row__title">Episodes</h2>
+        <dl class="stat-row__grid">
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Episodes.Total</dd>
+                <dt>Total</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Episodes.Matched</dd>
+                <dt>Matched</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Episodes.Unmatched</dd>
+                <dt>Unmatched</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Episodes.WithoutTranslation</dd>
+                <dt>No Translation</dt>
+            </div>
+        </dl>
+    </section>
+
+    <section class="stat-row stat-row--downloads" aria-label="Download Statistics">
+        <h2 class="stat-row__title">Downloads</h2>
+        <dl class="stat-row__grid">
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Downloads.QueueDepth</dd>
+                <dt>Queue</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Downloads.Downloading</dd>
+                <dt>Downloading</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Downloads.CompletedLast7Days</dd>
+                <dt>Completed (7d)</dt>
+            </div>
+            <div class="stat-row__card">
+                <dd>@_data.Statistics.Downloads.Failed</dd>
+                <dt>Failed</dt>
+            </div>
+        </dl>
+    </section>
 
     <section class="dashboard-section" aria-label="Currently Running Tasks">
         <h2 class="dashboard-section-title">Currently Running Tasks</h2>
