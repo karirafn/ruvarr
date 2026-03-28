@@ -29,7 +29,10 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        cut.Find("div.spinner").ShouldNotBeNull();
+        IElement spinner = cut.Find("div.spinner");
+        spinner.ShouldNotBeNull();
+        spinner.GetAttribute("role").ShouldBe("status");
+        spinner.GetAttribute("aria-label").ShouldBe("Loading");
     }
 
     [Fact]
@@ -44,7 +47,7 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IReadOnlyList<IElement> statValues = cut.FindAll(".stat-value");
+        IReadOnlyList<IElement> statValues = cut.FindAll(".stats-grid dd");
         statValues.Count.ShouldBe(7);
         statValues[0].TextContent.ShouldBe("10");
         statValues[1].TextContent.ShouldBe("50");
@@ -53,6 +56,25 @@ public sealed class DashboardTests : BunitContext
         statValues[4].TextContent.ShouldBe("2");
         statValues[5].TextContent.ShouldBe("1");
         statValues[6].TextContent.ShouldBe("7");
+    }
+
+    [Fact]
+    public void RendersStatCards_AsDefinitionList()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData();
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement dl = cut.Find("dl.stats-grid");
+        dl.ShouldNotBeNull();
+        IReadOnlyList<IElement> terms = cut.FindAll(".stats-grid dt");
+        terms.Count.ShouldBe(7);
+        terms[0].TextContent.ShouldBe("Programs");
     }
 
     [Fact]

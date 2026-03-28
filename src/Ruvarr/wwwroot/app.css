@@ -715,7 +715,7 @@ dialog input[type="number"]:focus {
 
 /* Empty message */
 .empty-message {
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.65);
     font-size: 0.95rem;
     margin-top: 2rem;
 }
