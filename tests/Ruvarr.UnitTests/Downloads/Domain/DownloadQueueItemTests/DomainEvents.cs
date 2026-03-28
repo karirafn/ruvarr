@@ -37,6 +37,20 @@ public sealed class DomainEvents
     }
 
     [Fact]
+    public void MarkFailed_RaisesDownloadFailedEvent()
+    {
+        // Arrange
+        DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
+
+        // Act
+        sut.MarkFailed();
+
+        // Assert
+        DownloadFailedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<DownloadFailedEvent>();
+        @event.Item.ShouldBe(sut);
+    }
+
+    [Fact]
     public void ClearDomainEvents_ClearsAllEvents()
     {
         // Arrange
