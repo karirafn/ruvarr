@@ -5,7 +5,6 @@ using Quartz;
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Sonarr;
-using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
@@ -68,8 +67,7 @@ internal sealed class TvdbEpisodeLookupJob(
                 return;
             }
 
-            IReadOnlyCollection<MissingEpisode> missingEpisodes = await sonarr.GetMissingEpisodesAsync();
-            HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
+            HashSet<int> missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(context?.CancellationToken ?? CancellationToken.None);
 
             EpisodeMatchingContext matchingContext = new(program, seriesData, missingTvdbIds);
             await matcher.MatchAsync(matchingContext, context?.CancellationToken ?? CancellationToken.None);

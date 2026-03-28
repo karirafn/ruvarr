@@ -51,12 +51,12 @@ internal sealed class RuvEpisodesSyncJob(
             .Where(x => x.HasMultipleEpisodes)
             .ToListAsync();
 
-        IReadOnlyCollection<MissingEpisode> missingEpisodes;
+        HashSet<int> missingTvdbIds;
         IReadOnlyList<Series> sonarrSeries;
 
         try
         {
-            missingEpisodes = await sonarr.GetMissingEpisodesAsync();
+            missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
             sonarrSeries = await sonarr.GetSeriesAsync();
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
@@ -73,8 +73,6 @@ internal sealed class RuvEpisodesSyncJob(
             broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
             return;
         }
-
-        HashSet<int> missingTvdbIds = [.. missingEpisodes.Select(x => x.TvdbId)];
 
         HashSet<int> monitoredTvdbIds = [.. sonarrSeries
             .Where(x => x.Monitored)
