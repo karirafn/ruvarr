@@ -17,7 +17,7 @@ internal sealed class GetDashboardHandler(
     ProgramRefreshNotifier programRefreshNotifier)
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
-    private const int RecentEpisodeLimit = 25;
+    private const int EpisodeTableLimit = 10;
     private const int LikelyDownloadedCandidateLimit = 50;
     private const int SevenDays = 7;
 
@@ -37,7 +37,7 @@ internal sealed class GetDashboardHandler(
         return await dbContext.Set<RuvEpisode>()
             .Where(e => e.Program.Series != null || e.Program.Movie != null)
             .OrderByDescending(e => e.FirstRun)
-            .Take(RecentEpisodeLimit)
+            .Take(EpisodeTableLimit)
             .Select(e => new DashboardEpisodeItem(
                 e.Program.Name,
                 e.Program.RuvId,
@@ -52,7 +52,7 @@ internal sealed class GetDashboardHandler(
             .Where(e => e.TvdbEpisodes.Count > 0)
             .Where(e => !e.TvdbEpisodes.Any(te => te.HasIslTranslation))
             .OrderByDescending(e => e.FirstRun)
-            .Take(RecentEpisodeLimit)
+            .Take(EpisodeTableLimit)
             .Select(e => new DashboardEpisodeItem(
                 e.Program.Name,
                 e.Program.RuvId,
@@ -78,6 +78,7 @@ internal sealed class GetDashboardHandler(
 
         return candidates
             .Where(e => !RuvProgram.IsGenericEpisodeTitle(e.EpisodeTitle))
+            .Take(EpisodeTableLimit)
             .ToList();
     }
 

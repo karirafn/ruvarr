@@ -49,6 +49,30 @@ else
         </div>
     </dl>
 
+    <section class="dashboard-section" aria-label="Currently Running Tasks">
+        <h2 class="dashboard-section-title">Currently Running Tasks</h2>
+        <div class="task-list">
+            @foreach ((string taskName, DashboardQueueInfo taskInfo) in _taskRows)
+            {
+                <div class="task-row">
+                    <span class="task-name">@taskName</span>
+                    <span class="task-depth">@taskInfo.Depth</span>
+                    @if (taskInfo.ActiveItem is not null)
+                    {
+                        <span class="task-active">
+                            <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
+                            @taskInfo.ActiveItem
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="task-idle">Idle</span>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
     <section class="dashboard-section" aria-label="Recently Added Episodes">
         <h2 class="dashboard-section-title">Recently Added Episodes</h2>
         @if (_data.RecentlyAddedEpisodes.Count == 0)
@@ -137,30 +161,6 @@ else
                 </tbody>
             </table>
         }
-    </section>
-
-    <section class="dashboard-section" aria-label="Currently Running Tasks">
-        <h2 class="dashboard-section-title">Currently Running Tasks</h2>
-        <div class="task-list">
-            @foreach ((string taskName, DashboardQueueInfo taskInfo) in _taskRows)
-            {
-                <div class="task-row">
-                    <span class="task-name">@taskName</span>
-                    <span class="task-depth">@taskInfo.Depth</span>
-                    @if (taskInfo.ActiveItem is not null)
-                    {
-                        <span class="task-active">
-                            <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
-                            @taskInfo.ActiveItem
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="task-idle">Idle</span>
-                    }
-                </div>
-            }
-        </div>
     </section>
 }
 
