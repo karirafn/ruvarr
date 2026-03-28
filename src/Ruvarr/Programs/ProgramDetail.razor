@@ -200,6 +200,12 @@ else
                                     <IcelandicFlag Class="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? null : "flag--dimmed")"
                                                    AriaLabel="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation" : "No Icelandic translation")" />
                                 </span>
+                                @if (episode.TvdbMatches.FirstOrDefault()?.TvdbUrl is { } tvdbUrl)
+                                {
+                                    <a class="icon-button" href="@tvdbUrl" target="_blank" rel="noopener noreferrer" title="View on TVDB">
+                                        <Icon Type="IconType.ExternalLink" Class="icon" AriaLabel="View on TVDB" />
+                                    </a>
+                                }
                                 @if (episode.RuvUrl is not null)
                                 {
                                     <a class="icon-button" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer" title="View on RÚV">

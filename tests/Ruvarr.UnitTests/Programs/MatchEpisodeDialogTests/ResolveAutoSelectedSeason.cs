@@ -109,7 +109,7 @@ public sealed class ResolveAutoSelectedSeason
     private static EpisodeSummary CreateEpisode(int? seasonNumber)
     {
         IReadOnlyList<TvdbEpisodeSummary> matches = seasonNumber is not null
-            ? [new TvdbEpisodeSummary(100, seasonNumber.Value, 1, false, false)]
+            ? [new TvdbEpisodeSummary(100, seasonNumber.Value, 1, false, false, null)]
             : [];
 
         return new(

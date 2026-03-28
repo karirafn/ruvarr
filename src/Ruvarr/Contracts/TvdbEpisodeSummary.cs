@@ -5,4 +5,5 @@ public sealed record TvdbEpisodeSummary(
     int SeasonNumber,
     int EpisodeNumber,
     bool IsMissing,
-    bool HasIslTranslation);
+    bool HasIslTranslation,
+    Uri? TvdbUrl);
