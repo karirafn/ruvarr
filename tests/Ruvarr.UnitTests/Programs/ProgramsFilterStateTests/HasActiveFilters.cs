@@ -202,7 +202,7 @@ public sealed class HasActiveFilters
     }
 
     [Fact]
-    public void ReturnsFalseWhenOnlySearchTextIsSet()
+    public void ReturnsTrueWhenSearchTextIsSet()
     {
         // Arrange
         ProgramsFilterState sut = new() { SearchText = "test" };
@@ -211,6 +211,6 @@ public sealed class HasActiveFilters
         bool result = sut.HasActiveFilters;
 
         // Assert
-        result.ShouldBeFalse();
+        result.ShouldBeTrue();
     }
 }

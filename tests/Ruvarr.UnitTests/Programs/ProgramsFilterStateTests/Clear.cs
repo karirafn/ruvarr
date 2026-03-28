@@ -36,7 +36,7 @@ public sealed class Clear
     }
 
     [Fact]
-    public void DoesNotResetSearchText()
+    public void ResetsSearchText()
     {
         // Arrange
         ProgramsFilterState sut = new() { SearchText = "test query" };
@@ -45,7 +45,7 @@ public sealed class Clear
         sut.Clear();
 
         // Assert
-        sut.SearchText.ShouldBe("test query");
+        sut.SearchText.ShouldBeEmpty();
     }
 
     [Fact]

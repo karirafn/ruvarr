@@ -21,7 +21,8 @@ internal sealed class ProgramsFilterState
         FilterPendingLookup != PendingLookupFilter.All ||
         FilterForeignName != ForeignNameFilter.All ||
         FilterEpisodeMatch != EpisodeMatchFilter.All ||
-        !string.IsNullOrEmpty(FilterChannel);
+        !string.IsNullOrEmpty(FilterChannel) ||
+        HasSearchText;
 
     public void Clear()
     {
@@ -32,6 +33,7 @@ internal sealed class ProgramsFilterState
         FilterForeignName = ForeignNameFilter.All;
         FilterEpisodeMatch = EpisodeMatchFilter.All;
         FilterChannel = string.Empty;
+        SearchText = string.Empty;
         ScrollPositionY = 0;
     }
 }
