@@ -49,14 +49,15 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
             return SettingsErrors.MovieSubdirectoryAbsolute;
         }
 
-        string normalizedRoot = Path.GetFullPath(RuvarrSettings.DownloadsRoot + Path.DirectorySeparatorChar);
-        string normalizedEpisodePath = Path.GetFullPath(Path.Join(RuvarrSettings.DownloadsRoot, command.EpisodeDownloadDirectory));
+        string downloadsRoot = store.Current.DownloadsRoot;
+        string normalizedRoot = Path.GetFullPath(downloadsRoot + Path.DirectorySeparatorChar);
+        string normalizedEpisodePath = Path.GetFullPath(Path.Join(downloadsRoot, command.EpisodeDownloadDirectory));
         if (!normalizedEpisodePath.StartsWith(normalizedRoot, StringComparison.Ordinal))
         {
             return SettingsErrors.EpisodeSubdirectoryTraversal;
         }
 
-        string normalizedMoviePath = Path.GetFullPath(Path.Join(RuvarrSettings.DownloadsRoot, command.MovieDownloadDirectory));
+        string normalizedMoviePath = Path.GetFullPath(Path.Join(downloadsRoot, command.MovieDownloadDirectory));
         if (!normalizedMoviePath.StartsWith(normalizedRoot, StringComparison.Ordinal))
         {
             return SettingsErrors.MovieSubdirectoryTraversal;

@@ -226,6 +226,10 @@ public sealed class SettingsTests : BunitContext
         handler.Handle(Arg.Any<GetSettingsQuery>(), Arg.Any<CancellationToken>())
             .Returns(new Result<RuvarrSettings>(settings));
         Services.AddSingleton(handler);
+
+        ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
+        settingsStore.Current.Returns(settings);
+        Services.AddSingleton(settingsStore);
     }
 
     private IRequestHandler<SaveSettingsCommand> RegisterSaveSettingsHandler()

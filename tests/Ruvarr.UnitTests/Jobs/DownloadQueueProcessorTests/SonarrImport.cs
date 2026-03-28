@@ -26,18 +26,18 @@ public sealed class SonarrImport : IDisposable
     {
         _tempDownloadsRoot = Path.Combine(Path.GetTempPath(), $"ruvarr-test-{Guid.NewGuid()}");
         Directory.CreateDirectory(_tempDownloadsRoot);
-        RuvarrSettings.DownloadsRoot = _tempDownloadsRoot;
 
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            EpisodeDownloadDirectory: "episodes"));
+            EpisodeDownloadDirectory: "episodes")
+        {
+            DownloadsRoot = _tempDownloadsRoot
+        });
     }
 
     public void Dispose()
     {
-        RuvarrSettings.DownloadsRoot = "/downloads";
-
         if (Directory.Exists(_tempDownloadsRoot))
         {
             Directory.Delete(_tempDownloadsRoot, recursive: true);
@@ -150,7 +150,7 @@ public sealed class SonarrImport : IDisposable
             Arg.Any<CancellationToken>());
     }
 
-    private static ManualImportFile CreateManualImportFile(
+    private ManualImportFile CreateManualImportFile(
         int? seriesId,
         IReadOnlyList<int> episodeIds,
         string filename = "Test.series.S01E01-RUV.mp4")
@@ -210,7 +210,7 @@ public sealed class SonarrImport : IDisposable
                 Id: id)).ToList();
 
         return new ManualImportFile(
-            Path: $"{RuvarrSettings.DownloadsRoot}/episodes/test/{filename}",
+            Path: $"{_tempDownloadsRoot}/episodes/test/{filename}",
             RelativePath: $"test/{filename}",
             Name: filename,
             Size: 1000,
