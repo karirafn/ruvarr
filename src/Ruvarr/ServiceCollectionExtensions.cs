@@ -3,6 +3,7 @@
 using Quartz;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Dashboard;
 using Ruvarr.Downloads;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Programs;
@@ -43,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEpisodeMatchingStrategy, PartOneSiblingMatchingStrategy>();
         services.AddScoped<ITvdbEpisodeMatcher, TvdbEpisodeMatcher>();
 
+        services.AddDashboard();
         services.AddPrograms();
         services.AddDownloads();
 
