@@ -76,7 +76,7 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        List<TvdbEpisodeSummary> currentMatches = [new(99999, 1, 1, false, false)];
+        List<TvdbEpisodeSummary> currentMatches = [new(99999, 1, 1, false, false, null)];
         await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
         await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
 

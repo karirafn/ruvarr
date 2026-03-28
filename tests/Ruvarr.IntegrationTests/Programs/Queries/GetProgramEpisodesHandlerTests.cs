@@ -132,6 +132,41 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
     }
 
     [Fact]
+    public async Task ReturnsTvdbUrlForMatchedEpisodes()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
+
+        RuvProgram program = RuvProgram.Create(30007, "RÚV1", "TVDB URL Program", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create(9001, "TVDB URL Series"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("TVDB-EP1", new Uri("https://example.com/ep.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("TVDB-EP2", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.Episodes[0].Match(tvdbId: 5001, season: 1, episode: 1, isMissing: false);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<EpisodeSummary> result = await handler.Handle(new GetProgramEpisodesQuery(30007), cancellationToken);
+
+        // Assert
+        result.Count.ShouldBe(2);
+        EpisodeSummary matched = result.Single(x => x.EpisodeRuvId == "TVDB-EP1");
+        matched.TvdbMatches[0].TvdbUrl.ShouldBe(new Uri("https://www.thetvdb.com/episodes/5001"));
+
+        EpisodeSummary unmatched = result.Single(x => x.EpisodeRuvId == "TVDB-EP2");
+        unmatched.TvdbMatches.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task ReturnsNullRuvUrlWhenSlugAbsent()
     {
         // Arrange
