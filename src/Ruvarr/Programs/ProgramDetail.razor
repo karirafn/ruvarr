@@ -202,15 +202,11 @@ else
                                 </span>
                                 @if (episode.TvdbMatches.FirstOrDefault()?.TvdbUrl is { } tvdbUrl)
                                 {
-                                    <a class="icon-button" href="@tvdbUrl" target="_blank" rel="noopener noreferrer" title="View on TVDB">
-                                        <Icon Type="IconType.ExternalLink" Class="icon" AriaLabel="View on TVDB" />
-                                    </a>
+                                    <a class="badge--tvdb" href="@tvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
                                 }
                                 @if (episode.RuvUrl is not null)
                                 {
-                                    <a class="icon-button" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer" title="View on RÚV">
-                                        <Icon Type="IconType.ExternalLink" Class="icon" AriaLabel="View on RÚV" />
-                                    </a>
+                                    <a class="badge--ruv" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
                                 }
                                 @if (_program.SeriesName is not null)
                                 {
