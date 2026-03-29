@@ -33,10 +33,12 @@ public sealed class RuvStreamInspectorTests
         using IDisposable _ = disposables;
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
-        result.ShouldBe(3 * SegmentContentLength);
+        result.ShouldNotBeNull();
+        result.EstimatedBytes.ShouldBe(3 * SegmentContentLength);
+        result.TotalDurationSeconds.ShouldBe(30.0);
     }
 
     [Fact]
@@ -78,10 +80,12 @@ public sealed class RuvStreamInspectorTests
         RuvStreamInspector sut = new(httpClient);
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
-        result.ShouldBe(4 * SegmentContentLength);
+        result.ShouldNotBeNull();
+        result.EstimatedBytes.ShouldBe(4 * SegmentContentLength);
+        result.TotalDurationSeconds.ShouldBe(40.0);
     }
 
     [Fact]
@@ -100,7 +104,7 @@ public sealed class RuvStreamInspectorTests
         using IDisposable _ = disposables;
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
         result.ShouldBeNull();
@@ -129,7 +133,7 @@ public sealed class RuvStreamInspectorTests
         RuvStreamInspector sut = new(httpClient);
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
         result.ShouldBeNull();
@@ -150,7 +154,7 @@ public sealed class RuvStreamInspectorTests
         using IDisposable _ = disposables;
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
         result.ShouldBeNull();
@@ -171,7 +175,7 @@ public sealed class RuvStreamInspectorTests
         using IDisposable _ = disposables;
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
         result.ShouldBeNull();
@@ -187,7 +191,7 @@ public sealed class RuvStreamInspectorTests
         RuvStreamInspector sut = new(httpClient);
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
         result.ShouldBeNull();
@@ -210,7 +214,7 @@ public sealed class RuvStreamInspectorTests
         RuvStreamInspector sut = new(httpClient);
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
         result.ShouldBeNull();
@@ -240,19 +244,24 @@ public sealed class RuvStreamInspectorTests
         RuvStreamInspector sut = new(httpClient);
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(playlistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(playlistUri, CancellationToken.None);
 
         // Assert
-        result.ShouldBe(2 * SegmentContentLength);
+        result.ShouldNotBeNull();
+        result.EstimatedBytes.ShouldBe(2 * SegmentContentLength);
+        result.TotalDurationSeconds.ShouldBe(20.0);
         capturedHeadUris.Count.ShouldBe(2);
         capturedHeadUris[0].AbsolutePath.ShouldBe("/stream/segments/segment001.ts");
         capturedHeadUris[1].AbsolutePath.ShouldBe("/stream/segments/segment002.ts");
     }
 
     [Fact]
-    public async Task AveragesMultipleSegmentSizes_WhenSegmentsHaveDifferentSizes()
+    public async Task EstimatesSize_UsingFirstSegmentTimesCountMinusOnePlusLastSegment()
     {
         // Arrange
+        const long firstSegmentSize = 1_000_000;
+        const long lastSegmentSize = 400_000;
+
         string m3u8 = """
             #EXTM3U
             #EXT-X-TARGETDURATION:10
@@ -266,29 +275,143 @@ public sealed class RuvStreamInspectorTests
             segment004.ts
             #EXTINF:10.0,
             segment005.ts
+            #EXTINF:10.0,
+            segment006.ts
+            #EXTINF:10.0,
+            segment007.ts
+            #EXTINF:10.0,
+            segment008.ts
+            #EXTINF:10.0,
+            segment009.ts
+            #EXTINF:5.0,
+            segment010.ts
             #EXT-X-ENDLIST
             """;
 
-        long[] segmentSizes = [400_000, 600_000, 500_000];
-        int headCallIndex = 0;
+        Dictionary<string, long> segmentSizesByName = new()
+        {
+            ["segment001.ts"] = firstSegmentSize,
+            ["segment010.ts"] = lastSegmentSize
+        };
 
         using HttpResponseMessage getResponse = new(HttpStatusCode.OK) { Content = new StringContent(m3u8) };
-        using StubHandler handler = new(getResponse, headResponseFactory: () =>
+        using StubHandler handler = new(getResponse, headResponseByUri: uri =>
         {
-            int index = headCallIndex++;
-            return index < segmentSizes.Length
-                ? CreateHeadResponse(segmentSizes[index])
+            string filename = uri.Segments[^1];
+            return segmentSizesByName.TryGetValue(filename, out long size)
+                ? CreateHeadResponse(size)
                 : CreateHeadResponse(SegmentContentLength);
         });
         using HttpClient httpClient = new(handler);
         RuvStreamInspector sut = new(httpClient);
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
-        long expectedAverage = (long)segmentSizes.Average();
-        result.ShouldBe(5 * expectedAverage);
+        result.ShouldNotBeNull();
+        long expected = (firstSegmentSize * 9) + lastSegmentSize;
+        result.EstimatedBytes.ShouldBe(expected);
+        result.TotalDurationSeconds.ShouldBe(95.0);
+    }
+
+    [Fact]
+    public async Task ReturnsSingleSegmentSize_WhenPlaylistHasOneSegment()
+    {
+        // Arrange
+        const long singleSegmentSize = 750_000;
+
+        string m3u8 = """
+            #EXTM3U
+            #EXT-X-TARGETDURATION:10
+            #EXTINF:8.5,
+            segment001.ts
+            #EXT-X-ENDLIST
+            """;
+
+        (RuvStreamInspector sut, IDisposable disposables) = CreateInspector(m3u8, singleSegmentSize);
+        using IDisposable _ = disposables;
+
+        // Act
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.EstimatedBytes.ShouldBe(singleSegmentSize);
+        result.TotalDurationSeconds.ShouldBe(8.5);
+    }
+
+    [Fact]
+    public async Task ReturnsNull_WhenLastSegmentPointsToDifferentHost()
+    {
+        // Arrange
+        string m3u8 = """
+            #EXTM3U
+            #EXTINF:10.0,
+            segment001.ts
+            #EXTINF:10.0,
+            https://evil.com/segment002.ts
+            #EXT-X-ENDLIST
+            """;
+
+        (RuvStreamInspector sut, IDisposable disposables) = CreateInspector(m3u8, SegmentContentLength);
+        using IDisposable _ = disposables;
+
+        // Act
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task SumsDuration_WhenExtInfLinesHaveMixedFormats()
+    {
+        // Arrange
+        string m3u8 = """
+            #EXTM3U
+            #EXT-X-TARGETDURATION:10
+            #EXTINF:10,
+            segment001.ts
+            #EXTINF:9.500,
+            segment002.ts
+            #EXTINF:10.123,
+            segment003.ts
+            #EXT-X-ENDLIST
+            """;
+
+        (RuvStreamInspector sut, IDisposable disposables) = CreateInspector(m3u8, SegmentContentLength);
+        using IDisposable _ = disposables;
+
+        // Act
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.TotalDurationSeconds.ShouldBe(29.623, tolerance: 0.001);
+    }
+
+    [Fact]
+    public async Task ReturnsTotalDurationZero_WhenNoExtInfLines()
+    {
+        // Arrange
+        string m3u8 = """
+            #EXTM3U
+            #EXT-X-TARGETDURATION:10
+            segment001.ts
+            segment002.ts
+            #EXT-X-ENDLIST
+            """;
+
+        (RuvStreamInspector sut, IDisposable disposables) = CreateInspector(m3u8, SegmentContentLength);
+        using IDisposable _ = disposables;
+
+        // Act
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.TotalDurationSeconds.ShouldBe(0);
     }
 
     [Fact]
@@ -306,7 +429,7 @@ public sealed class RuvStreamInspectorTests
         using IDisposable _ = disposables;
 
         // Act
-        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+        StreamSizeEstimate? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
 
         // Assert
         result.ShouldBeNull();
@@ -356,6 +479,7 @@ public sealed class RuvStreamInspectorTests
     private sealed class StubHandler(
         HttpResponseMessage getResponse,
         Func<HttpResponseMessage>? headResponseFactory = null,
+        Func<Uri, HttpResponseMessage>? headResponseByUri = null,
         Action<Uri>? onHead = null) : DelegatingHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
@@ -370,6 +494,12 @@ public sealed class RuvStreamInspectorTests
             if (request.Method == HttpMethod.Head)
             {
                 onHead?.Invoke(request.RequestUri!);
+
+                if (headResponseByUri is not null)
+                {
+                    return Task.FromResult(headResponseByUri(request.RequestUri!));
+                }
+
                 return headResponseFactory is not null
                     ? Task.FromResult(headResponseFactory())
                     : throw new HttpRequestException("HEAD failed");

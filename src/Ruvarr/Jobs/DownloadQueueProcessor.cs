@@ -91,7 +91,7 @@ internal class DownloadQueueProcessor(
 
         string filename = Path.GetFileName(filepath);
 
-        long? estimatedSize = await streamInspector.EstimateStreamSizeAsync(
+        StreamSizeEstimate? estimate = await streamInspector.EstimateStreamSizeAsync(
             item.Episode.Uri,
             context.CancellationToken);
 
@@ -100,7 +100,8 @@ internal class DownloadQueueProcessor(
             item.Episode.Program.Name,
             item.Episode.Title,
             seasonEpisodeLabel,
-            totalSize: estimatedSize);
+            totalSize: estimate?.EstimatedBytes,
+            totalDurationSeconds: estimate?.TotalDurationSeconds);
 
         Progress<FfmpegProgressData> progress = new(data => progressNotifier.ReportProgress(data));
 

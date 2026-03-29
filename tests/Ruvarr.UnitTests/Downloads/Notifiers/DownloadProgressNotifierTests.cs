@@ -251,4 +251,46 @@ public sealed class DownloadProgressNotifierTests
         // Assert
         sut.TotalSize.ShouldBe(10_000_000L);
     }
+
+    [Fact]
+    public void ReportProgress_DynamicallyReEstimatesTotalSize_WhenDurationIsAvailable()
+    {
+        // Arrange
+        DownloadProgressNotifier sut = CreateSut();
+        sut.StartDownload("Show A", "Episode 1", null, totalSize: null, totalDurationSeconds: 60.0);
+
+        // Act
+        sut.ReportProgress(new FfmpegProgressData(6_000_000, TimeSpan.FromSeconds(30)));
+
+        // Assert — 6MB downloaded in 30s of a 60s stream → estimated total 12MB
+        sut.TotalSize.ShouldBe(12_000_000L);
+    }
+
+    [Fact]
+    public void ReportProgress_DoesNotReEstimate_WhenTimeIsLessThanOneSecond()
+    {
+        // Arrange
+        DownloadProgressNotifier sut = CreateSut();
+        sut.StartDownload("Show A", "Episode 1", null, totalSize: null, totalDurationSeconds: 60.0);
+
+        // Act
+        sut.ReportProgress(new FfmpegProgressData(100_000, TimeSpan.FromSeconds(0.5)));
+
+        // Assert — time too short, no re-estimation; no fallback either
+        sut.TotalSize.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ReportProgress_FallsBackToEstimatedTotalBytes_WhenNoDuration()
+    {
+        // Arrange
+        DownloadProgressNotifier sut = CreateSut();
+        sut.StartDownload("Show A", "Episode 1", null, totalSize: null, totalDurationSeconds: null);
+
+        // Act
+        sut.ReportProgress(new FfmpegProgressData(1024, TimeSpan.FromSeconds(10), EstimatedTotalBytes: 5_000_000));
+
+        // Assert
+        sut.TotalSize.ShouldBe(5_000_000L);
+    }
 }

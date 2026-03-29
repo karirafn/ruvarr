@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Ruvarr.Infrastructure.Ruv;
@@ -5,9 +6,8 @@ namespace Ruvarr.Infrastructure.Ruv;
 internal sealed partial class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInspector
 {
     private const string MasterPlaylistMarker = "#EXT-X-STREAM-INF";
-    private const int MaxSegmentsToSample = 3;
-
-    public async Task<long?> EstimateStreamSizeAsync(Uri m3u8Uri, CancellationToken cancellationToken)
+    private const string ExtInfMarker = "#EXTINF:";
+    public async Task<StreamSizeEstimate?> EstimateStreamSizeAsync(Uri m3u8Uri, CancellationToken cancellationToken)
     {
         try
         {
@@ -63,15 +63,17 @@ internal sealed partial class RuvStreamInspector(HttpClient httpClient) : IRuvSt
                 return null;
             }
 
-            long? averageSegmentSize = await GetAverageSegmentSizeAsync(
+            long? estimatedBytes = await EstimateTotalBytesAsync(
                 segments, mediaPlaylistUri, m3u8Uri, cancellationToken);
 
-            if (averageSegmentSize is null)
+            if (estimatedBytes is null)
             {
                 return null;
             }
 
-            return segments.Count * averageSegmentSize.Value;
+            double totalDurationSeconds = ParseTotalDuration(mediaLines);
+
+            return new StreamSizeEstimate(estimatedBytes.Value, totalDurationSeconds);
         }
 #pragma warning disable CA1031 // Return null on any failure
         catch (Exception)
@@ -81,37 +83,72 @@ internal sealed partial class RuvStreamInspector(HttpClient httpClient) : IRuvSt
         }
     }
 
-    private async Task<long?> GetAverageSegmentSizeAsync(
+    private async Task<long?> EstimateTotalBytesAsync(
         List<string> segments, Uri mediaPlaylistUri, Uri m3u8Uri, CancellationToken cancellationToken)
     {
-        int samplesToTake = Math.Min(segments.Count, MaxSegmentsToSample);
-        List<long> sizes = [];
-
-        for (int i = 0; i < samplesToTake; i++)
-        {
-            Uri segmentUri = new(mediaPlaylistUri, segments[i]);
-
-            if (segmentUri.Host != m3u8Uri.Host || segmentUri.Scheme != "https")
-            {
-                return null;
-            }
-
-            using HttpRequestMessage headRequest = new(HttpMethod.Head, segmentUri);
-            using HttpResponseMessage headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
-
-            long? contentLength = headResponse.Content.Headers.ContentLength;
-            if (contentLength is > 0)
-            {
-                sizes.Add(contentLength.Value);
-            }
-        }
-
-        if (sizes.Count == 0)
+        long? firstSize = await GetSegmentSizeAsync(segments[0], mediaPlaylistUri, m3u8Uri, cancellationToken);
+        if (firstSize is null)
         {
             return null;
         }
 
-        return (long)sizes.Average();
+        if (segments.Count == 1)
+        {
+            return firstSize.Value;
+        }
+
+        long? lastSize = await GetSegmentSizeAsync(segments[^1], mediaPlaylistUri, m3u8Uri, cancellationToken);
+        if (lastSize is null)
+        {
+            return null;
+        }
+
+        return (firstSize.Value * (segments.Count - 1)) + lastSize.Value;
+    }
+
+    private async Task<long?> GetSegmentSizeAsync(
+        string segment, Uri mediaPlaylistUri, Uri m3u8Uri, CancellationToken cancellationToken)
+    {
+        Uri segmentUri = new(mediaPlaylistUri, segment);
+
+        if (segmentUri.Host != m3u8Uri.Host || segmentUri.Scheme != "https")
+        {
+            return null;
+        }
+
+        using HttpRequestMessage headRequest = new(HttpMethod.Head, segmentUri);
+        using HttpResponseMessage headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
+
+        long? contentLength = headResponse.Content.Headers.ContentLength;
+        return contentLength is > 0 ? contentLength.Value : null;
+    }
+
+    private static double ParseTotalDuration(string[] mediaLines)
+    {
+        double total = 0;
+
+        foreach (string line in mediaLines)
+        {
+            string trimmed = line.Trim();
+            if (!trimmed.StartsWith(ExtInfMarker, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string durationPart = trimmed[ExtInfMarker.Length..];
+            int commaIndex = durationPart.IndexOf(',', StringComparison.Ordinal);
+            if (commaIndex >= 0)
+            {
+                durationPart = durationPart[..commaIndex];
+            }
+
+            if (double.TryParse(durationPart, CultureInfo.InvariantCulture, out double duration))
+            {
+                total += duration;
+            }
+        }
+
+        return total;
     }
 
     private static string? ExtractHighestBandwidthVariantUrl(string[] lines)

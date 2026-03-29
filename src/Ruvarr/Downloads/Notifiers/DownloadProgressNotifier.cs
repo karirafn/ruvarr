@@ -19,6 +19,7 @@ internal sealed class DownloadProgressNotifier(IDomainEventBroadcaster broadcast
     private string? _seasonEpisodeLabel;
     private long _bytesDownloaded;
     private long? _totalSize;
+    private double _totalDurationSeconds;
     private DateTimeOffset? _lastDownloadedAt;
     private int _completedLast7Days;
     private int _failedCount;
@@ -107,7 +108,9 @@ internal sealed class DownloadProgressNotifier(IDomainEventBroadcaster broadcast
         }
     }
 
-    public void StartDownload(string programName, string episodeTitle, string? seasonEpisodeLabel, long? totalSize)
+    public void StartDownload(
+        string programName, string episodeTitle, string? seasonEpisodeLabel,
+        long? totalSize, double? totalDurationSeconds = null)
     {
         lock (_lock)
         {
@@ -116,6 +119,7 @@ internal sealed class DownloadProgressNotifier(IDomainEventBroadcaster broadcast
             _episodeTitle = episodeTitle;
             _seasonEpisodeLabel = seasonEpisodeLabel;
             _totalSize = totalSize;
+            _totalDurationSeconds = totalDurationSeconds ?? 0;
             _bytesDownloaded = 0;
             _bufferIndex = 0;
             _bufferCount = 0;
@@ -130,7 +134,11 @@ internal sealed class DownloadProgressNotifier(IDomainEventBroadcaster broadcast
         {
             _bytesDownloaded = data.BytesDownloaded;
 
-            if (_totalSize is null && data.EstimatedTotalBytes is not null)
+            if (_totalDurationSeconds > 0 && data.Time.TotalSeconds > 1.0)
+            {
+                _totalSize = (long)(data.BytesDownloaded * (_totalDurationSeconds / data.Time.TotalSeconds));
+            }
+            else if (_totalSize is null && data.EstimatedTotalBytes is not null)
             {
                 _totalSize = data.EstimatedTotalBytes;
             }
