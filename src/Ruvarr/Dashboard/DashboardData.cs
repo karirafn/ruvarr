@@ -5,7 +5,8 @@ internal sealed record DashboardData(
     IReadOnlyList<DashboardEpisodeItem> RequiresTranslationEpisodes,
     IReadOnlyList<DashboardEpisodeItem> LikelyDownloadedOnceMatchedEpisodes,
     DashboardStatistics Statistics,
-    DashboardQueueStatus QueueStatus);
+    DashboardQueueStatus QueueStatus,
+    ProgramRefreshCardInfo ProgramRefresh);
 
 internal sealed record DashboardEpisodeItem(
     string ProgramName,
@@ -39,9 +40,18 @@ internal sealed record DownloadStatistics(
 internal sealed record DashboardQueueStatus(
     DashboardQueueInfo TvdbSeriesLookup,
     DashboardQueueInfo TvdbEpisodeLookup,
-    DashboardQueueInfo ProgramRefresh,
     DashboardQueueInfo Download);
 
 internal sealed record DashboardQueueInfo(
     int Depth,
     string? ActiveItem);
+
+internal sealed record ProgramRefreshCardInfo(
+    bool IsRunning,
+    int Depth,
+    int CompletedCount,
+    string? CurrentProgram,
+    DateTimeOffset? LastCompletedAt,
+    TimeSpan? LastRunDuration,
+    int? LastRunTotal,
+    DateTimeOffset? NextFireTimeUtc);

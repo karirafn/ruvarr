@@ -209,15 +209,19 @@ public sealed class DashboardTests : BunitContext
     }
 
     [Fact]
-    public void RendersTaskRows()
+    public void RendersProgramRefreshCard_WhenRunning()
     {
         // Arrange
         DashboardData data = CreateDashboardData(
-            queueStatus: new DashboardQueueStatus(
-                new DashboardQueueInfo(3, "Looking up series"),
-                new DashboardQueueInfo(0, null),
-                new DashboardQueueInfo(1, null),
-                new DashboardQueueInfo(0, null)));
+            programRefresh: new ProgramRefreshCardInfo(
+                IsRunning: true,
+                Depth: 33,
+                CompletedCount: 12,
+                CurrentProgram: "Kastljós",
+                LastCompletedAt: null,
+                LastRunDuration: TimeSpan.FromMinutes(4),
+                LastRunTotal: null,
+                NextFireTimeUtc: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -225,16 +229,42 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IReadOnlyList<IElement> taskRows = cut.FindAll(".task-row");
-        taskRows.Count.ShouldBe(4);
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        section.QuerySelector(".refresh-card__badge--running").ShouldNotBeNull();
+        section.QuerySelector(".refresh-card__count")!.TextContent.ShouldBe("12 / 45");
+        section.QuerySelector(".refresh-card__current")!.TextContent.ShouldBe("Kastljós");
+        IElement progressBar = section.QuerySelector("[role='progressbar']")!;
+        progressBar.GetAttribute("aria-valuenow").ShouldBe("26");
+        progressBar.GetAttribute("aria-valuemin").ShouldBe("0");
+        progressBar.GetAttribute("aria-valuemax").ShouldBe("100");
+    }
 
-        IElement firstRow = taskRows[0];
-        firstRow.QuerySelector(".task-name")!.TextContent.ShouldBe("TVDB Series Lookup");
-        firstRow.QuerySelector(".task-depth")!.TextContent.ShouldBe("3");
-        firstRow.QuerySelector(".task-active")!.TextContent.ShouldContain("Looking up series");
+    [Fact]
+    public void RendersProgramRefreshCard_WhenIdle()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                IsRunning: false,
+                Depth: 0,
+                CompletedCount: 0,
+                CurrentProgram: null,
+                LastCompletedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+                LastRunDuration: TimeSpan.FromSeconds(45),
+                LastRunTotal: 40,
+                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero)));
+        RegisterHandler(data);
+        RegisterBroadcaster();
 
-        IElement secondRow = taskRows[1];
-        secondRow.QuerySelector(".task-idle")!.TextContent.ShouldBe("Idle");
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        section.QuerySelector(".refresh-card__badge--idle").ShouldNotBeNull();
+        IReadOnlyList<IElement> details = cut.FindAll(".refresh-card__detail dd");
+        details.Count.ShouldBe(4);
+        details[2].TextContent.ShouldBe("40");
     }
 
     [Fact]
@@ -272,7 +302,8 @@ public sealed class DashboardTests : BunitContext
         IReadOnlyList<DashboardEpisodeItem>? requiresTranslation = null,
         IReadOnlyList<DashboardEpisodeItem>? likelyDownloaded = null,
         DashboardStatistics? statistics = null,
-        DashboardQueueStatus? queueStatus = null)
+        DashboardQueueStatus? queueStatus = null,
+        ProgramRefreshCardInfo? programRefresh = null)
     {
         return new DashboardData(
             recentlyAdded ?? [],
@@ -285,7 +316,8 @@ public sealed class DashboardTests : BunitContext
             queueStatus ?? new DashboardQueueStatus(
                 new DashboardQueueInfo(0, null),
                 new DashboardQueueInfo(0, null),
-                new DashboardQueueInfo(0, null),
-                new DashboardQueueInfo(0, null)));
+                new DashboardQueueInfo(0, null)),
+            programRefresh ?? new ProgramRefreshCardInfo(
+                false, 0, 0, null, null, null, null, null));
     }
 }
