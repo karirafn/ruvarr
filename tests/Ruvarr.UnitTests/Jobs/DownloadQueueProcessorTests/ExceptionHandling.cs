@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Jobs;
@@ -23,6 +25,8 @@ public sealed class ExceptionHandling
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly DownloadProgressNotifier _progressNotifier = new(
+        Substitute.For<IDomainEventBroadcaster>(), TimeProvider.System);
 
     public ExceptionHandling()
     {
@@ -40,7 +44,7 @@ public sealed class ExceptionHandling
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _settingsStore);
+        dbContext, _sonarr, _ffmpeg, _settingsStore, _progressNotifier);
 
     [Fact]
     public async Task MarksItemFailed_WhenSonarrThrowsDuringPostDownload()

@@ -7,7 +7,6 @@
     <NavLink class="nav-link" href="/programs">Programs</NavLink>
     <details class="nav-group" open="@_queuesOpen">
         <summary class="nav-link" @onclick="ToggleQueues" @onclick:preventDefault>Queues</summary>
-        <NavLink class="nav-link nav-link--nested" href="/download-queue">Download</NavLink>
         <NavLink class="nav-link nav-link--nested" href="/tvdb-series-lookup-queue">TVDB Series Lookup</NavLink>
         <NavLink class="nav-link nav-link--nested" href="/tvdb-episode-lookup-queue">TVDB Episode Lookup</NavLink>
     </details>
@@ -31,7 +30,6 @@
     }
 
     private bool IsQueueRoute() =>
-        Navigation.Uri.Contains("/download-queue") ||
         Navigation.Uri.Contains("/tvdb-series-lookup-queue") ||
         Navigation.Uri.Contains("/tvdb-episode-lookup-queue");
 

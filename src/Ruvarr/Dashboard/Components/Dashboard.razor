@@ -62,28 +62,6 @@ else
         </dl>
     </section>
 
-    <section class="stat-row stat-row--downloads" aria-label="Download Statistics">
-        <h2 class="stat-row__title">Downloads</h2>
-        <dl class="stat-row__grid">
-            <div class="stat-row__card">
-                <dt>Queue</dt>
-                <dd>@_data.Statistics.Downloads.QueueDepth</dd>
-            </div>
-            <div class="stat-row__card">
-                <dt>Downloading</dt>
-                <dd>@_data.Statistics.Downloads.Downloading</dd>
-            </div>
-            <div class="stat-row__card">
-                <dt>Completed (7d)</dt>
-                <dd>@_data.Statistics.Downloads.CompletedLast7Days</dd>
-            </div>
-            <div class="stat-row__card">
-                <dt>Failed</dt>
-                <dd>@_data.Statistics.Downloads.Failed</dd>
-            </div>
-        </dl>
-    </section>
-
     <section class="refresh-card" aria-label="Program Refresh">
         <div class="refresh-card__header">
             <h2 class="dashboard-section-title">Program Refresh</h2>
@@ -142,6 +120,108 @@ else
                 <div class="refresh-card__detail">
                     <dt>Next run</dt>
                     <dd>@FormatNextRun(_data.ProgramRefresh.NextFireTimeUtc)</dd>
+                </div>
+            </dl>
+        }
+    </section>
+
+    <section class="download-card" aria-label="Active Download">
+        <div class="download-card__header">
+            <h2 class="dashboard-section-title">Downloads</h2>
+            @if (_data.Download.IsDownloading)
+            {
+                <span class="download-card__badge download-card__badge--downloading">
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Downloading" />
+                    Downloading
+                </span>
+            }
+            else
+            {
+                <span class="download-card__badge download-card__badge--idle">
+                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    Idle
+                </span>
+            }
+        </div>
+
+        @if (_data.Download.IsDownloading)
+        {
+            <div class="download-card__current-item" aria-live="polite">
+                <span class="download-card__program-name">@_data.Download.ProgramName</span>
+                @if (_data.Download.SeasonEpisodeLabel is not null)
+                {
+                    <span class="download-card__episode-label"><span class="download-card__se-prefix">@_data.Download.SeasonEpisodeLabel</span> · @_data.Download.EpisodeTitle</span>
+                }
+                else
+                {
+                    <span class="download-card__episode-label">@_data.Download.EpisodeTitle</span>
+                }
+            </div>
+
+            @if (_data.Download.TotalSize is not null && _data.Download.TotalSize > 0)
+            {
+                <div class="download-card__progress-track" role="progressbar"
+                     aria-label="Download progress"
+                     aria-valuenow="@((int)GetDownloadPercent(_data.Download))"
+                     aria-valuemin="0" aria-valuemax="100">
+                    <div class="download-card__progress-bar" style="width:@(GetDownloadPercent(_data.Download).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                </div>
+            }
+            else
+            {
+                <div class="download-card__progress-track download-card__progress-track--indeterminate" role="progressbar"
+                     aria-label="Download in progress (size unknown)">
+                    <div class="download-card__progress-bar download-card__progress-bar--indeterminate"></div>
+                </div>
+            }
+
+            <div class="download-card__meta">
+                @if (_data.Download.TotalSize is not null && _data.Download.BytesDownloaded is not null)
+                {
+                    <span>@FormatBytes(_data.Download.BytesDownloaded.Value) / @FormatBytes(_data.Download.TotalSize.Value)</span>
+                }
+                @if (_data.Download.RateBytesPerSecond is not null)
+                {
+                    <span>@FormatBytes((long)_data.Download.RateBytesPerSecond.Value)/s</span>
+                }
+                @if (_data.Download.EstimatedRemaining is not null)
+                {
+                    <span>~@FormatDuration(_data.Download.EstimatedRemaining.Value) remaining</span>
+                }
+                @if (_data.Download.PendingCount > 0)
+                {
+                    <span>@_data.Download.PendingCount in queue</span>
+                }
+            </div>
+
+            @if (_data.Download.PendingItems.Count > 0)
+            {
+                <ul class="download-card__pending-list" aria-label="Pending downloads">
+                    @foreach (DownloadCardPendingItem pending in _data.Download.PendingItems)
+                    {
+                        <li>@pending.ProgramName · @pending.EpisodeTitle</li>
+                    }
+                </ul>
+            }
+        }
+        else
+        {
+            <dl class="download-card__details">
+                <div class="download-card__detail">
+                    <dt>Last Downloaded</dt>
+                    <dd>@FormatTimestamp(_data.Download.LastDownloadedAt)</dd>
+                </div>
+                <div class="download-card__detail">
+                    <dt>Completed (7d)</dt>
+                    <dd>@_data.Download.CompletedLast7Days</dd>
+                </div>
+                <div class="download-card__detail">
+                    <dt>Failed</dt>
+                    <dd>@_data.Download.FailedCount</dd>
+                </div>
+                <div class="download-card__detail">
+                    <dt>Queue</dt>
+                    <dd>@_data.Download.QueueDepth</dd>
                 </div>
             </dl>
         }
@@ -254,6 +334,7 @@ else
         _ = WatchAsync(Broadcaster.Subscribe<EpisodeMatchedEvent>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<DownloadStartedEvent>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<DownloadCompletedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadProgressUpdatedEvent>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>>(_cts.Token));
@@ -344,6 +425,40 @@ else
         }
 
         return $"{(int)duration.TotalSeconds}s";
+    }
+
+    private static double GetDownloadPercent(DownloadCardInfo download)
+    {
+        if (download.TotalSize is null or 0 || download.BytesDownloaded is null)
+        {
+            return 0;
+        }
+
+        return (double)download.BytesDownloaded.Value / download.TotalSize.Value * 100;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const double Gigabyte = 1024.0 * 1024 * 1024;
+        const double Megabyte = 1024.0 * 1024;
+        const double Kilobyte = 1024.0;
+
+        if (bytes >= Gigabyte)
+        {
+            return $"{bytes / Gigabyte:F1} GB";
+        }
+
+        if (bytes >= Megabyte)
+        {
+            return $"{bytes / Megabyte:F1} MB";
+        }
+
+        if (bytes >= Kilobyte)
+        {
+            return $"{bytes / Kilobyte:F1} KB";
+        }
+
+        return $"{bytes} B";
     }
 
     private static string FormatTimestamp(DateTimeOffset? ts) =>

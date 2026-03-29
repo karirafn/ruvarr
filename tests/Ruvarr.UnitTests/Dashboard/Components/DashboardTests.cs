@@ -36,7 +36,7 @@ public sealed class DashboardTests : BunitContext
     }
 
     [Fact]
-    public void RendersThreeStatRows()
+    public void RendersTwoStatRows()
     {
         // Arrange
         DashboardData data = CreateDashboardData();
@@ -48,10 +48,9 @@ public sealed class DashboardTests : BunitContext
 
         // Assert
         IReadOnlyList<IElement> rows = cut.FindAll("section.stat-row");
-        rows.Count.ShouldBe(3);
+        rows.Count.ShouldBe(2);
         rows[0].ClassList.ShouldContain("stat-row--programs");
         rows[1].ClassList.ShouldContain("stat-row--episodes");
-        rows[2].ClassList.ShouldContain("stat-row--downloads");
     }
 
     [Fact]
@@ -99,10 +98,25 @@ public sealed class DashboardTests : BunitContext
     }
 
     [Fact]
-    public void RendersDownloadStatistics()
+    public void RendersDownloadCard_WhenIdle()
     {
         // Arrange
-        DashboardData data = CreateDashboardData();
+        DownloadCardInfo download = new(
+            IsDownloading: false,
+            ProgramName: null,
+            EpisodeTitle: null,
+            SeasonEpisodeLabel: null,
+            PendingCount: 0,
+            BytesDownloaded: null,
+            TotalSize: null,
+            RateBytesPerSecond: null,
+            EstimatedRemaining: null,
+            PendingItems: [],
+            LastDownloadedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+            CompletedLast7Days: 5,
+            FailedCount: 2,
+            QueueDepth: 3);
+        DashboardData data = CreateDashboardData(download: download);
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -110,14 +124,111 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IElement section = cut.Find("section.stat-row--downloads");
-        section.QuerySelector("h2")!.TextContent.ShouldBe("Downloads");
-        IReadOnlyList<IElement> values = cut.FindAll(".stat-row--downloads .stat-row__card dd");
-        values.Count.ShouldBe(4);
-        values[0].TextContent.ShouldBe("2");
-        values[1].TextContent.ShouldBe("1");
-        values[2].TextContent.ShouldBe("7");
-        values[3].TextContent.ShouldBe("0");
+        IElement section = cut.Find("section.download-card");
+        section.ShouldNotBeNull();
+        section.QuerySelector(".download-card__badge--idle").ShouldNotBeNull();
+        IReadOnlyList<IElement> details = cut.FindAll(".download-card__detail dd");
+        details.Count.ShouldBe(4);
+        details[1].TextContent.ShouldBe("5");
+        details[2].TextContent.ShouldBe("2");
+        details[3].TextContent.ShouldBe("3");
+    }
+
+    [Fact]
+    public void RendersDownloadCard_WhenDownloading()
+    {
+        // Arrange
+        DownloadCardInfo download = new(
+            IsDownloading: true,
+            ProgramName: "Kastljós",
+            EpisodeTitle: "Episode 5",
+            SeasonEpisodeLabel: "S01E05",
+            PendingCount: 2,
+            BytesDownloaded: 5 * 1024 * 1024,
+            TotalSize: null,
+            RateBytesPerSecond: 1024 * 1024,
+            EstimatedRemaining: null,
+            PendingItems: [new("Show B", "Episode 2")],
+            LastDownloadedAt: null,
+            CompletedLast7Days: 0,
+            FailedCount: 0,
+            QueueDepth: 3);
+        DashboardData data = CreateDashboardData(download: download);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section.download-card");
+        section.ShouldNotBeNull();
+        section.QuerySelector(".download-card__badge--downloading").ShouldNotBeNull();
+        section.QuerySelector(".download-card__program-name")!.TextContent.ShouldBe("Kastljós");
+    }
+
+    [Fact]
+    public void RendersDownloadCard_IndeterminateProgress_WhenTotalSizeIsNull()
+    {
+        // Arrange
+        DownloadCardInfo download = new(
+            IsDownloading: true,
+            ProgramName: "Show A",
+            EpisodeTitle: "Episode 1",
+            SeasonEpisodeLabel: null,
+            PendingCount: 0,
+            BytesDownloaded: 1024,
+            TotalSize: null,
+            RateBytesPerSecond: null,
+            EstimatedRemaining: null,
+            PendingItems: [],
+            LastDownloadedAt: null,
+            CompletedLast7Days: 0,
+            FailedCount: 0,
+            QueueDepth: 1);
+        DashboardData data = CreateDashboardData(download: download);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement progressBar = cut.Find(".download-card__progress-track[role='progressbar']");
+        progressBar.GetAttribute("aria-label").ShouldBe("Download in progress (size unknown)");
+        progressBar.HasAttribute("aria-valuenow").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RendersDownloadCard_NeverState_WhenLastDownloadedAtIsNull()
+    {
+        // Arrange
+        DownloadCardInfo download = new(
+            IsDownloading: false,
+            ProgramName: null,
+            EpisodeTitle: null,
+            SeasonEpisodeLabel: null,
+            PendingCount: 0,
+            BytesDownloaded: null,
+            TotalSize: null,
+            RateBytesPerSecond: null,
+            EstimatedRemaining: null,
+            PendingItems: [],
+            LastDownloadedAt: null,
+            CompletedLast7Days: 0,
+            FailedCount: 0,
+            QueueDepth: 0);
+        DashboardData data = CreateDashboardData(download: download);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        cut.Find("section.download-card").ShouldNotBeNull();
+        IReadOnlyList<IElement> details = cut.FindAll(".download-card__detail dd");
+        details[0].TextContent.ShouldBe("Never");
     }
 
     [Fact]
@@ -133,9 +244,9 @@ public sealed class DashboardTests : BunitContext
 
         // Assert
         IReadOnlyList<IElement> dls = cut.FindAll("dl.stat-row__grid");
-        dls.Count.ShouldBe(3);
+        dls.Count.ShouldBe(2);
         IReadOnlyList<IElement> allCards = cut.FindAll(".stat-row__card");
-        allCards.Count.ShouldBe(12);
+        allCards.Count.ShouldBe(8);
     }
 
     [Fact]
@@ -303,7 +414,8 @@ public sealed class DashboardTests : BunitContext
         IReadOnlyList<DashboardEpisodeItem>? likelyDownloaded = null,
         DashboardStatistics? statistics = null,
         DashboardQueueStatus? queueStatus = null,
-        ProgramRefreshCardInfo? programRefresh = null)
+        ProgramRefreshCardInfo? programRefresh = null,
+        DownloadCardInfo? download = null)
     {
         return new DashboardData(
             recentlyAdded ?? [],
@@ -311,13 +423,29 @@ public sealed class DashboardTests : BunitContext
             likelyDownloaded ?? [],
             statistics ?? new DashboardStatistics(
                 new ProgramStatistics(10, 4, 6, 1),
-                new EpisodeStatistics(50, 30, 5, 3),
-                new DownloadStatistics(2, 1, 7, 0)),
+                new EpisodeStatistics(50, 30, 5, 3)),
             queueStatus ?? new DashboardQueueStatus(
                 new DashboardQueueInfo(0, null),
                 new DashboardQueueInfo(0, null),
                 new DashboardQueueInfo(0, null)),
             programRefresh ?? new ProgramRefreshCardInfo(
-                false, 0, 0, null, null, null, null, null));
+                false, 0, 0, null, null, null, null, null),
+            download ?? DefaultDownloadCard);
     }
+
+    private static readonly DownloadCardInfo DefaultDownloadCard = new(
+        IsDownloading: false,
+        ProgramName: null,
+        EpisodeTitle: null,
+        SeasonEpisodeLabel: null,
+        PendingCount: 0,
+        BytesDownloaded: null,
+        TotalSize: null,
+        RateBytesPerSecond: null,
+        EstimatedRemaining: null,
+        PendingItems: [],
+        LastDownloadedAt: null,
+        CompletedLast7Days: 0,
+        FailedCount: 0,
+        QueueDepth: 0);
 }

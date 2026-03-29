@@ -6,7 +6,8 @@ internal sealed record DashboardData(
     IReadOnlyList<DashboardEpisodeItem> LikelyDownloadedOnceMatchedEpisodes,
     DashboardStatistics Statistics,
     DashboardQueueStatus QueueStatus,
-    ProgramRefreshCardInfo ProgramRefresh);
+    ProgramRefreshCardInfo ProgramRefresh,
+    DownloadCardInfo Download);
 
 internal sealed record DashboardEpisodeItem(
     string ProgramName,
@@ -16,8 +17,7 @@ internal sealed record DashboardEpisodeItem(
 
 internal sealed record DashboardStatistics(
     ProgramStatistics Programs,
-    EpisodeStatistics Episodes,
-    DownloadStatistics Downloads);
+    EpisodeStatistics Episodes);
 
 internal sealed record ProgramStatistics(
     int Total,
@@ -30,12 +30,6 @@ internal sealed record EpisodeStatistics(
     int Matched,
     int Unmatched,
     int WithoutTranslation);
-
-internal sealed record DownloadStatistics(
-    int QueueDepth,
-    int Downloading,
-    int CompletedLast7Days,
-    int Failed);
 
 internal sealed record DashboardQueueStatus(
     DashboardQueueInfo TvdbSeriesLookup,
@@ -55,3 +49,21 @@ internal sealed record ProgramRefreshCardInfo(
     TimeSpan? LastRunDuration,
     int? LastRunTotal,
     DateTimeOffset? NextFireTimeUtc);
+
+internal sealed record DownloadCardInfo(
+    bool IsDownloading,
+    string? ProgramName,
+    string? EpisodeTitle,
+    string? SeasonEpisodeLabel,
+    int PendingCount,
+    long? BytesDownloaded,
+    long? TotalSize,
+    double? RateBytesPerSecond,
+    TimeSpan? EstimatedRemaining,
+    IReadOnlyList<DownloadCardPendingItem> PendingItems,
+    DateTimeOffset? LastDownloadedAt,
+    int CompletedLast7Days,
+    int FailedCount,
+    int QueueDepth);
+
+internal sealed record DownloadCardPendingItem(string ProgramName, string EpisodeTitle);

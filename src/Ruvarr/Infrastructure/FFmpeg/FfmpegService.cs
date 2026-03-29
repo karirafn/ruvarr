@@ -6,7 +6,7 @@ internal sealed class FfmpegService(IConfiguration configuration) : IFfmpegServi
 {
     private readonly string _ffmpegPath = configuration.GetValue("Ruvarr:FfmpegPath", "ffmpeg")!;
 
-    public async Task DownloadAsync(Uri uri, string filepath, string title)
+    public async Task DownloadAsync(Uri uri, string filepath, string title, IProgress<FfmpegProgressData>? progress = null)
     {
         List<string> argumentList = new FfmpegArgumentsBuilder()
             .WithInput(uri)
@@ -35,6 +35,20 @@ internal sealed class FfmpegService(IConfiguration configuration) : IFfmpegServi
         }
 
         using Process process = new() { StartInfo = psi };
+
+        process.ErrorDataReceived += (_, e) =>
+        {
+            if (progress is null || e.Data is null)
+            {
+                return;
+            }
+
+            FfmpegProgressData? data = FfmpegStderrParser.TryParse(e.Data);
+            if (data is not null)
+            {
+                progress.Report(data);
+            }
+        };
 
         process.Start();
         process.BeginOutputReadLine();

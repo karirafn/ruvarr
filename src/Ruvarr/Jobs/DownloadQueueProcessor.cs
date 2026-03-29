@@ -1,13 +1,18 @@
 ﻿
+using System.Globalization;
+using System.Text;
+
 using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
 
 namespace Ruvarr.Jobs;
@@ -18,7 +23,8 @@ internal class DownloadQueueProcessor(
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
     IFfmpegService ffmpeg,
-    ISettingsStore settingsStore) : IJob
+    ISettingsStore settingsStore,
+    DownloadProgressNotifier progressNotifier) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -83,9 +89,32 @@ internal class DownloadQueueProcessor(
 
         string filename = Path.GetFileName(filepath);
 
-        await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title);
+        string? seasonEpisodeLabel = BuildSeasonEpisodeLabel(item.Episode);
+        progressNotifier.StartDownload(
+            item.Episode.Program.Name,
+            item.Episode.Title,
+            seasonEpisodeLabel,
+            totalSize: null);
+
+        Progress<FfmpegProgressData> progress = new(data => progressNotifier.ReportProgress(data));
+
+        try
+        {
+            await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title, progress);
+        }
+#pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            logger.LogError(ex, "FFmpeg download failed for {Episode}", item.Episode.ToString());
+            item.MarkFailed();
+            progressNotifier.FailDownload();
+            await dbContext.SaveChangesAsync();
+            return;
+        }
 
         item.MarkDownloaded();
+        progressNotifier.CompleteDownload();
 
         await dbContext.SaveChangesAsync();
 
@@ -132,5 +161,26 @@ internal class DownloadQueueProcessor(
             item.MarkFailed();
             await dbContext.SaveChangesAsync();
         }
+    }
+
+    private static string? BuildSeasonEpisodeLabel(RuvEpisode episode)
+    {
+        if (episode.TvdbEpisodes.Count == 0)
+        {
+            return null;
+        }
+
+        List<TvdbEpisode> ordered = [.. episode.TvdbEpisodes
+            .OrderBy(e => e.SeasonNumber)
+            .ThenBy(e => e.EpisodeNumber)];
+
+        StringBuilder sb = new();
+        sb.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}", ordered[0].SeasonNumber);
+        foreach (TvdbEpisode ep in ordered)
+        {
+            sb.AppendFormat(CultureInfo.InvariantCulture, "E{0:D2}", ep.EpisodeNumber);
+        }
+
+        return sb.ToString();
     }
 }

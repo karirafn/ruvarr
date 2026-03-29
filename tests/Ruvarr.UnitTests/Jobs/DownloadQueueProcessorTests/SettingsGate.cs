@@ -5,8 +5,10 @@ using NSubstitute;
 
 using Quartz;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Jobs;
@@ -25,6 +27,8 @@ public sealed class SettingsGate
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
+    private readonly DownloadProgressNotifier _progressNotifier = new(
+        Substitute.For<IDomainEventBroadcaster>(), TimeProvider.System);
 
     public SettingsGate()
     {
@@ -40,7 +44,7 @@ public sealed class SettingsGate
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _settingsStore);
+        dbContext, _sonarr, _ffmpeg, _settingsStore, _progressNotifier);
 
     private static async Task<DownloadQueueItem> SeedPendingItemAsync(RuvarrDbContext dbContext)
     {
