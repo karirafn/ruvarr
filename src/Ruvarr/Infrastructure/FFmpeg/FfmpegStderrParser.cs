@@ -38,7 +38,8 @@ internal static partial class FfmpegStderrParser
 
         double durationSeconds = (hours * 3600) + (minutes * 60) + seconds + (centiseconds / 100.0);
 
-        return (long)(durationSeconds * bitrateKbps * 1000 / 8);
+        long estimated = (long)(durationSeconds * bitrateKbps * 1000 / 8);
+        return estimated > 0 ? estimated : null;
     }
 
     public static FfmpegProgressData? TryParse(string line)

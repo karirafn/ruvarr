@@ -170,6 +170,19 @@ public sealed class FfmpegStderrParserTests
     }
 
     [Fact]
+    public void TryParseDuration_ReturnsNull_WhenBitrateIsZero()
+    {
+        // Arrange
+        const string line = "  Duration: 00:01:00.00, start: 0.000000, bitrate: 0 kb/s";
+
+        // Act
+        long? result = FfmpegStderrParser.TryParseDuration(line);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
     public void TryParseDuration_HandlesLongerDuration()
     {
         // Arrange
