@@ -84,28 +84,66 @@ else
         </dl>
     </section>
 
-    <section class="dashboard-section" aria-label="Currently Running Tasks">
-        <h2 class="dashboard-section-title">Currently Running Tasks</h2>
-        <div class="task-list">
-            @foreach ((string taskName, DashboardQueueInfo taskInfo) in _taskRows)
+    <section class="refresh-card" aria-label="Program Refresh">
+        <div class="refresh-card__header">
+            <h2 class="dashboard-section-title">Program Refresh</h2>
+            @if (_data.ProgramRefresh.IsRunning)
             {
-                <div class="task-row">
-                    <span class="task-name">@taskName</span>
-                    <span class="task-depth">@taskInfo.Depth</span>
-                    @if (taskInfo.ActiveItem is not null)
-                    {
-                        <span class="task-active">
-                            <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
-                            @taskInfo.ActiveItem
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="task-idle">Idle</span>
-                    }
-                </div>
+                <span class="refresh-card__badge refresh-card__badge--running">
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Running" />
+                    Running
+                </span>
+            }
+            else
+            {
+                <span class="refresh-card__badge refresh-card__badge--idle">
+                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    Idle
+                </span>
             }
         </div>
+
+        @if (_data.ProgramRefresh.IsRunning)
+        {
+            <div class="refresh-card__progress-track" role="progressbar"
+                 aria-valuenow="@((int)GetProgressPercent(_data.ProgramRefresh))"
+                 aria-valuemin="0" aria-valuemax="100">
+                <div class="refresh-card__progress-bar" style="width:@(GetProgressPercent(_data.ProgramRefresh).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+            </div>
+            <div class="refresh-card__running-details">
+                <span class="refresh-card__count">@_data.ProgramRefresh.CompletedCount / @(_data.ProgramRefresh.CompletedCount + _data.ProgramRefresh.Depth)</span>
+                @if (_data.ProgramRefresh.CurrentProgram is not null)
+                {
+                    <span class="refresh-card__current">@_data.ProgramRefresh.CurrentProgram</span>
+                }
+                @{ TimeSpan? eta = GetEta(_data.ProgramRefresh); }
+                @if (eta is not null)
+                {
+                    <span class="refresh-card__eta">ETA @FormatDuration(eta.Value)</span>
+                }
+            </div>
+        }
+        else
+        {
+            <dl class="refresh-card__details">
+                <div class="refresh-card__detail">
+                    <dt>Last completed</dt>
+                    <dd>@FormatTimestamp(_data.ProgramRefresh.LastCompletedAt)</dd>
+                </div>
+                <div class="refresh-card__detail">
+                    <dt>Duration</dt>
+                    <dd>@(_data.ProgramRefresh.LastRunDuration is not null ? FormatDuration(_data.ProgramRefresh.LastRunDuration.Value) : "—")</dd>
+                </div>
+                <div class="refresh-card__detail">
+                    <dt>Programs</dt>
+                    <dd>@(_data.ProgramRefresh.LastRunTotal?.ToString() ?? "—")</dd>
+                </div>
+                <div class="refresh-card__detail">
+                    <dt>Next run</dt>
+                    <dd>@FormatNextRun(_data.ProgramRefresh.NextFireTimeUtc)</dd>
+                </div>
+            </dl>
+        }
     </section>
 
     <section class="dashboard-section" aria-label="Recently Added Episodes">
@@ -206,16 +244,6 @@ else
     private readonly CancellationTokenSource _cts = new();
     private CancellationTokenSource? _debounceTokenSource;
 
-    private IReadOnlyList<(string Name, DashboardQueueInfo Info)> _taskRows =>
-        _data is null
-            ? []
-            : [
-                ("TVDB Series Lookup", _data.QueueStatus.TvdbSeriesLookup),
-                ("TVDB Episode Lookup", _data.QueueStatus.TvdbEpisodeLookup),
-                ("Program Refresh", _data.QueueStatus.ProgramRefresh),
-                ("Download", _data.QueueStatus.Download),
-            ];
-
     protected override Task OnInitializedAsync()
     {
         _ = LoadDataAsync();
@@ -278,4 +306,48 @@ else
         await _cts.CancelAsync();
         _cts.Dispose();
     }
+
+    private static double GetProgressPercent(ProgramRefreshCardInfo info)
+    {
+        int total = info.CompletedCount + info.Depth;
+        return total == 0 ? 0 : (double)info.CompletedCount / total * 100;
+    }
+
+    private static TimeSpan? GetEta(ProgramRefreshCardInfo info)
+    {
+        if (!info.IsRunning || info.LastRunDuration is null)
+        {
+            return null;
+        }
+
+        int total = info.CompletedCount + info.Depth;
+        if (total == 0)
+        {
+            return null;
+        }
+
+        double remaining = 1.0 - (double)info.CompletedCount / total;
+        return info.LastRunDuration.Value * remaining;
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}h {duration.Minutes:D2}m";
+        }
+
+        if (duration.TotalMinutes >= 1)
+        {
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds:D2}s";
+        }
+
+        return $"{(int)duration.TotalSeconds}s";
+    }
+
+    private static string FormatTimestamp(DateTimeOffset? ts) =>
+        ts?.LocalDateTime.ToString("yyyy-MM-dd HH:mm") ?? "Never";
+
+    private static string FormatNextRun(DateTimeOffset? ts) =>
+        ts?.LocalDateTime.ToString("yyyy-MM-dd HH:mm") ?? "\u2014";
 }

@@ -413,11 +413,29 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         result.QueueStatus.ShouldNotBeNull();
         result.QueueStatus.TvdbSeriesLookup.ShouldNotBeNull();
         result.QueueStatus.TvdbEpisodeLookup.ShouldNotBeNull();
-        result.QueueStatus.ProgramRefresh.ShouldNotBeNull();
         result.QueueStatus.Download.ShouldNotBeNull();
         result.QueueStatus.TvdbSeriesLookup.Depth.ShouldBeGreaterThanOrEqualTo(0);
         result.QueueStatus.TvdbEpisodeLookup.Depth.ShouldBeGreaterThanOrEqualTo(0);
-        result.QueueStatus.ProgramRefresh.Depth.ShouldBeGreaterThanOrEqualTo(0);
         result.QueueStatus.Download.Depth.ShouldBeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public async Task ReturnsProgramRefreshCardInfo()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.ProgramRefresh.ShouldNotBeNull();
+        result.ProgramRefresh.IsRunning.ShouldBeFalse();
+        result.ProgramRefresh.Depth.ShouldBe(0);
+        result.ProgramRefresh.CompletedCount.ShouldBe(0);
+        result.ProgramRefresh.CurrentProgram.ShouldBeNull();
     }
 }

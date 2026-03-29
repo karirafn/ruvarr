@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
@@ -14,7 +17,8 @@ internal sealed class GetDashboardHandler(
     IServiceScopeFactory serviceScopeFactory,
     TvdbSeriesLookupNotifier tvdbSeriesLookupNotifier,
     TvdbEpisodeLookupNotifier tvdbEpisodeLookupNotifier,
-    ProgramRefreshNotifier programRefreshNotifier)
+    ProgramRefreshNotifier programRefreshNotifier,
+    ISchedulerFactory schedulerFactory)
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int EpisodeTableLimit = 10;
@@ -30,14 +34,18 @@ internal sealed class GetDashboardHandler(
 
         await Task.WhenAll(recentlyAddedTask, requiresTranslationTask, likelyDownloadedTask, statisticsTask);
 
-        DashboardQueueStatus queueStatus = await GetQueueStatusAsync(cancellationToken);
+        Task<DashboardQueueStatus> queueStatusTask = GetQueueStatusAsync(cancellationToken);
+        Task<ProgramRefreshCardInfo> programRefreshTask = GetProgramRefreshCardInfoAsync(cancellationToken);
+
+        await Task.WhenAll(queueStatusTask, programRefreshTask);
 
         return new DashboardData(
             await recentlyAddedTask,
             await requiresTranslationTask,
             await likelyDownloadedTask,
             await statisticsTask,
-            queueStatus);
+            await queueStatusTask,
+            await programRefreshTask);
     }
 
     private async Task<IReadOnlyList<DashboardEpisodeItem>> GetRecentlyAddedEpisodesAsync(CancellationToken cancellationToken)
@@ -185,8 +193,37 @@ internal sealed class GetDashboardHandler(
         return new DashboardQueueStatus(
             ToQueueInfo(tvdbSeriesLookupNotifier.Items),
             ToQueueInfo(tvdbEpisodeLookupNotifier.Items),
-            ToQueueInfo(programRefreshNotifier.Items),
             await GetDownloadQueueInfoAsync(cancellationToken));
+    }
+
+    private async Task<ProgramRefreshCardInfo> GetProgramRefreshCardInfoAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<ProgramRefreshQueueItemSummary> items = programRefreshNotifier.Items;
+        bool isRunning = items.Count > 0;
+        int depth = items.Count;
+
+        DateTimeOffset? nextFireTimeUtc = null;
+        try
+        {
+            IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+            IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(
+                new JobKey(nameof(RuvProgramRefreshJob)), cancellationToken);
+            nextFireTimeUtc = triggers.FirstOrDefault()?.GetNextFireTimeUtc();
+        }
+        catch (SchedulerException)
+        {
+            // Scheduler not started or job not found
+        }
+
+        return new ProgramRefreshCardInfo(
+            isRunning,
+            depth,
+            programRefreshNotifier.CompletedCount,
+            programRefreshNotifier.CurrentProgram,
+            programRefreshNotifier.LastCompletedAt,
+            programRefreshNotifier.LastRunDuration,
+            programRefreshNotifier.LastRunTotal,
+            nextFireTimeUtc);
     }
 
     private static DashboardQueueInfo ToQueueInfo<T>(IReadOnlyList<T> items) where T : IQueueItemSummary
