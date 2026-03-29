@@ -5,6 +5,7 @@ using Quartz;
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
@@ -18,12 +19,12 @@ internal sealed class GetDashboardHandler(
     TvdbSeriesLookupNotifier tvdbSeriesLookupNotifier,
     TvdbEpisodeLookupNotifier tvdbEpisodeLookupNotifier,
     ProgramRefreshNotifier programRefreshNotifier,
+    DownloadProgressNotifier downloadProgressNotifier,
     ISchedulerFactory schedulerFactory)
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int EpisodeTableLimit = 10;
     private const int LikelyDownloadedCandidateLimit = 50;
-    private const int SevenDays = 7;
 
     public async Task<DashboardData> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
@@ -36,8 +37,9 @@ internal sealed class GetDashboardHandler(
 
         Task<DashboardQueueStatus> queueStatusTask = GetQueueStatusAsync(cancellationToken);
         Task<ProgramRefreshCardInfo> programRefreshTask = GetProgramRefreshCardInfoAsync(cancellationToken);
+        Task<DownloadCardInfo> downloadCardTask = GetDownloadCardInfoAsync(cancellationToken);
 
-        await Task.WhenAll(queueStatusTask, programRefreshTask);
+        await Task.WhenAll(queueStatusTask, programRefreshTask, downloadCardTask);
 
         return new DashboardData(
             await recentlyAddedTask,
@@ -45,7 +47,8 @@ internal sealed class GetDashboardHandler(
             await likelyDownloadedTask,
             await statisticsTask,
             await queueStatusTask,
-            await programRefreshTask);
+            await programRefreshTask,
+            await downloadCardTask);
     }
 
     private async Task<IReadOnlyList<DashboardEpisodeItem>> GetRecentlyAddedEpisodesAsync(CancellationToken cancellationToken)
@@ -109,11 +112,10 @@ internal sealed class GetDashboardHandler(
     {
         Task<ProgramStatistics> programsTask = GetProgramStatisticsAsync(cancellationToken);
         Task<EpisodeStatistics> episodesTask = GetEpisodeStatisticsAsync(cancellationToken);
-        Task<DownloadStatistics> downloadsTask = GetDownloadStatisticsAsync(cancellationToken);
 
-        await Task.WhenAll(programsTask, episodesTask, downloadsTask);
+        await Task.WhenAll(programsTask, episodesTask);
 
-        return new DashboardStatistics(await programsTask, await episodesTask, await downloadsTask);
+        return new DashboardStatistics(await programsTask, await episodesTask);
     }
 
     private async Task<ProgramStatistics> GetProgramStatisticsAsync(CancellationToken cancellationToken)
@@ -163,29 +165,40 @@ internal sealed class GetDashboardHandler(
         return new EpisodeStatistics(total, matched, unmatched, withoutTranslation);
     }
 
-    private async Task<DownloadStatistics> GetDownloadStatisticsAsync(CancellationToken cancellationToken)
+    private async Task<DownloadCardInfo> GetDownloadCardInfoAsync(CancellationToken cancellationToken)
     {
         await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        int pendingCount = await dbContext.Set<DownloadQueueItem>()
+            .Where(x => x.Status == DownloadQueueStatus.Pending)
+            .CountAsync(cancellationToken);
 
         int queueDepth = await dbContext.Set<DownloadQueueItem>()
             .Where(x => x.Status == DownloadQueueStatus.Pending || x.Status == DownloadQueueStatus.Downloading)
             .CountAsync(cancellationToken);
 
-        int downloading = await dbContext.Set<DownloadQueueItem>()
-            .Where(x => x.Status == DownloadQueueStatus.Downloading)
-            .CountAsync(cancellationToken);
+        List<DownloadCardPendingItem> pendingItems = await dbContext.Set<DownloadQueueItem>()
+            .Where(x => x.Status == DownloadQueueStatus.Pending)
+            .OrderBy(x => x.Created)
+            .Select(x => new DownloadCardPendingItem(x.Episode.Program.Name, x.Episode.Title))
+            .ToListAsync(cancellationToken);
 
-        DateTime sevenDaysAgo = DateTime.UtcNow.AddDays(-SevenDays);
-        int completedLast7Days = await dbContext.Set<DownloadQueueItem>()
-            .Where(x => x.Status == DownloadQueueStatus.Complete && x.Downloaded >= sevenDaysAgo)
-            .CountAsync(cancellationToken);
-
-        int failed = await dbContext.Set<DownloadQueueItem>()
-            .Where(x => x.Status == DownloadQueueStatus.Failed)
-            .CountAsync(cancellationToken);
-
-        return new DownloadStatistics(queueDepth, downloading, completedLast7Days, failed);
+        return new DownloadCardInfo(
+            downloadProgressNotifier.IsDownloading,
+            downloadProgressNotifier.ProgramName,
+            downloadProgressNotifier.EpisodeTitle,
+            downloadProgressNotifier.SeasonEpisodeLabel,
+            pendingCount,
+            downloadProgressNotifier.BytesDownloaded,
+            downloadProgressNotifier.TotalSize,
+            downloadProgressNotifier.RateBytesPerSecond,
+            downloadProgressNotifier.EstimatedRemaining,
+            pendingItems,
+            downloadProgressNotifier.LastDownloadedAt,
+            downloadProgressNotifier.CompletedLast7Days,
+            downloadProgressNotifier.FailedCount,
+            queueDepth);
     }
 
     private async Task<DashboardQueueStatus> GetQueueStatusAsync(CancellationToken cancellationToken)

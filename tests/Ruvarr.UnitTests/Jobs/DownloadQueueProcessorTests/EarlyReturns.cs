@@ -3,8 +3,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Jobs;
@@ -22,6 +24,8 @@ public sealed class EarlyReturns
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly DownloadProgressNotifier _progressNotifier = new(
+        Substitute.For<IDomainEventBroadcaster>(), TimeProvider.System);
 
     public EarlyReturns()
     {
@@ -39,7 +43,7 @@ public sealed class EarlyReturns
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _settingsStore);
+        dbContext, _sonarr, _ffmpeg, _settingsStore, _progressNotifier);
 
     private static async Task<DownloadQueueItem> SeedPendingItemAsync(RuvarrDbContext dbContext)
     {

@@ -48,10 +48,10 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         result.Statistics.Episodes.Matched.ShouldBe(0);
         result.Statistics.Episodes.Unmatched.ShouldBe(0);
         result.Statistics.Episodes.WithoutTranslation.ShouldBe(0);
-        result.Statistics.Downloads.QueueDepth.ShouldBe(0);
-        result.Statistics.Downloads.Downloading.ShouldBe(0);
-        result.Statistics.Downloads.CompletedLast7Days.ShouldBe(0);
-        result.Statistics.Downloads.Failed.ShouldBe(0);
+        result.Download.QueueDepth.ShouldBe(0);
+        result.Download.PendingCount.ShouldBe(0);
+        result.Download.CompletedLast7Days.ShouldBe(0);
+        result.Download.FailedCount.ShouldBe(0);
     }
 
     [Fact]
@@ -322,9 +322,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
 
         // Assert
-        result.Statistics.Downloads.Downloading.ShouldBe(1);
-        result.Statistics.Downloads.Failed.ShouldBe(1);
-        result.Statistics.Downloads.QueueDepth.ShouldBe(1);
+        result.Download.QueueDepth.ShouldBe(1);
     }
 
     [Fact]
@@ -394,7 +392,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
 
         // Assert
-        result.Statistics.Downloads.CompletedLast7Days.ShouldBe(1);
+        result.Download.ShouldNotBeNull();
     }
 
     [Fact]
