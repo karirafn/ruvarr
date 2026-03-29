@@ -40,10 +40,10 @@ public sealed class RuvStreamInspectorTests
     }
 
     [Fact]
-    public async Task ReturnsNull_WhenPlaylistIsMaster()
+    public async Task FollowsLastVariant_WhenPlaylistIsMasterWithRelativeUrls()
     {
         // Arrange
-        string m3u8 = """
+        string masterPlaylist = """
             #EXTM3U
             #EXT-X-STREAM-INF:BANDWIDTH=800000
             low/index.m3u8
@@ -51,8 +51,82 @@ public sealed class RuvStreamInspectorTests
             high/index.m3u8
             """;
 
-        (RuvStreamInspector sut, IDisposable disposables) = CreateInspector(m3u8, SegmentContentLength);
+        string mediaPlaylist = """
+            #EXTM3U
+            #EXT-X-TARGETDURATION:10
+            #EXTINF:10.0,
+            segment001.ts
+            #EXTINF:10.0,
+            segment002.ts
+            #EXTINF:10.0,
+            segment003.ts
+            #EXTINF:10.0,
+            segment004.ts
+            #EXT-X-ENDLIST
+            """;
+
+        Dictionary<string, HttpResponseMessage> getResponses = new()
+        {
+            [PlaylistUri.AbsoluteUri] = new(HttpStatusCode.OK) { Content = new StringContent(masterPlaylist) },
+            ["https://ruv.is/stream/high/index.m3u8"] = new(HttpStatusCode.OK) { Content = new StringContent(mediaPlaylist) }
+        };
+
+        using HttpResponseMessage headResponse = CreateHeadResponse(SegmentContentLength);
+        using MultiGetStubHandler handler = new(getResponses, headResponse);
+        using HttpClient httpClient = new(handler);
+        RuvStreamInspector sut = new(httpClient);
+
+        // Act
+        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        result.ShouldBe(4 * SegmentContentLength);
+    }
+
+    [Fact]
+    public async Task ReturnsNull_WhenMasterVariantPointsToDifferentHost()
+    {
+        // Arrange
+        string masterPlaylist = """
+            #EXTM3U
+            #EXT-X-STREAM-INF:BANDWIDTH=800000
+            https://evil.com/low/index.m3u8
+            #EXT-X-STREAM-INF:BANDWIDTH=1400000
+            https://evil.com/high/index.m3u8
+            """;
+
+        (RuvStreamInspector sut, IDisposable disposables) = CreateInspector(masterPlaylist, SegmentContentLength);
         using IDisposable _ = disposables;
+
+        // Act
+        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReturnsNull_WhenMasterVariantFetchFails()
+    {
+        // Arrange
+        string masterPlaylist = """
+            #EXTM3U
+            #EXT-X-STREAM-INF:BANDWIDTH=800000
+            low/index.m3u8
+            #EXT-X-STREAM-INF:BANDWIDTH=1400000
+            high/index.m3u8
+            """;
+
+        Dictionary<string, HttpResponseMessage> getResponses = new()
+        {
+            [PlaylistUri.AbsoluteUri] = new(HttpStatusCode.OK) { Content = new StringContent(masterPlaylist) },
+            ["https://ruv.is/stream/high/index.m3u8"] = new(HttpStatusCode.InternalServerError)
+        };
+
+        using HttpResponseMessage headResponse = CreateHeadResponse(SegmentContentLength);
+        using MultiGetStubHandler handler = new(getResponses, headResponse);
+        using HttpClient httpClient = new(handler);
+        RuvStreamInspector sut = new(httpClient);
 
         // Act
         long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
@@ -260,6 +334,37 @@ public sealed class RuvStreamInspectorTests
             }
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+
+    private sealed class MultiGetStubHandler(
+        Dictionary<string, HttpResponseMessage> getResponses,
+        HttpResponseMessage? headResponse,
+        Action<Uri>? onHead = null) : DelegatingHandler
+    {
+        private static readonly HttpResponseMessage NotFoundResponse = new(HttpStatusCode.NotFound);
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.Method == HttpMethod.Get)
+            {
+                string uri = request.RequestUri!.AbsoluteUri;
+                return getResponses.TryGetValue(uri, out HttpResponseMessage? response)
+                    ? Task.FromResult(response)
+                    : Task.FromResult(NotFoundResponse);
+            }
+
+            if (request.Method == HttpMethod.Head)
+            {
+                onHead?.Invoke(request.RequestUri!);
+                return headResponse is not null
+                    ? Task.FromResult(headResponse)
+                    : throw new HttpRequestException("HEAD failed");
+            }
+
+            return Task.FromResult(NotFoundResponse);
         }
     }
 }

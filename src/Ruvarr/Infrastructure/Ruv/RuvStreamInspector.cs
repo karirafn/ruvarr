@@ -17,12 +17,40 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
             string content = await getResponse.Content.ReadAsStringAsync(cancellationToken);
             string[] lines = content.Split('\n');
 
+            Uri mediaPlaylistUri = m3u8Uri;
+            string mediaContent;
+
             if (lines.Any(line => line.TrimStart().StartsWith(MasterPlaylistMarker, StringComparison.Ordinal)))
             {
-                return null;
+                string? variantUrl = ExtractLastVariantUrl(lines);
+                if (variantUrl is null)
+                {
+                    return null;
+                }
+
+                Uri variantUri = new(m3u8Uri, variantUrl);
+                if (variantUri.Host != m3u8Uri.Host || variantUri.Scheme != "https")
+                {
+                    return null;
+                }
+
+                using HttpResponseMessage variantResponse = await httpClient.GetAsync(variantUri, cancellationToken);
+                if (!variantResponse.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                mediaContent = await variantResponse.Content.ReadAsStringAsync(cancellationToken);
+                mediaPlaylistUri = variantUri;
+            }
+            else
+            {
+                mediaContent = content;
             }
 
-            List<string> segments = lines
+            string[] mediaLines = mediaContent.Split('\n');
+
+            List<string> segments = mediaLines
                 .Select(line => line.Trim())
                 .Where(line => line.Length > 0 && !line.StartsWith('#'))
                 .ToList();
@@ -32,7 +60,7 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
                 return null;
             }
 
-            Uri firstSegmentUri = new(m3u8Uri, segments[0]);
+            Uri firstSegmentUri = new(mediaPlaylistUri, segments[0]);
 
             if (firstSegmentUri.Host != m3u8Uri.Host || firstSegmentUri.Scheme != "https")
             {
@@ -56,5 +84,26 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
         {
             return null;
         }
+    }
+
+    private static string? ExtractLastVariantUrl(string[] lines)
+    {
+        string? lastVariantUrl = null;
+
+        for (int i = 0; i < lines.Length - 1; i++)
+        {
+            if (!lines[i].TrimStart().StartsWith(MasterPlaylistMarker, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string candidate = lines[i + 1].Trim();
+            if (candidate.Length > 0 && !candidate.StartsWith('#'))
+            {
+                lastVariantUrl = candidate;
+            }
+        }
+
+        return lastVariantUrl;
     }
 }
