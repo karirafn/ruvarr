@@ -109,4 +109,76 @@ public sealed class FfmpegStderrParserTests
         result.BytesDownloaded.ShouldBe(0L);
         result.Time.ShouldBe(TimeSpan.Zero);
     }
+
+    [Fact]
+    public void TryParseDuration_ReturnsEstimatedBytes_ForTypicalDurationLine()
+    {
+        // Arrange
+        const string line = "  Duration: 00:01:00.00, start: 0.000000, bitrate: 800 kb/s";
+
+        // Act
+        long? result = FfmpegStderrParser.TryParseDuration(line);
+
+        // Assert — 60 seconds * 800 kbps * 1000 / 8 = 6_000_000 bytes
+        result.ShouldBe(6_000_000L);
+    }
+
+    [Fact]
+    public void TryParseDuration_ReturnsNull_ForProgressLine()
+    {
+        // Arrange
+        const string line = "size=   1024kB time=00:00:10.00 bitrate= 838.9kbits/s";
+
+        // Act
+        long? result = FfmpegStderrParser.TryParseDuration(line);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void TryParseDuration_ReturnsNull_ForNullInput()
+    {
+        // Arrange & Act
+        long? result = FfmpegStderrParser.TryParseDuration(null!);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void TryParseDuration_ReturnsNull_ForEmptyInput()
+    {
+        // Arrange & Act
+        long? result = FfmpegStderrParser.TryParseDuration("");
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void TryParseDuration_ReturnsNull_WhenBitrateIsNotAvailable()
+    {
+        // Arrange
+        const string line = "  Duration: 00:01:00.00, start: 0.000000, bitrate: N/A";
+
+        // Act
+        long? result = FfmpegStderrParser.TryParseDuration(line);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void TryParseDuration_HandlesLongerDuration()
+    {
+        // Arrange
+        const string line = "  Duration: 01:30:00.50, start: 0.000000, bitrate: 1200 kb/s";
+
+        // Act
+        long? result = FfmpegStderrParser.TryParseDuration(line);
+
+        // Assert — (1*3600 + 30*60 + 0 + 0.50) seconds = 5400.5s; 5400.5 * 1200 * 1000 / 8 = 810_075_000
+        result.ShouldBe(810_075_000L);
+    }
 }

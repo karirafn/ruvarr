@@ -11,6 +11,36 @@ internal static partial class FfmpegStderrParser
     [GeneratedRegex(@"time=\s*(\d{2}):(\d{2}):(\d{2})\.(\d{2})", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TimePattern();
 
+    [GeneratedRegex(@"Duration:\s*(\d{2}):(\d{2}):(\d{2})\.(\d{2}).*bitrate:\s*(\d+)\s*kb/s", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex DurationPattern();
+
+    public static long? TryParseDuration(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return null;
+        }
+
+        Match match = DurationPattern().Match(line);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        if (!int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int hours) ||
+            !int.TryParse(match.Groups[2].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int minutes) ||
+            !int.TryParse(match.Groups[3].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seconds) ||
+            !int.TryParse(match.Groups[4].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int centiseconds) ||
+            !long.TryParse(match.Groups[5].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long bitrateKbps))
+        {
+            return null;
+        }
+
+        double durationSeconds = (hours * 3600) + (minutes * 60) + seconds + (centiseconds / 100.0);
+
+        return (long)(durationSeconds * bitrateKbps * 1000 / 8);
+    }
+
     public static FfmpegProgressData? TryParse(string line)
     {
         if (string.IsNullOrWhiteSpace(line))

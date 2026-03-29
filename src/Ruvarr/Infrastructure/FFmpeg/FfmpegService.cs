@@ -36,6 +36,8 @@ internal sealed class FfmpegService(IConfiguration configuration) : IFfmpegServi
 
         using Process process = new() { StartInfo = psi };
 
+        long? estimatedTotalBytes = null;
+
         process.ErrorDataReceived += (_, e) =>
         {
             if (progress is null || e.Data is null)
@@ -43,10 +45,15 @@ internal sealed class FfmpegService(IConfiguration configuration) : IFfmpegServi
                 return;
             }
 
+            if (estimatedTotalBytes is null)
+            {
+                estimatedTotalBytes = FfmpegStderrParser.TryParseDuration(e.Data);
+            }
+
             FfmpegProgressData? data = FfmpegStderrParser.TryParse(e.Data);
             if (data is not null)
             {
-                progress.Report(data);
+                progress.Report(data with { EstimatedTotalBytes = estimatedTotalBytes });
             }
         };
 
