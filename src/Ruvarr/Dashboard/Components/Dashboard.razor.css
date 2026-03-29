@@ -256,6 +256,12 @@
     margin: 0;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .refresh-card__progress-bar {
+        animation: none;
+    }
+}
+
 @media (max-width: 640px) {
     .stat-row__grid {
         grid-template-columns: repeat(2, 1fr);
