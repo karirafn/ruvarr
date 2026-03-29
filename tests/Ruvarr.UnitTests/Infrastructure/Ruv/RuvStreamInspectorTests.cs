@@ -40,15 +40,17 @@ public sealed class RuvStreamInspectorTests
     }
 
     [Fact]
-    public async Task FollowsLastVariant_WhenPlaylistIsMasterWithRelativeUrls()
+    public async Task PicksHighestBandwidthVariant_WhenPlaylistIsMaster()
     {
         // Arrange
         string masterPlaylist = """
             #EXTM3U
-            #EXT-X-STREAM-INF:BANDWIDTH=800000
-            low/index.m3u8
-            #EXT-X-STREAM-INF:BANDWIDTH=1400000
+            #EXT-X-STREAM-INF:BANDWIDTH=3600000,CODECS="avc1",RESOLUTION=1920x1080
             high/index.m3u8
+            #EXT-X-STREAM-INF:BANDWIDTH=800000,CODECS="avc1",RESOLUTION=640x360
+            low/index.m3u8
+            #EXT-X-STREAM-INF:BANDWIDTH=1400000,CODECS="avc1",RESOLUTION=1280x720
+            mid/index.m3u8
             """;
 
         string mediaPlaylist = """
@@ -71,8 +73,7 @@ public sealed class RuvStreamInspectorTests
             ["https://ruv.is/stream/high/index.m3u8"] = new(HttpStatusCode.OK) { Content = new StringContent(mediaPlaylist) }
         };
 
-        using HttpResponseMessage headResponse = CreateHeadResponse(SegmentContentLength);
-        using MultiGetStubHandler handler = new(getResponses, headResponse);
+        using MultiGetStubHandler handler = new(getResponses, _ => CreateHeadResponse(SegmentContentLength));
         using HttpClient httpClient = new(handler);
         RuvStreamInspector sut = new(httpClient);
 
@@ -123,8 +124,7 @@ public sealed class RuvStreamInspectorTests
             ["https://ruv.is/stream/high/index.m3u8"] = new(HttpStatusCode.InternalServerError)
         };
 
-        using HttpResponseMessage headResponse = CreateHeadResponse(SegmentContentLength);
-        using MultiGetStubHandler handler = new(getResponses, headResponse);
+        using MultiGetStubHandler handler = new(getResponses, _ => CreateHeadResponse(SegmentContentLength));
         using HttpClient httpClient = new(handler);
         RuvStreamInspector sut = new(httpClient);
 
@@ -182,8 +182,7 @@ public sealed class RuvStreamInspectorTests
     {
         // Arrange
         using HttpResponseMessage getResponse = new(HttpStatusCode.InternalServerError);
-        using HttpResponseMessage headResponse = new(HttpStatusCode.OK);
-        using StubHandler handler = new(getResponse, headResponse);
+        using StubHandler handler = new(getResponse, headResponseFactory: () => new(HttpStatusCode.OK));
         using HttpClient httpClient = new(handler);
         RuvStreamInspector sut = new(httpClient);
 
@@ -206,7 +205,7 @@ public sealed class RuvStreamInspectorTests
             """;
 
         using HttpResponseMessage getResponse = new(HttpStatusCode.OK) { Content = new StringContent(m3u8) };
-        using StubHandler handler = new(getResponse, headResponse: null);
+        using StubHandler handler = new(getResponse, headResponseFactory: null);
         using HttpClient httpClient = new(handler);
         RuvStreamInspector sut = new(httpClient);
 
@@ -231,11 +230,12 @@ public sealed class RuvStreamInspectorTests
             """;
 
         Uri playlistUri = new("https://ruv.is/stream/hls/index.m3u8");
-        Uri? capturedHeadUri = null;
+        List<Uri> capturedHeadUris = [];
 
         using HttpResponseMessage getResponse = new(HttpStatusCode.OK) { Content = new StringContent(m3u8) };
-        using HttpResponseMessage headResponse = CreateHeadResponse(SegmentContentLength);
-        using StubHandler handler = new(getResponse, headResponse, onHead: uri => capturedHeadUri = uri);
+        using StubHandler handler = new(getResponse,
+            headResponseFactory: () => CreateHeadResponse(SegmentContentLength),
+            onHead: uri => capturedHeadUris.Add(uri));
         using HttpClient httpClient = new(handler);
         RuvStreamInspector sut = new(httpClient);
 
@@ -244,8 +244,51 @@ public sealed class RuvStreamInspectorTests
 
         // Assert
         result.ShouldBe(2 * SegmentContentLength);
-        capturedHeadUri.ShouldNotBeNull();
-        capturedHeadUri.AbsolutePath.ShouldBe("/stream/segments/segment001.ts");
+        capturedHeadUris.Count.ShouldBe(2);
+        capturedHeadUris[0].AbsolutePath.ShouldBe("/stream/segments/segment001.ts");
+        capturedHeadUris[1].AbsolutePath.ShouldBe("/stream/segments/segment002.ts");
+    }
+
+    [Fact]
+    public async Task AveragesMultipleSegmentSizes_WhenSegmentsHaveDifferentSizes()
+    {
+        // Arrange
+        string m3u8 = """
+            #EXTM3U
+            #EXT-X-TARGETDURATION:10
+            #EXTINF:10.0,
+            segment001.ts
+            #EXTINF:10.0,
+            segment002.ts
+            #EXTINF:10.0,
+            segment003.ts
+            #EXTINF:10.0,
+            segment004.ts
+            #EXTINF:10.0,
+            segment005.ts
+            #EXT-X-ENDLIST
+            """;
+
+        long[] segmentSizes = [400_000, 600_000, 500_000];
+        int headCallIndex = 0;
+
+        using HttpResponseMessage getResponse = new(HttpStatusCode.OK) { Content = new StringContent(m3u8) };
+        using StubHandler handler = new(getResponse, headResponseFactory: () =>
+        {
+            int index = headCallIndex++;
+            return index < segmentSizes.Length
+                ? CreateHeadResponse(segmentSizes[index])
+                : CreateHeadResponse(SegmentContentLength);
+        });
+        using HttpClient httpClient = new(handler);
+        RuvStreamInspector sut = new(httpClient);
+
+        // Act
+        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        long expectedAverage = (long)segmentSizes.Average();
+        result.ShouldBe(5 * expectedAverage);
     }
 
     [Fact]
@@ -278,12 +321,11 @@ public sealed class RuvStreamInspectorTests
             Content = new StringContent(m3u8Content)
         };
 
-        HttpResponseMessage headResponse = CreateHeadResponse(contentLength);
-        StubHandler handler = new(getResponse, headResponse);
+        StubHandler handler = new(getResponse, headResponseFactory: () => CreateHeadResponse(contentLength));
         HttpClient httpClient = new(handler);
 
         RuvStreamInspector sut = new(httpClient);
-        CompositeDisposable disposables = new(getResponse, headResponse, handler, httpClient);
+        CompositeDisposable disposables = new(getResponse, handler, httpClient);
 
         return (sut, disposables);
     }
@@ -313,7 +355,7 @@ public sealed class RuvStreamInspectorTests
 
     private sealed class StubHandler(
         HttpResponseMessage getResponse,
-        HttpResponseMessage? headResponse,
+        Func<HttpResponseMessage>? headResponseFactory = null,
         Action<Uri>? onHead = null) : DelegatingHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
@@ -328,8 +370,8 @@ public sealed class RuvStreamInspectorTests
             if (request.Method == HttpMethod.Head)
             {
                 onHead?.Invoke(request.RequestUri!);
-                return headResponse is not null
-                    ? Task.FromResult(headResponse)
+                return headResponseFactory is not null
+                    ? Task.FromResult(headResponseFactory())
                     : throw new HttpRequestException("HEAD failed");
             }
 
@@ -339,7 +381,7 @@ public sealed class RuvStreamInspectorTests
 
     private sealed class MultiGetStubHandler(
         Dictionary<string, HttpResponseMessage> getResponses,
-        HttpResponseMessage? headResponse,
+        Func<Uri, HttpResponseMessage> headResponseFactory,
         Action<Uri>? onHead = null) : DelegatingHandler
     {
         private static readonly HttpResponseMessage NotFoundResponse = new(HttpStatusCode.NotFound);
@@ -359,9 +401,7 @@ public sealed class RuvStreamInspectorTests
             if (request.Method == HttpMethod.Head)
             {
                 onHead?.Invoke(request.RequestUri!);
-                return headResponse is not null
-                    ? Task.FromResult(headResponse)
-                    : throw new HttpRequestException("HEAD failed");
+                return Task.FromResult(headResponseFactory(request.RequestUri!));
             }
 
             return Task.FromResult(NotFoundResponse);
