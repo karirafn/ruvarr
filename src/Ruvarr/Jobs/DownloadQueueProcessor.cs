@@ -100,8 +100,7 @@ internal class DownloadQueueProcessor(
             item.Episode.Program.Name,
             item.Episode.Title,
             seasonEpisodeLabel,
-            totalSize: estimate?.EstimatedBytes,
-            totalDurationSeconds: estimate?.TotalDurationSeconds);
+            totalSize: estimate?.EstimatedBytes);
 
         Progress<FfmpegProgressData> progress = new(data => progressNotifier.ReportProgress(data));
 
