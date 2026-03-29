@@ -129,6 +129,12 @@ internal sealed class DownloadProgressNotifier(IDomainEventBroadcaster broadcast
         lock (_lock)
         {
             _bytesDownloaded = data.BytesDownloaded;
+
+            if (_totalSize is null && data.EstimatedTotalBytes is not null)
+            {
+                _totalSize = data.EstimatedTotalBytes;
+            }
+
             _buffer[_bufferIndex] = (data.BytesDownloaded, timeProvider.GetUtcNow());
             _bufferIndex = (_bufferIndex + 1) % BufferSize;
             if (_bufferCount < BufferSize)

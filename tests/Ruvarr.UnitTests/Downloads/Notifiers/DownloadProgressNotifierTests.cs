@@ -208,4 +208,47 @@ public sealed class DownloadProgressNotifierTests
         // Assert
         sut.CompletedLast7Days.ShouldBe(4);
     }
+
+    [Fact]
+    public void ReportProgress_SetsTotalSize_WhenEstimatedTotalBytesProvided()
+    {
+        // Arrange
+        DownloadProgressNotifier sut = CreateSut();
+        sut.StartDownload("Show A", "Episode 1", null, totalSize: null);
+
+        // Act
+        sut.ReportProgress(new FfmpegProgressData(1024, TimeSpan.FromSeconds(1), EstimatedTotalBytes: 6_000_000));
+
+        // Assert
+        sut.TotalSize.ShouldBe(6_000_000L);
+    }
+
+    [Fact]
+    public void ReportProgress_DoesNotClearTotalSize_WhenSubsequentReportHasNoEstimate()
+    {
+        // Arrange
+        DownloadProgressNotifier sut = CreateSut();
+        sut.StartDownload("Show A", "Episode 1", null, totalSize: null);
+        sut.ReportProgress(new FfmpegProgressData(1024, TimeSpan.FromSeconds(1), EstimatedTotalBytes: 6_000_000));
+
+        // Act
+        sut.ReportProgress(new FfmpegProgressData(2048, TimeSpan.FromSeconds(2)));
+
+        // Assert
+        sut.TotalSize.ShouldBe(6_000_000L);
+    }
+
+    [Fact]
+    public void ReportProgress_DoesNotOverrideTotalSize_WhenAlreadySetFromStartDownload()
+    {
+        // Arrange
+        DownloadProgressNotifier sut = CreateSut();
+        sut.StartDownload("Show A", "Episode 1", null, totalSize: 10_000_000);
+
+        // Act
+        sut.ReportProgress(new FfmpegProgressData(1024, TimeSpan.FromSeconds(1), EstimatedTotalBytes: 6_000_000));
+
+        // Assert
+        sut.TotalSize.ShouldBe(10_000_000L);
+    }
 }
