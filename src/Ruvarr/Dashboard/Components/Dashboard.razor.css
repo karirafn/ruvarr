@@ -53,7 +53,7 @@
 }
 
 .tvdb-lookup-card__badge--idle {
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     background: rgba(255, 255, 255, 0.06);
 }
 
@@ -73,7 +73,7 @@
 
 .tvdb-lookup-card__meta {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     font-variant-numeric: tabular-nums;
 }
 
@@ -94,7 +94,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     margin-bottom: 0.25rem;
 }
 
@@ -260,7 +260,7 @@
 }
 
 .refresh-card__badge--idle {
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     background: rgba(255, 255, 255, 0.06);
 }
 
@@ -336,7 +336,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     margin-bottom: 0.25rem;
 }
 
@@ -375,7 +375,7 @@
 }
 
 .download-card__badge--idle {
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     background: rgba(255, 255, 255, 0.06);
 }
 
@@ -446,7 +446,7 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     margin-bottom: 0.5rem;
     font-variant-numeric: tabular-nums;
 }
@@ -457,7 +457,7 @@
     padding: 0.75rem 0 0 0;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
 }
 
 .download-card__pending-list li {
@@ -481,7 +481,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.65);
     margin-bottom: 0.25rem;
 }
 
