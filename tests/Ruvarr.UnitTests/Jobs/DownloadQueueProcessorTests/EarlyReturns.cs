@@ -3,11 +3,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
+using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Jobs;
 using Ruvarr.Programs.Domain;
@@ -22,8 +25,10 @@ public sealed class EarlyReturns
 {
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
+    private readonly IRuvStreamInspector _streamInspector = Substitute.For<IRuvStreamInspector>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly DownloadProgressNotifier _progressNotifier = new(
         Substitute.For<IDomainEventBroadcaster>(), TimeProvider.System);
 
@@ -43,7 +48,7 @@ public sealed class EarlyReturns
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _settingsStore, _progressNotifier);
+        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier);
 
     private static async Task<DownloadQueueItem> SeedPendingItemAsync(RuvarrDbContext dbContext)
     {
@@ -70,7 +75,7 @@ public sealed class EarlyReturns
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert — item gets picked up and proceeds past the guard
         item.Status.ShouldNotBe(DownloadQueueStatus.Pending);
