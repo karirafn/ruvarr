@@ -120,7 +120,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.50);
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -432,5 +432,9 @@
 
     .download-card__meta {
         flex-wrap: wrap;
+    }
+
+    .dashboard-section {
+        overflow-x: auto;
     }
 }
