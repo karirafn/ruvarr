@@ -1,9 +1,31 @@
 @inherits LayoutComponentBase
 @inject Ruvarr.Settings.ISettingsStore SettingsStore
+@inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="layout">
+<div class="layout @(_drawerOpen ? "layout--drawer-open" : "")"
+     tabindex="-1"
+     @onkeydown="OnKeyDown">
+
+    <header class="mobile-topbar">
+        <button class="hamburger-button"
+                @onclick="ToggleDrawer"
+                aria-label="Toggle navigation"
+                aria-expanded="@(_drawerOpen ? "true" : "false")">
+            <svg class="hamburger-icon" viewBox="0 0 20 16" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <line x1="0" y1="2" x2="20" y2="2" />
+                <line x1="0" y1="8" x2="20" y2="8" />
+                <line x1="0" y1="14" x2="20" y2="14" />
+            </svg>
+        </button>
+        <span class="mobile-topbar__title">Ruvarr</span>
+    </header>
+
+    <div class="nav-backdrop" @onclick="CloseDrawer"></div>
+
     <NavMenu />
+
     <main>
         @if (!SettingsStore.Current.IsReady)
         {
@@ -23,14 +45,35 @@
 
 @code {
     private Timer? _pollingTimer;
+    private bool _drawerOpen;
 
     protected override void OnInitialized()
     {
         _pollingTimer = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void CloseDrawer() => _drawerOpen = false;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _drawerOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            _drawerOpen = false;
+        }
     }
 
     public void Dispose()
     {
         _pollingTimer?.Dispose();
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }
