@@ -15,6 +15,7 @@ internal static class ServiceCollectionExtensions
 
         services.AddTransient<IRuvClient, RuvClient>();
         services.AddHttpClient<IRuvClient, RuvClient>(client => client.BaseAddress = options.Value.BaseAddress);
+        services.AddHttpClient<IRuvStreamInspector, RuvStreamInspector>();
 
         return services;
     }

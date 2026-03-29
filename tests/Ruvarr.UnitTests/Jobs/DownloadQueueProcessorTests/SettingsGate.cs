@@ -10,6 +10,7 @@ using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
+using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Jobs;
 using Ruvarr.Programs.Domain;
@@ -24,6 +25,7 @@ public sealed class SettingsGate
 {
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
+    private readonly IRuvStreamInspector _streamInspector = Substitute.For<IRuvStreamInspector>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
@@ -44,7 +46,7 @@ public sealed class SettingsGate
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _settingsStore, _progressNotifier);
+        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier);
 
     private static async Task<DownloadQueueItem> SeedPendingItemAsync(RuvarrDbContext dbContext)
     {

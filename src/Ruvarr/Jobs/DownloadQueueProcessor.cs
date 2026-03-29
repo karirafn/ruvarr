@@ -10,6 +10,7 @@ using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
+using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Programs.Domain;
@@ -23,6 +24,7 @@ internal class DownloadQueueProcessor(
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,
     IFfmpegService ffmpeg,
+    IRuvStreamInspector streamInspector,
     ISettingsStore settingsStore,
     DownloadProgressNotifier progressNotifier) : IJob
 {
@@ -89,12 +91,16 @@ internal class DownloadQueueProcessor(
 
         string filename = Path.GetFileName(filepath);
 
+        long? estimatedSize = await streamInspector.EstimateStreamSizeAsync(
+            item.Episode.Uri,
+            context.CancellationToken);
+
         string? seasonEpisodeLabel = BuildSeasonEpisodeLabel(item.Episode);
         progressNotifier.StartDownload(
             item.Episode.Program.Name,
             item.Episode.Title,
             seasonEpisodeLabel,
-            totalSize: null);
+            totalSize: estimatedSize);
 
         Progress<FfmpegProgressData> progress = new(data => progressNotifier.ReportProgress(data));
 

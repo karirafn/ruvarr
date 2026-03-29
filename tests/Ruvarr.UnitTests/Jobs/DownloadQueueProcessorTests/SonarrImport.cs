@@ -3,10 +3,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
+using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Jobs;
@@ -20,8 +23,10 @@ public sealed class SonarrImport : IDisposable
 {
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
+    private readonly IRuvStreamInspector _streamInspector = Substitute.For<IRuvStreamInspector>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly DownloadProgressNotifier _progressNotifier = new(
         Substitute.For<IDomainEventBroadcaster>(), TimeProvider.System);
     private readonly string _tempDownloadsRoot;
@@ -56,7 +61,7 @@ public sealed class SonarrImport : IDisposable
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _settingsStore, _progressNotifier);
+        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier);
 
     private static async Task<DownloadQueueItem> SeedMatchedEpisodeAsync(RuvarrDbContext dbContext)
     {
@@ -93,7 +98,7 @@ public sealed class SonarrImport : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         int[] expectedEpisodeIds = [101];
@@ -121,7 +126,7 @@ public sealed class SonarrImport : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         await _sonarr.DidNotReceive().ManualImportFilesAsync(
@@ -146,7 +151,7 @@ public sealed class SonarrImport : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         await _sonarr.DidNotReceive().ManualImportFilesAsync(
