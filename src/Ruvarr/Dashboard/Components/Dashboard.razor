@@ -125,6 +125,59 @@ else
         }
     </section>
 
+    <section class="tvdb-lookup-card" aria-label="TVDB Series Lookup">
+        <div class="tvdb-lookup-card__header">
+            <h2 class="dashboard-section-title">TVDB Series Lookup</h2>
+            @if (_data.TvdbSeriesLookup.IsProcessing)
+            {
+                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
+                    Processing
+                </span>
+            }
+            else
+            {
+                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
+                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    Idle
+                </span>
+            }
+        </div>
+
+        @if (_data.TvdbSeriesLookup.IsProcessing)
+        {
+            <div class="tvdb-lookup-card__active" aria-live="polite">
+                @if (_data.TvdbSeriesLookup.CurrentProgram is not null)
+                {
+                    <span class="tvdb-lookup-card__current-program">@_data.TvdbSeriesLookup.CurrentProgram</span>
+                }
+                @if (_data.TvdbSeriesLookup.PendingCount > 0)
+                {
+                    <div class="tvdb-lookup-card__meta">
+                        <span>@_data.TvdbSeriesLookup.PendingCount pending</span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <dl class="tvdb-lookup-card__details">
+                <div class="tvdb-lookup-card__detail">
+                    <dt>Last Lookup</dt>
+                    <dd>@FormatTimestamp(_data.TvdbSeriesLookup.LastLookedUpAt)</dd>
+                </div>
+                <div class="tvdb-lookup-card__detail">
+                    <dt>Pending</dt>
+                    <dd>@_data.TvdbSeriesLookup.PendingCount</dd>
+                </div>
+                <div class="tvdb-lookup-card__detail">
+                    <dt>Retrying</dt>
+                    <dd>@_data.TvdbSeriesLookup.RetryCount</dd>
+                </div>
+            </dl>
+        }
+    </section>
+
     <section class="download-card" aria-label="Active Download">
         <div class="download-card__header">
             <h2 class="dashboard-section-title">Downloads</h2>

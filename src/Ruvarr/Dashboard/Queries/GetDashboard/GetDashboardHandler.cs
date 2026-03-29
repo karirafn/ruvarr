@@ -37,9 +37,10 @@ internal sealed class GetDashboardHandler(
 
         Task<DashboardQueueStatus> queueStatusTask = GetQueueStatusAsync(cancellationToken);
         Task<ProgramRefreshCardInfo> programRefreshTask = GetProgramRefreshCardInfoAsync(cancellationToken);
+        Task<TvdbSeriesLookupCardInfo> tvdbSeriesLookupTask = GetTvdbSeriesLookupCardInfoAsync(cancellationToken);
         Task<DownloadCardInfo> downloadCardTask = GetDownloadCardInfoAsync(cancellationToken);
 
-        await Task.WhenAll(queueStatusTask, programRefreshTask, downloadCardTask);
+        await Task.WhenAll(queueStatusTask, programRefreshTask, tvdbSeriesLookupTask, downloadCardTask);
 
         return new DashboardData(
             await recentlyAddedTask,
@@ -48,6 +49,7 @@ internal sealed class GetDashboardHandler(
             await statisticsTask,
             await queueStatusTask,
             await programRefreshTask,
+            await tvdbSeriesLookupTask,
             await downloadCardTask);
     }
 
@@ -237,6 +239,26 @@ internal sealed class GetDashboardHandler(
             programRefreshNotifier.LastRunDuration,
             programRefreshNotifier.LastRunTotal,
             nextFireTimeUtc);
+    }
+
+    private async Task<TvdbSeriesLookupCardInfo> GetTvdbSeriesLookupCardInfoAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<TvdbSeriesLookupQueueItemSummary> items = tvdbSeriesLookupNotifier.Items;
+        bool isProcessing = items.Any(x => x.IsProcessing);
+        int pendingCount = items.Count(x => !x.IsProcessing);
+
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        int retryCount = await dbContext.Set<RuvProgram>()
+            .CountAsync(x => x.NextLookup != null, cancellationToken);
+
+        return new TvdbSeriesLookupCardInfo(
+            isProcessing,
+            tvdbSeriesLookupNotifier.CurrentProgram,
+            pendingCount,
+            tvdbSeriesLookupNotifier.LastLookedUpAt,
+            retryCount);
     }
 
     private static DashboardQueueInfo ToQueueInfo<T>(IReadOnlyList<T> items) where T : IQueueItemSummary
