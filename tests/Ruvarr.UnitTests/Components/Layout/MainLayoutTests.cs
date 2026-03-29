@@ -72,7 +72,7 @@ public sealed class MainLayoutTests : BunitContext
         cut.Find("button.hamburger-button").Click();
 
         // Act
-        cut.Find("div.nav-backdrop").Click();
+        cut.Find("button.nav-backdrop").Click();
 
         // Assert
         IElement layoutDiv = cut.Find("div.layout");
