@@ -2,9 +2,9 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<nav class="nav">
-    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All" ActiveClass="nav-link--active">Dashboard</NavLink>
-    <NavLink class="nav-link" href="/programs" ActiveClass="nav-link--active">Programs</NavLink>
+<nav id="main-nav" class="nav" aria-label="Main">
+    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Dashboard</NavLink>
+    <NavLink class="nav-link" href="/programs">Programs</NavLink>
     <details class="nav-group" open="@_queuesOpen">
         <summary class="nav-link" @onclick="ToggleQueues" @onclick:preventDefault>Queues</summary>
         <NavLink class="nav-link nav-link--nested" href="/download-queue">Download</NavLink>

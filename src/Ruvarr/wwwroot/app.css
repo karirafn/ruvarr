@@ -992,7 +992,7 @@ dialog input[type="number"]:focus {
 
 /* ── Mobile top bar ─────────────────────────────────────── */
 .mobile-topbar { display: none; }
-.nav-backdrop  { display: none; }
+.nav-backdrop  { display: none; background: none; border: none; padding: 0; cursor: default; }
 
 @media (max-width: 640px) {
     .layout {

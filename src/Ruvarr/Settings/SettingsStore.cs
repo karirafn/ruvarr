@@ -22,6 +22,8 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
 
     public RuvarrSettings Current => _current;
 
+    public event Action? SettingsChanged;
+
     public async Task SaveAsync(RuvarrSettings settings, CancellationToken cancellationToken)
     {
         await _writeLock.WaitAsync(cancellationToken);
@@ -42,6 +44,7 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
 
             File.Move(tempPath, _filePath, overwrite: true);
             _current = settings;
+            SettingsChanged?.Invoke();
         }
         finally
         {
