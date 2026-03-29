@@ -16,6 +16,94 @@
     border-left-color: #2dd4bf;
 }
 
+.tvdb-lookup-card {
+    background-color: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.tvdb-lookup-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.tvdb-lookup-card__header .dashboard-section-title {
+    margin: 0;
+}
+
+.tvdb-lookup-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.tvdb-lookup-card__badge--processing {
+    color: #a78bfa;
+    background: rgba(167, 139, 250, 0.12);
+}
+
+.tvdb-lookup-card__badge--idle {
+    color: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.tvdb-lookup-card__active {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.tvdb-lookup-card__current-program {
+    font-weight: 600;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tvdb-lookup-card__meta {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-variant-numeric: tabular-nums;
+}
+
+.tvdb-lookup-card__details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+}
+
+.tvdb-lookup-card__detail {
+    text-align: center;
+}
+
+.tvdb-lookup-card__detail dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 0.25rem;
+}
+
+.tvdb-lookup-card__detail dd {
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
 .download-card {
     background-color: #2a2a2a;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -419,6 +507,10 @@
     }
 
     .refresh-card__details {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .tvdb-lookup-card__details {
         grid-template-columns: repeat(2, 1fr);
     }
 

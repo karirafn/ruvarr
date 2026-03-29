@@ -379,6 +379,80 @@ public sealed class DashboardTests : BunitContext
     }
 
     [Fact]
+    public void RendersTvdbSeriesLookupCard_WhenIdle()
+    {
+        // Arrange
+        TvdbSeriesLookupCardInfo tvdbSeriesLookup = new(
+            IsProcessing: false,
+            CurrentProgram: null,
+            PendingCount: 3,
+            LastLookedUpAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+            RetryCount: 5);
+        DashboardData data = CreateDashboardData(tvdbSeriesLookup: tvdbSeriesLookup);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section.tvdb-lookup-card");
+        section.ShouldNotBeNull();
+        section.QuerySelector(".tvdb-lookup-card__badge--idle").ShouldNotBeNull();
+        IReadOnlyList<IElement> details = cut.FindAll(".tvdb-lookup-card__detail dd");
+        details.Count.ShouldBe(3);
+        details[1].TextContent.ShouldBe("3");
+        details[2].TextContent.ShouldBe("5");
+    }
+
+    [Fact]
+    public void RendersTvdbSeriesLookupCard_WhenProcessing()
+    {
+        // Arrange
+        TvdbSeriesLookupCardInfo tvdbSeriesLookup = new(
+            IsProcessing: true,
+            CurrentProgram: "Kastljos",
+            PendingCount: 2,
+            LastLookedUpAt: null,
+            RetryCount: 0);
+        DashboardData data = CreateDashboardData(tvdbSeriesLookup: tvdbSeriesLookup);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section.tvdb-lookup-card");
+        section.ShouldNotBeNull();
+        section.QuerySelector(".tvdb-lookup-card__badge--processing").ShouldNotBeNull();
+        section.QuerySelector(".tvdb-lookup-card__current-program")!.TextContent.ShouldBe("Kastljos");
+    }
+
+    [Fact]
+    public void RendersTvdbSeriesLookupCard_NeverState_WhenLastLookedUpAtIsNull()
+    {
+        // Arrange
+        TvdbSeriesLookupCardInfo tvdbSeriesLookup = new(
+            IsProcessing: false,
+            CurrentProgram: null,
+            PendingCount: 0,
+            LastLookedUpAt: null,
+            RetryCount: 0);
+        DashboardData data = CreateDashboardData(tvdbSeriesLookup: tvdbSeriesLookup);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        cut.Find("section.tvdb-lookup-card").ShouldNotBeNull();
+        IReadOnlyList<IElement> details = cut.FindAll(".tvdb-lookup-card__detail dd");
+        details[0].TextContent.ShouldBe("Never");
+    }
+
+    [Fact]
     public void RendersHeading()
     {
         // Arrange
@@ -415,6 +489,7 @@ public sealed class DashboardTests : BunitContext
         DashboardStatistics? statistics = null,
         DashboardQueueStatus? queueStatus = null,
         ProgramRefreshCardInfo? programRefresh = null,
+        TvdbSeriesLookupCardInfo? tvdbSeriesLookup = null,
         DownloadCardInfo? download = null)
     {
         return new DashboardData(
@@ -430,8 +505,16 @@ public sealed class DashboardTests : BunitContext
                 new DashboardQueueInfo(0, null)),
             programRefresh ?? new ProgramRefreshCardInfo(
                 false, 0, 0, null, null, null, null, null),
+            tvdbSeriesLookup ?? DefaultTvdbSeriesLookupCard,
             download ?? DefaultDownloadCard);
     }
+
+    private static readonly TvdbSeriesLookupCardInfo DefaultTvdbSeriesLookupCard = new(
+        IsProcessing: false,
+        CurrentProgram: null,
+        PendingCount: 0,
+        LastLookedUpAt: null,
+        RetryCount: 0);
 
     private static readonly DownloadCardInfo DefaultDownloadCard = new(
         IsDownloading: false,

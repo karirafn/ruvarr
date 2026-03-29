@@ -418,6 +418,60 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
     }
 
     [Fact]
+    public async Task ReturnsTvdbSeriesLookupCardInfo_WhenNoData()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.TvdbSeriesLookup.ShouldNotBeNull();
+        result.TvdbSeriesLookup.IsProcessing.ShouldBeFalse();
+        result.TvdbSeriesLookup.CurrentProgram.ShouldBeNull();
+        result.TvdbSeriesLookup.PendingCount.ShouldBe(0);
+        result.TvdbSeriesLookup.LastLookedUpAt.ShouldBeNull();
+        result.TvdbSeriesLookup.RetryCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ReturnsTvdbSeriesLookupCardInfo_RetryCount_CountsProgramsWithNextLookup()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram retryingProgram = new RuvProgramBuilder()
+            .WithRuvId(9001)
+            .WithName("Retrying Show")
+            .WithMultipleEpisodes()
+            .Build();
+        retryingProgram.ScheduleLookup();
+
+        RuvProgram normalProgram = new RuvProgramBuilder()
+            .WithRuvId(9002)
+            .WithName("Normal Show")
+            .WithMultipleEpisodes()
+            .Build();
+
+        dbContext.Set<RuvProgram>().AddRange(retryingProgram, normalProgram);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.TvdbSeriesLookup.RetryCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task ReturnsProgramRefreshCardInfo()
     {
         // Arrange

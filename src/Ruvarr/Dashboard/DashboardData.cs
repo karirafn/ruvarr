@@ -7,6 +7,7 @@ internal sealed record DashboardData(
     DashboardStatistics Statistics,
     DashboardQueueStatus QueueStatus,
     ProgramRefreshCardInfo ProgramRefresh,
+    TvdbSeriesLookupCardInfo TvdbSeriesLookup,
     DownloadCardInfo Download);
 
 internal sealed record DashboardEpisodeItem(
@@ -65,5 +66,12 @@ internal sealed record DownloadCardInfo(
     int CompletedLast7Days,
     int FailedCount,
     int QueueDepth);
+
+internal sealed record TvdbSeriesLookupCardInfo(
+    bool IsProcessing,
+    string? CurrentProgram,
+    int PendingCount,
+    DateTimeOffset? LastLookedUpAt,
+    int RetryCount);
 
 internal sealed record DownloadCardPendingItem(string ProgramName, string EpisodeTitle);
