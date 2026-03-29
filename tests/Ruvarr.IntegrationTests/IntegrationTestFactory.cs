@@ -8,6 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
+using NSubstitute;
+
+using Quartz;
+
 using Ruvarr.Settings;
 
 namespace Ruvarr.IntegrationTests;
@@ -49,6 +53,15 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
 
             services.AddSingleton<SettingsStore>(_ => new SettingsStore(_settingsPath));
             services.AddSingleton<ISettingsStore>(sp => sp.GetRequiredService<SettingsStore>());
+
+            services.RemoveAll<ISchedulerFactory>();
+            IScheduler scheduler = Substitute.For<IScheduler>();
+            scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+                .Returns(Array.Empty<ITrigger>());
+            ISchedulerFactory schedulerFactory = Substitute.For<ISchedulerFactory>();
+            schedulerFactory.GetScheduler(Arg.Any<CancellationToken>())
+                .Returns(scheduler);
+            services.AddSingleton(schedulerFactory);
         });
     }
 
