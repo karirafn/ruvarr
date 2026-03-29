@@ -106,11 +106,12 @@ else
         @if (_data.ProgramRefresh.IsRunning)
         {
             <div class="refresh-card__progress-track" role="progressbar"
+                 aria-label="Program refresh progress"
                  aria-valuenow="@((int)GetProgressPercent(_data.ProgramRefresh))"
                  aria-valuemin="0" aria-valuemax="100">
                 <div class="refresh-card__progress-bar" style="width:@(GetProgressPercent(_data.ProgramRefresh).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
             </div>
-            <div class="refresh-card__running-details">
+            <div class="refresh-card__running-details" aria-live="polite">
                 <span class="refresh-card__count">@_data.ProgramRefresh.CompletedCount / @(_data.ProgramRefresh.CompletedCount + _data.ProgramRefresh.Depth)</span>
                 @if (_data.ProgramRefresh.CurrentProgram is not null)
                 {
