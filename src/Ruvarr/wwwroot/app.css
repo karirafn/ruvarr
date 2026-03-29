@@ -1097,6 +1097,7 @@ dialog input[type="number"]:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .nav        { transition: none; }
-    .nav-backdrop { transition: none; }
+    .nav           { transition: none; }
+    .nav-backdrop  { transition: none; }
+    .icon--spinning { animation: none; }
 }
