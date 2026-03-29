@@ -11,7 +11,7 @@ public sealed class RuvStreamInspectorTests
 {
     private const long SegmentContentLength = 500_000;
 
-    private static readonly Uri PlaylistUri = new("http://ruv.is/stream/index.m3u8");
+    private static readonly Uri PlaylistUri = new("https://ruv.is/stream/index.m3u8");
 
     [Fact]
     public async Task ReturnsCorrectEstimate_WhenPlaylistHasMultipleSegments()
@@ -156,7 +156,7 @@ public sealed class RuvStreamInspectorTests
             #EXT-X-ENDLIST
             """;
 
-        Uri playlistUri = new("http://ruv.is/stream/hls/index.m3u8");
+        Uri playlistUri = new("https://ruv.is/stream/hls/index.m3u8");
         Uri? capturedHeadUri = null;
 
         using HttpResponseMessage getResponse = new(HttpStatusCode.OK) { Content = new StringContent(m3u8) };
@@ -172,6 +172,27 @@ public sealed class RuvStreamInspectorTests
         result.ShouldBe(2 * SegmentContentLength);
         capturedHeadUri.ShouldNotBeNull();
         capturedHeadUri.AbsolutePath.ShouldBe("/stream/segments/segment001.ts");
+    }
+
+    [Fact]
+    public async Task ReturnsNull_WhenSegmentPointsToDifferentHost()
+    {
+        // Arrange
+        string m3u8 = """
+            #EXTM3U
+            #EXTINF:10.0,
+            http://169.254.169.254/latest/meta-data
+            #EXT-X-ENDLIST
+            """;
+
+        (RuvStreamInspector sut, IDisposable disposables) = CreateInspector(m3u8, SegmentContentLength);
+        using IDisposable _ = disposables;
+
+        // Act
+        long? result = await sut.EstimateStreamSizeAsync(PlaylistUri, CancellationToken.None);
+
+        // Assert
+        result.ShouldBeNull();
     }
 
     [SuppressMessage("Reliability", "CA2000", Justification = "Disposables returned to caller via CompositeDisposable")]

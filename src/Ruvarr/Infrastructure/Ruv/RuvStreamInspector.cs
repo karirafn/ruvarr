@@ -8,7 +8,7 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
     {
         try
         {
-            HttpResponseMessage getResponse = await httpClient.GetAsync(m3u8Uri, cancellationToken);
+            using HttpResponseMessage getResponse = await httpClient.GetAsync(m3u8Uri, cancellationToken);
             if (!getResponse.IsSuccessStatusCode)
             {
                 return null;
@@ -34,8 +34,13 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
 
             Uri firstSegmentUri = new(m3u8Uri, segments[0]);
 
+            if (firstSegmentUri.Host != m3u8Uri.Host || firstSegmentUri.Scheme != "https")
+            {
+                return null;
+            }
+
             using HttpRequestMessage headRequest = new(HttpMethod.Head, firstSegmentUri);
-            HttpResponseMessage headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
+            using HttpResponseMessage headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
 
             long? contentLength = headResponse.Content.Headers.ContentLength;
             if (contentLength is null or <= 0)
