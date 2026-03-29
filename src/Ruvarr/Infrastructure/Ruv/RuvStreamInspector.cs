@@ -1,8 +1,11 @@
+using System.Text.RegularExpressions;
+
 namespace Ruvarr.Infrastructure.Ruv;
 
-internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInspector
+internal sealed partial class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInspector
 {
     private const string MasterPlaylistMarker = "#EXT-X-STREAM-INF";
+    private const int MaxSegmentsToSample = 3;
 
     public async Task<long?> EstimateStreamSizeAsync(Uri m3u8Uri, CancellationToken cancellationToken)
     {
@@ -22,7 +25,7 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
 
             if (lines.Any(line => line.TrimStart().StartsWith(MasterPlaylistMarker, StringComparison.Ordinal)))
             {
-                string? variantUrl = ExtractLastVariantUrl(lines);
+                string? variantUrl = ExtractHighestBandwidthVariantUrl(lines);
                 if (variantUrl is null)
                 {
                     return null;
@@ -60,23 +63,15 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
                 return null;
             }
 
-            Uri firstSegmentUri = new(mediaPlaylistUri, segments[0]);
+            long? averageSegmentSize = await GetAverageSegmentSizeAsync(
+                segments, mediaPlaylistUri, m3u8Uri, cancellationToken);
 
-            if (firstSegmentUri.Host != m3u8Uri.Host || firstSegmentUri.Scheme != "https")
+            if (averageSegmentSize is null)
             {
                 return null;
             }
 
-            using HttpRequestMessage headRequest = new(HttpMethod.Head, firstSegmentUri);
-            using HttpResponseMessage headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
-
-            long? contentLength = headResponse.Content.Headers.ContentLength;
-            if (contentLength is null or <= 0)
-            {
-                return null;
-            }
-
-            return segments.Count * contentLength.Value;
+            return segments.Count * averageSegmentSize.Value;
         }
 #pragma warning disable CA1031 // Return null on any failure
         catch (Exception)
@@ -86,24 +81,78 @@ internal sealed class RuvStreamInspector(HttpClient httpClient) : IRuvStreamInsp
         }
     }
 
-    private static string? ExtractLastVariantUrl(string[] lines)
+    private async Task<long?> GetAverageSegmentSizeAsync(
+        List<string> segments, Uri mediaPlaylistUri, Uri m3u8Uri, CancellationToken cancellationToken)
     {
-        string? lastVariantUrl = null;
+        int samplesToTake = Math.Min(segments.Count, MaxSegmentsToSample);
+        List<long> sizes = [];
+
+        for (int i = 0; i < samplesToTake; i++)
+        {
+            Uri segmentUri = new(mediaPlaylistUri, segments[i]);
+
+            if (segmentUri.Host != m3u8Uri.Host || segmentUri.Scheme != "https")
+            {
+                return null;
+            }
+
+            using HttpRequestMessage headRequest = new(HttpMethod.Head, segmentUri);
+            using HttpResponseMessage headResponse = await httpClient.SendAsync(headRequest, cancellationToken);
+
+            long? contentLength = headResponse.Content.Headers.ContentLength;
+            if (contentLength is > 0)
+            {
+                sizes.Add(contentLength.Value);
+            }
+        }
+
+        if (sizes.Count == 0)
+        {
+            return null;
+        }
+
+        return (long)sizes.Average();
+    }
+
+    private static string? ExtractHighestBandwidthVariantUrl(string[] lines)
+    {
+        string? bestVariantUrl = null;
+        long highestBandwidth = -1;
+        bool hasBandwidth = false;
 
         for (int i = 0; i < lines.Length - 1; i++)
         {
-            if (!lines[i].TrimStart().StartsWith(MasterPlaylistMarker, StringComparison.Ordinal))
+            string trimmedLine = lines[i].TrimStart();
+            if (!trimmedLine.StartsWith(MasterPlaylistMarker, StringComparison.Ordinal))
             {
                 continue;
             }
 
             string candidate = lines[i + 1].Trim();
-            if (candidate.Length > 0 && !candidate.StartsWith('#'))
+            if (candidate.Length == 0 || candidate.StartsWith('#'))
             {
-                lastVariantUrl = candidate;
+                continue;
+            }
+
+            Match match = BandwidthPattern().Match(trimmedLine);
+            if (match.Success && long.TryParse(match.Groups[1].Value, out long bandwidth))
+            {
+                hasBandwidth = true;
+                if (bandwidth > highestBandwidth)
+                {
+                    highestBandwidth = bandwidth;
+                    bestVariantUrl = candidate;
+                }
+            }
+            else if (!hasBandwidth)
+            {
+                bestVariantUrl = candidate;
             }
         }
 
-        return lastVariantUrl;
+        return bestVariantUrl;
     }
+
+    [GeneratedRegex(@"BANDWIDTH=(\d+)")]
+    private static partial Regex BandwidthPattern();
 }
