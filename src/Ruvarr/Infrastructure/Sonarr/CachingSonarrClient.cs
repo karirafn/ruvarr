@@ -75,6 +75,9 @@ internal sealed class CachingSonarrClient(
     public Task<IReadOnlyList<Series>> GetSeriesAsync(CancellationToken cancellationToken = default) =>
         innerClientFactory().GetSeriesAsync(cancellationToken);
 
+    public Task<IReadOnlyList<SonarrEpisode>> GetEpisodesAsync(int seriesId, CancellationToken cancellationToken = default) =>
+        innerClientFactory().GetEpisodesAsync(seriesId, cancellationToken);
+
     public Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(
         string folder,
         int? seriesId = null,

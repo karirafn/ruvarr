@@ -139,33 +139,67 @@ internal class DownloadQueueProcessor(
 
             IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(
                 settingsStore.Current.ResolvedEpisodeDownloadDirectory,
-                sonarrSeriesId,
+                seriesId: null,
                 context.CancellationToken);
 
             ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
 
-            if (file.Series is null)
+            if (file.Series is not null)
             {
-                logger.LogWarning("Sonarr did not match {Episode} to a series. Skipping import", item.Episode.ToString());
+                if (file.Episodes.Count == 0)
+                {
+                    logger.LogWarning("Sonarr matched {Episode} to series {SeriesId} but found no episodes. Skipping import",
+                        item.Episode.ToString(), file.Series.Id);
+                    return;
+                }
+
+                ManualImportRequest request = new(
+                    Path: file.Path,
+                    SeriesId: file.Series.Id,
+                    EpisodeIds: file.Episodes.Select(e => e.Id).ToList(),
+                    Quality: file.Quality,
+                    Languages: file.Languages,
+                    ReleaseGroup: "RUV");
+
+                logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
+                await sonarr.ManualImportFilesAsync([request]);
                 return;
             }
 
-            if (file.Episodes.Count == 0)
+            if (sonarrSeriesId is null)
             {
-                logger.LogWarning("Sonarr matched {Episode} to series {SeriesId} but found no episodes. Skipping import", item.Episode.ToString(), file.Series.Id);
+                logger.LogWarning("Sonarr did not match {Episode} to a series and no Sonarr series ID is known. Skipping import",
+                    item.Episode.ToString());
                 return;
             }
 
-            ManualImportRequest request = new(
+            IReadOnlyList<SonarrEpisode> sonarrEpisodes = await sonarr.GetEpisodesAsync(
+                sonarrSeriesId.Value, context.CancellationToken);
+
+            List<int> matchedEpisodeIds = item.Episode.TvdbEpisodes
+                .Select(tvdbEp => sonarrEpisodes
+                    .FirstOrDefault(se => se.SeasonNumber == tvdbEp.SeasonNumber && se.EpisodeNumber == tvdbEp.EpisodeNumber))
+                .Where(se => se is not null)
+                .Select(se => se!.Id)
+                .ToList();
+
+            if (matchedEpisodeIds.Count == 0)
+            {
+                logger.LogWarning("Sonarr series {SeriesId} has no episodes matching {Episode}. Skipping import",
+                    sonarrSeriesId.Value, item.Episode.ToString());
+                return;
+            }
+
+            ManualImportRequest fallbackRequest = new(
                 Path: file.Path,
-                SeriesId: file.Series.Id,
-                EpisodeIds: file.Episodes.Select(e => e.Id).ToList(),
+                SeriesId: sonarrSeriesId.Value,
+                EpisodeIds: matchedEpisodeIds,
                 Quality: file.Quality,
                 Languages: file.Languages,
                 ReleaseGroup: "RUV");
 
-            logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
-            await sonarr.ManualImportFilesAsync([request]);
+            logger.LogInformation("Importing {Episode} into Sonarr using fallback episode matching", item.Episode.ToString());
+            await sonarr.ManualImportFilesAsync([fallbackRequest]);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
         catch (Exception ex)

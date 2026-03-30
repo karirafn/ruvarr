@@ -12,6 +12,9 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
     public Task<IReadOnlyList<Series>> GetSeriesAsync(CancellationToken cancellationToken = default) =>
         GetMany<Series>("api/v3/series", cancellationToken);
 
+    public Task<IReadOnlyList<SonarrEpisode>> GetEpisodesAsync(int seriesId, CancellationToken cancellationToken = default) =>
+        GetMany<SonarrEpisode>($"api/v3/episode?seriesId={seriesId}", cancellationToken);
+
     public async Task<IReadOnlyCollection<MissingEpisode>> GetMissingEpisodesAsync(int pageSize = int.MaxValue, CancellationToken cancellationToken = default)
     {
         NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);
