@@ -77,8 +77,9 @@ internal sealed class CachingSonarrClient(
 
     public Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(
         string folder,
+        int? seriesId = null,
         CancellationToken cancellationToken = default) =>
-        innerClientFactory().GetManualImportsAsync(folder, cancellationToken);
+        innerClientFactory().GetManualImportsAsync(folder, seriesId, cancellationToken);
 
     public Task<IReadOnlyList<RootFolder>> GetRootFoldersAsync(CancellationToken cancellationToken = default) =>
         innerClientFactory().GetRootFoldersAsync(cancellationToken);

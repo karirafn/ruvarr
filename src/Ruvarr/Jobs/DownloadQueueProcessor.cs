@@ -132,7 +132,15 @@ internal class DownloadQueueProcessor(
 
         try
         {
-            IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(settingsStore.Current.ResolvedEpisodeDownloadDirectory);
+            IReadOnlyList<Series> sonarrSeries = await sonarr.GetSeriesAsync(context.CancellationToken);
+            int? sonarrSeriesId = sonarrSeries
+                .FirstOrDefault(s => s.TvdbId == item.Episode.Program.Series?.TvdbId)
+                ?.Id;
+
+            IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(
+                settingsStore.Current.ResolvedEpisodeDownloadDirectory,
+                sonarrSeriesId,
+                context.CancellationToken);
 
             ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
 

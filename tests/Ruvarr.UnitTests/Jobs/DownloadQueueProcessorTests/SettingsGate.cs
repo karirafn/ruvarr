@@ -77,6 +77,6 @@ public sealed class SettingsGate
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Pending);
-        _ = _sonarr.DidNotReceive().GetManualImportsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        _ = _sonarr.DidNotReceive().GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 }

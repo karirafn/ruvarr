@@ -70,7 +70,7 @@ public sealed class ExceptionHandling
         dbContext.Set<DownloadQueueItem>().Add(item);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("Sonarr unavailable"));
 
         DownloadQueueProcessor sut = CreateJob(dbContext);

@@ -27,10 +27,12 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
     public Task ManualImportFilesAsync(IEnumerable<ManualImportRequest> files, CancellationToken cancellationToken = default) =>
         PostAsync("api/v3/command", new ManualImportCommand(files), cancellationToken);
 
-    public Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder, int? seriesId = null, CancellationToken cancellationToken = default)
     {
         NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);
         parameters.Add("folder", folder);
+        if (seriesId.HasValue)
+            parameters.Add("seriesId", $"{seriesId.Value}");
 
         string path = $"api/v3/manualimport?{HttpUtility.UrlPathEncode(parameters.ToString())}";
 
