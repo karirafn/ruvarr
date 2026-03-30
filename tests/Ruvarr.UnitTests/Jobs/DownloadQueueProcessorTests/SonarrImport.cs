@@ -101,6 +101,11 @@ public sealed class SonarrImport : IDisposable
         await sut.Execute(_context);
 
         // Assert
+        await _sonarr.Received(1).GetManualImportsAsync(
+            Arg.Any<string>(),
+            null,
+            Arg.Any<CancellationToken>());
+
         int[] expectedEpisodeIds = [101];
         await _sonarr.Received(1).ManualImportFilesAsync(
             Arg.Is<IEnumerable<ManualImportRequest>>(reqs =>
@@ -110,7 +115,7 @@ public sealed class SonarrImport : IDisposable
     }
 
     [Fact]
-    public async Task SkipsImport_WhenSeriesIsNull()
+    public async Task SkipsImport_WhenSeriesIsNullAndSonarrSeriesIdIsNull()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -120,6 +125,8 @@ public sealed class SonarrImport : IDisposable
             seriesId: null,
             episodeIds: [101]);
 
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Series>());
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
 
@@ -129,6 +136,9 @@ public sealed class SonarrImport : IDisposable
         await sut.Execute(_context);
 
         // Assert
+        await _sonarr.DidNotReceive().GetEpisodesAsync(
+            Arg.Any<int>(),
+            Arg.Any<CancellationToken>());
         await _sonarr.DidNotReceive().ManualImportFilesAsync(
             Arg.Any<IEnumerable<ManualImportRequest>>(),
             Arg.Any<CancellationToken>());
@@ -158,6 +168,164 @@ public sealed class SonarrImport : IDisposable
             Arg.Any<IEnumerable<ManualImportRequest>>(),
             Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task ImportsEpisode_WhenSeriesIsNullButSonarrSeriesIdKnown()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        await SeedMatchedEpisodeAsync(dbContext);
+
+        ManualImportFile file = CreateManualImportFile(
+            seriesId: null,
+            episodeIds: []);
+
+        Series sonarrSeries = CreateSonarrSeries(id: 42, tvdbId: 5000);
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new[] { sonarrSeries });
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns([file]);
+        _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 1) });
+
+        DownloadQueueProcessor sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        int[] expectedEpisodeIds = [201];
+        await _sonarr.Received(1).ManualImportFilesAsync(
+            Arg.Is<IEnumerable<ManualImportRequest>>(reqs =>
+                reqs.First().SeriesId == 42 &&
+                reqs.First().EpisodeIds.SequenceEqual(expectedEpisodeIds)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SkipsImport_WhenSeriesIsNullAndNoEpisodesMatch()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        await SeedMatchedEpisodeAsync(dbContext);
+
+        ManualImportFile file = CreateManualImportFile(
+            seriesId: null,
+            episodeIds: []);
+
+        Series sonarrSeries = CreateSonarrSeries(id: 42, tvdbId: 5000);
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new[] { sonarrSeries });
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns([file]);
+        _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 99, EpisodeNumber: 99) });
+
+        DownloadQueueProcessor sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        await _sonarr.DidNotReceive().ManualImportFilesAsync(
+            Arg.Any<IEnumerable<ManualImportRequest>>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ImportsEpisode_WithMultipleEpisodes_WhenSeriesIsNull()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        await SeedMatchedEpisodeWithMultipleTvdbEpisodesAsync(dbContext);
+
+        ManualImportFile file = CreateManualImportFile(
+            seriesId: null,
+            episodeIds: [],
+            filename: "Test.series.S01E01E02-RUV.mp4");
+
+        Series sonarrSeries = CreateSonarrSeries(id: 42, tvdbId: 5000);
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new[] { sonarrSeries });
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns([file]);
+        _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
+            .Returns(new[]
+            {
+                new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 1),
+                new SonarrEpisode(Id: 202, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 2),
+                new SonarrEpisode(Id: 203, SeriesId: 42, SeasonNumber: 2, EpisodeNumber: 1),
+            });
+
+        DownloadQueueProcessor sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        int[] expectedEpisodeIds = [201, 202];
+        await _sonarr.Received(1).ManualImportFilesAsync(
+            Arg.Is<IEnumerable<ManualImportRequest>>(reqs =>
+                reqs.First().SeriesId == 42 &&
+                reqs.First().EpisodeIds.SequenceEqual(expectedEpisodeIds)),
+            Arg.Any<CancellationToken>());
+    }
+
+    private static async Task<DownloadQueueItem> SeedMatchedEpisodeWithMultipleTvdbEpisodesAsync(RuvarrDbContext dbContext)
+    {
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(5000).Build();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com/stream"), "Episode 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.MatchTvdb(series);
+        RuvEpisode episode = program.Episodes[0];
+        episode.MatchMultiple([
+            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1, isMissing: true),
+            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2, isMissing: true),
+        ]);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        DownloadQueueItem item = DownloadQueueItem.Create(episode);
+        dbContext.Set<DownloadQueueItem>().Add(item);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return item;
+    }
+
+    private static Series CreateSonarrSeries(int id, int tvdbId) => new(
+        Title: "Test Series",
+        SortTitle: "test series",
+        Status: "continuing",
+        Ended: false,
+        Overview: "",
+        Airtime: new TimeOnly(20, 0),
+        Originallanguage: new Originallanguage(1, "English"),
+        Year: 2024,
+        Path: "/tv/test",
+        QualityProfileId: 1,
+        SeasonFolder: true,
+        Monitored: true,
+        MonitorNewItems: "all",
+        UseScheneNumbering: false,
+        Runtime: 30,
+        TvdbId: tvdbId,
+        TvRageId: 0,
+        TvMazeId: 0,
+        TmdbId: 0,
+        SeriesType: "standard",
+        CleanTitle: "testseries",
+        ImdbId: "",
+        TitleSlug: "test-series",
+        Certification: "",
+        FirstAired: DateTime.UtcNow,
+        LastAired: DateTime.UtcNow,
+        Added: DateTime.UtcNow,
+        Images: [],
+        Seasons: [],
+        Genres: [],
+        Ratings: new Ratings(0, 0),
+        LanguageProfileId: 1,
+        Id: id);
 
     private ManualImportFile CreateManualImportFile(
         int? seriesId,
