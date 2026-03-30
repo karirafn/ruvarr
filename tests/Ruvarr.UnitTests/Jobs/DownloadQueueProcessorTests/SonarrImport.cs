@@ -92,7 +92,7 @@ public sealed class SonarrImport : IDisposable
             seriesId: 42,
             episodeIds: [101]);
 
-        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
@@ -120,7 +120,7 @@ public sealed class SonarrImport : IDisposable
             seriesId: null,
             episodeIds: [101]);
 
-        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
@@ -145,7 +145,7 @@ public sealed class SonarrImport : IDisposable
             seriesId: 42,
             episodeIds: []);
 
-        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
