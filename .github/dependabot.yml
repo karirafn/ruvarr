@@ -5,9 +5,17 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: main
+    groups:
+      nuget:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     target-branch: main
+    groups:
+      github-actions:
+        patterns:
+          - "*"
