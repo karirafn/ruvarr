@@ -31,7 +31,7 @@ internal sealed partial class RuvProgram
 
     public required string? ForeignName { get; init; }
 
-    public required bool HasMultipleEpisodes { get; init; }
+    public bool HasMultipleEpisodes { get; private set; }
 
     public required DateTime Created { get; init; }
 
@@ -125,6 +125,16 @@ internal sealed partial class RuvProgram
 
     private static string? SanitizeSlug(string? slug) =>
         slug is not null && SlugPattern.IsMatch(slug) ? slug : null;
+
+    public void UpdateHasMultipleEpisodes(bool value)
+    {
+        if (HasMultipleEpisodes == value)
+        {
+            return;
+        }
+
+        HasMultipleEpisodes = value;
+    }
 
     public void SetMonitoredStatus(bool monitored)
     {
