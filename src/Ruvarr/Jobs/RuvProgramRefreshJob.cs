@@ -35,6 +35,8 @@ internal sealed class RuvProgramRefreshJob(
             return;
         }
 
+        HashSet<int> apiRuvIds = [.. programs.Select(x => x.Id)];
+
         List<RuvProgram> existingTvPrograms = await SyncPrograms(programs);
 
         UpdateExistingProgramMetadata(existingTvPrograms, programs);
@@ -42,6 +44,8 @@ internal sealed class RuvProgramRefreshJob(
         await dbContext.SaveChangesAsync();
 
         EnqueueProgramRefreshes(programs);
+
+        await EnqueueKnownProgramRefreshes(apiRuvIds);
 
         await EnqueueUnmatchedProgramsForLookup();
 
@@ -119,6 +123,7 @@ internal sealed class RuvProgramRefreshJob(
 
         Dictionary<int, Uri?> imageByRuvId = programs.ToDictionary(x => x.Id, x => x.Image);
         Dictionary<int, string?> descriptionByRuvId = programs.ToDictionary(x => x.Id, x => JoinDescription(x.Description));
+        Dictionary<int, bool> multipleEpisodesByRuvId = programs.ToDictionary(x => x.Id, x => x.MultipleEpisodes);
 
         foreach (RuvProgram existing in existingTvPrograms)
         {
@@ -137,6 +142,11 @@ internal sealed class RuvProgramRefreshJob(
             {
                 existing.UpdateDescription(incomingDescription);
             }
+
+            if (multipleEpisodesByRuvId.TryGetValue(existing.RuvId, out bool incomingMultipleEpisodes))
+            {
+                existing.UpdateHasMultipleEpisodes(incomingMultipleEpisodes);
+            }
         }
     }
 
@@ -150,6 +160,22 @@ internal sealed class RuvProgramRefreshJob(
         {
             syncQueue.Enqueue(program.Id, program.Title);
         }
+        broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+    }
+
+    private async Task EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds)
+    {
+        List<RuvProgram> knownPrograms = await dbContext.Set<RuvProgram>()
+            .IgnoreAutoIncludes()
+            .Where(x => x.HasMultipleEpisodes)
+            .Where(x => !apiRuvIds.Contains(x.RuvId))
+            .ToListAsync();
+
+        foreach (RuvProgram program in knownPrograms)
+        {
+            syncQueue.Enqueue(program.RuvId, program.Name);
+        }
+
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
     }
 
