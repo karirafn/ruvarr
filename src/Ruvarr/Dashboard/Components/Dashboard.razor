@@ -178,6 +178,59 @@ else
         }
     </section>
 
+    <section class="tvdb-lookup-card" aria-label="TVDB Episode Lookup">
+        <div class="tvdb-lookup-card__header">
+            <h2 class="dashboard-section-title">TVDB Episode Lookup</h2>
+            @if (_data.TvdbEpisodeLookup.IsProcessing)
+            {
+                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
+                    Processing
+                </span>
+            }
+            else
+            {
+                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
+                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    Idle
+                </span>
+            }
+        </div>
+
+        @if (_data.TvdbEpisodeLookup.IsProcessing)
+        {
+            <div class="tvdb-lookup-card__active" aria-live="polite">
+                @if (_data.TvdbEpisodeLookup.CurrentProgram is not null)
+                {
+                    <span class="tvdb-lookup-card__current-program">@_data.TvdbEpisodeLookup.CurrentProgram</span>
+                }
+                @if (_data.TvdbEpisodeLookup.PendingCount > 0)
+                {
+                    <div class="tvdb-lookup-card__meta">
+                        <span>@_data.TvdbEpisodeLookup.PendingCount pending</span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <dl class="tvdb-lookup-card__details">
+                <div class="tvdb-lookup-card__detail">
+                    <dt>Last Lookup</dt>
+                    <dd>@FormatTimestamp(_data.TvdbEpisodeLookup.LastLookedUpAt)</dd>
+                </div>
+                <div class="tvdb-lookup-card__detail">
+                    <dt>Pending</dt>
+                    <dd>@_data.TvdbEpisodeLookup.PendingCount</dd>
+                </div>
+                <div class="tvdb-lookup-card__detail">
+                    <dt>Retrying</dt>
+                    <dd>@_data.TvdbEpisodeLookup.RetryCount</dd>
+                </div>
+            </dl>
+        }
+    </section>
+
     <section class="download-card" aria-label="Active Download">
         <div class="download-card__header">
             <h2 class="dashboard-section-title">Downloads</h2>

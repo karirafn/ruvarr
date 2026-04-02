@@ -472,6 +472,59 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
     }
 
     [Fact]
+    public async Task ReturnsTvdbEpisodeLookupCardInfo_WhenNoData()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.TvdbEpisodeLookup.ShouldNotBeNull();
+        result.TvdbEpisodeLookup.IsProcessing.ShouldBeFalse();
+        result.TvdbEpisodeLookup.PendingCount.ShouldBeGreaterThanOrEqualTo(0);
+        result.TvdbEpisodeLookup.LastLookedUpAt.ShouldBeNull();
+        result.TvdbEpisodeLookup.RetryCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ReturnsTvdbEpisodeLookupCardInfo_RetryCount_CountsEpisodesWithNextLookup()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(10001)
+            .WithName("Episode Retry Show")
+            .WithMultipleEpisodes()
+            .Build();
+        program.MatchTvdb(new TvdbSeriesBuilder().WithName("Episode Retry Series").Build());
+        program.TryAddEpisode("ep-retry", new Uri("http://test.com"), "Retrying Episode", "Desc", new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep-normal", new Uri("http://test.com"), "Normal Episode", "Desc", new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode retryingEpisode = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep-retry", cancellationToken);
+        retryingEpisode.ScheduleLookup();
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.TvdbEpisodeLookup.RetryCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task ReturnsProgramRefreshCardInfo()
     {
         // Arrange
