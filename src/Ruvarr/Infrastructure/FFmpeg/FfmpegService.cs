@@ -135,7 +135,7 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
 
     public async Task TrimStartAsync(string filepath, TimeSpan trimPoint, CancellationToken cancellationToken = default)
     {
-        string tempFilePath = filepath + ".tmp";
+        string tempFilePath = Path.ChangeExtension(filepath, ".tmp" + Path.GetExtension(filepath));
 
         List<string> trimArgs = new FfmpegArgumentsBuilder()
             .WithInput(filepath)
