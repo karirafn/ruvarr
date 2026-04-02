@@ -38,9 +38,10 @@ internal sealed class GetDashboardHandler(
         Task<DashboardQueueStatus> queueStatusTask = GetQueueStatusAsync(cancellationToken);
         Task<ProgramRefreshCardInfo> programRefreshTask = GetProgramRefreshCardInfoAsync(cancellationToken);
         Task<TvdbSeriesLookupCardInfo> tvdbSeriesLookupTask = GetTvdbSeriesLookupCardInfoAsync(cancellationToken);
+        Task<TvdbEpisodeLookupCardInfo> tvdbEpisodeLookupTask = GetTvdbEpisodeLookupCardInfoAsync(cancellationToken);
         Task<DownloadCardInfo> downloadCardTask = GetDownloadCardInfoAsync(cancellationToken);
 
-        await Task.WhenAll(queueStatusTask, programRefreshTask, tvdbSeriesLookupTask, downloadCardTask);
+        await Task.WhenAll(queueStatusTask, programRefreshTask, tvdbSeriesLookupTask, tvdbEpisodeLookupTask, downloadCardTask);
 
         return new DashboardData(
             await recentlyAddedTask,
@@ -50,6 +51,7 @@ internal sealed class GetDashboardHandler(
             await queueStatusTask,
             await programRefreshTask,
             await tvdbSeriesLookupTask,
+            await tvdbEpisodeLookupTask,
             await downloadCardTask);
     }
 
@@ -258,6 +260,26 @@ internal sealed class GetDashboardHandler(
             tvdbSeriesLookupNotifier.CurrentProgram,
             pendingCount,
             tvdbSeriesLookupNotifier.LastLookedUpAt,
+            retryCount);
+    }
+
+    private async Task<TvdbEpisodeLookupCardInfo> GetTvdbEpisodeLookupCardInfoAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<TvdbEpisodeLookupQueueItemSummary> items = tvdbEpisodeLookupNotifier.Items;
+        bool isProcessing = items.Any(x => x.IsProcessing);
+        int pendingCount = items.Count(x => !x.IsProcessing);
+
+        await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        int retryCount = await dbContext.Set<RuvEpisode>()
+            .CountAsync(x => x.NextLookup != null, cancellationToken);
+
+        return new TvdbEpisodeLookupCardInfo(
+            isProcessing,
+            tvdbEpisodeLookupNotifier.CurrentProgram,
+            pendingCount,
+            tvdbEpisodeLookupNotifier.LastLookedUpAt,
             retryCount);
     }
 

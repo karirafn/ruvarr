@@ -396,10 +396,10 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IElement section = cut.Find("section.tvdb-lookup-card");
+        IElement section = cut.Find("section[aria-label='TVDB Series Lookup']");
         section.ShouldNotBeNull();
         section.QuerySelector(".tvdb-lookup-card__badge--idle").ShouldNotBeNull();
-        IReadOnlyList<IElement> details = cut.FindAll(".tvdb-lookup-card__detail dd");
+        List<IElement> details = section.QuerySelectorAll(".tvdb-lookup-card__detail dd").ToList();
         details.Count.ShouldBe(3);
         details[1].TextContent.ShouldBe("3");
         details[2].TextContent.ShouldBe("5");
@@ -423,7 +423,7 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IElement section = cut.Find("section.tvdb-lookup-card");
+        IElement section = cut.Find("section[aria-label='TVDB Series Lookup']");
         section.ShouldNotBeNull();
         section.QuerySelector(".tvdb-lookup-card__badge--processing").ShouldNotBeNull();
         section.QuerySelector(".tvdb-lookup-card__current-program")!.TextContent.ShouldBe("Kastljos");
@@ -447,8 +447,9 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        cut.Find("section.tvdb-lookup-card").ShouldNotBeNull();
-        IReadOnlyList<IElement> details = cut.FindAll(".tvdb-lookup-card__detail dd");
+        IElement section = cut.Find("section[aria-label='TVDB Series Lookup']");
+        section.ShouldNotBeNull();
+        List<IElement> details = section.QuerySelectorAll(".tvdb-lookup-card__detail dd").ToList();
         details[0].TextContent.ShouldBe("Never");
     }
 
@@ -490,6 +491,7 @@ public sealed class DashboardTests : BunitContext
         DashboardQueueStatus? queueStatus = null,
         ProgramRefreshCardInfo? programRefresh = null,
         TvdbSeriesLookupCardInfo? tvdbSeriesLookup = null,
+        TvdbEpisodeLookupCardInfo? tvdbEpisodeLookup = null,
         DownloadCardInfo? download = null)
     {
         return new DashboardData(
@@ -506,10 +508,18 @@ public sealed class DashboardTests : BunitContext
             programRefresh ?? new ProgramRefreshCardInfo(
                 false, 0, 0, null, null, null, null, null),
             tvdbSeriesLookup ?? DefaultTvdbSeriesLookupCard,
+            tvdbEpisodeLookup ?? DefaultTvdbEpisodeLookupCard,
             download ?? DefaultDownloadCard);
     }
 
     private static readonly TvdbSeriesLookupCardInfo DefaultTvdbSeriesLookupCard = new(
+        IsProcessing: false,
+        CurrentProgram: null,
+        PendingCount: 0,
+        LastLookedUpAt: null,
+        RetryCount: 0);
+
+    private static readonly TvdbEpisodeLookupCardInfo DefaultTvdbEpisodeLookupCard = new(
         IsProcessing: false,
         CurrentProgram: null,
         PendingCount: 0,
