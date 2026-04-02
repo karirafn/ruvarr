@@ -7,10 +7,10 @@ namespace Ruvarr.UnitTests.Infrastructure.FFmpeg;
 public sealed class FfmpegSceneParserTests
 {
     [Fact]
-    public void TryParsePtsTime_ParsesTypicalLine()
+    public void TryParsePtsTime_ParsesFromFrameHeaderLine()
     {
         // Arrange
-        const string line = "pts_time:2.475";
+        const string line = "frame:0    pts:69390   pts_time:2.475";
 
         // Act
         double? result = FfmpegSceneParser.TryParsePtsTime(line);

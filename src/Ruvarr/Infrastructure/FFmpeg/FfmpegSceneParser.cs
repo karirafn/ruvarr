@@ -5,7 +5,7 @@ namespace Ruvarr.Infrastructure.FFmpeg;
 
 internal static partial class FfmpegSceneParser
 {
-    [GeneratedRegex(@"^pts_time:(\d+\.?\d*)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"pts_time:(\d+\.?\d*)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PtsTimePattern();
 
     [GeneratedRegex(@"^lavfi\.scene_score=(\d+\.?\d*)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
