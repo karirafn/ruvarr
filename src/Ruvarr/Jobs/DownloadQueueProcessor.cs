@@ -119,6 +119,22 @@ internal class DownloadQueueProcessor(
             return;
         }
 
+        try
+        {
+            TimeSpan? trimPoint = await ffmpeg.DetectTrimPointAsync(filepath, context.CancellationToken);
+            if (trimPoint is not null)
+            {
+                logger.LogInformation("Trimming {TrimPoint:g} from start of {Episode}", trimPoint, item.Episode.ToString());
+                await ffmpeg.TrimStartAsync(filepath, trimPoint.Value, context.CancellationToken);
+            }
+        }
+#pragma warning disable CA1031 // Trim failures should not fail the download
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            logger.LogWarning(ex, "Trim detection/execution failed for {Episode}. Continuing with untrimmed file", item.Episode.ToString());
+        }
+
         item.MarkDownloaded();
         progressNotifier.CompleteDownload();
 
