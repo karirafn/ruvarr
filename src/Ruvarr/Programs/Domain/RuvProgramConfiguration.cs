@@ -71,6 +71,10 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
         builder.Navigation(x => x.Episodes)
             .AutoInclude();
 
+        builder.Metadata
+            .FindNavigation(nameof(RuvProgram.Episodes))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+
         builder.Navigation(x => x.Series)
             .AutoInclude();
 
