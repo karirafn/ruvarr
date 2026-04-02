@@ -68,14 +68,14 @@ else
             @if (_data.ProgramRefresh.IsRunning)
             {
                 <span class="refresh-card__badge refresh-card__badge--running">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Running" />
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
                     Running
                 </span>
             }
             else
             {
                 <span class="refresh-card__badge refresh-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    <Icon Type="IconType.Clock" Class="icon" />
                     Idle
                 </span>
             }
@@ -89,7 +89,7 @@ else
                  aria-valuemin="0" aria-valuemax="100">
                 <div class="refresh-card__progress-bar" style="width:@(GetProgressPercent(_data.ProgramRefresh).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
             </div>
-            <div class="refresh-card__running-details" aria-live="polite">
+            <div class="refresh-card__running-details">
                 <span class="refresh-card__count">@_data.ProgramRefresh.CompletedCount / @(_data.ProgramRefresh.CompletedCount + _data.ProgramRefresh.Depth)</span>
                 @if (_data.ProgramRefresh.CurrentProgram is not null)
                 {
@@ -131,14 +131,14 @@ else
             @if (_data.TvdbSeriesLookup.IsProcessing)
             {
                 <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
                     Processing
                 </span>
             }
             else
             {
                 <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    <Icon Type="IconType.Clock" Class="icon" />
                     Idle
                 </span>
             }
@@ -146,7 +146,7 @@ else
 
         @if (_data.TvdbSeriesLookup.IsProcessing)
         {
-            <div class="tvdb-lookup-card__active" aria-live="polite">
+            <div class="tvdb-lookup-card__active">
                 @if (_data.TvdbSeriesLookup.CurrentProgram is not null)
                 {
                     <span class="tvdb-lookup-card__current-program">@_data.TvdbSeriesLookup.CurrentProgram</span>
@@ -184,14 +184,14 @@ else
             @if (_data.TvdbEpisodeLookup.IsProcessing)
             {
                 <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Processing" />
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
                     Processing
                 </span>
             }
             else
             {
                 <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    <Icon Type="IconType.Clock" Class="icon" />
                     Idle
                 </span>
             }
@@ -199,7 +199,7 @@ else
 
         @if (_data.TvdbEpisodeLookup.IsProcessing)
         {
-            <div class="tvdb-lookup-card__active" aria-live="polite">
+            <div class="tvdb-lookup-card__active">
                 @if (_data.TvdbEpisodeLookup.CurrentProgram is not null)
                 {
                     <span class="tvdb-lookup-card__current-program">@_data.TvdbEpisodeLookup.CurrentProgram</span>
@@ -237,14 +237,14 @@ else
             @if (_data.Download.IsDownloading)
             {
                 <span class="download-card__badge download-card__badge--downloading">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Downloading" />
+                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
                     Downloading
                 </span>
             }
             else
             {
                 <span class="download-card__badge download-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Idle" />
+                    <Icon Type="IconType.Clock" Class="icon" />
                     Idle
                 </span>
             }
@@ -252,7 +252,7 @@ else
 
         @if (_data.Download.IsDownloading)
         {
-            <div class="download-card__current-item" aria-live="polite">
+            <div class="download-card__current-item">
                 <span class="download-card__program-name">@_data.Download.ProgramName</span>
                 @if (_data.Download.SeasonEpisodeLabel is not null)
                 {
