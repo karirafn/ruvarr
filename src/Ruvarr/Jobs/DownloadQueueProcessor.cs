@@ -106,7 +106,7 @@ internal class DownloadQueueProcessor(
 
         try
         {
-            await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title, progress);
+            await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title, progress, context.CancellationToken);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
         catch (Exception ex)

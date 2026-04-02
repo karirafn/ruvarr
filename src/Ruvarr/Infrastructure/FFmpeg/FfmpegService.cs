@@ -10,7 +10,7 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
 
     private readonly string _ffmpegPath = configuration.GetValue("Ruvarr:FfmpegPath", "ffmpeg")!;
 
-    public async Task DownloadAsync(Uri uri, string filepath, string title, IProgress<FfmpegProgressData>? progress = null)
+    public async Task DownloadAsync(Uri uri, string filepath, string title, IProgress<FfmpegProgressData>? progress = null, CancellationToken cancellationToken = default)
     {
         List<string> argumentList = new FfmpegArgumentsBuilder()
             .WithInput(uri)
@@ -53,7 +53,16 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        await process.WaitForExitAsync();
+        await using (cancellationToken.Register(() =>
+        {
+            try { process.Kill(); }
+#pragma warning disable CA1031 // Process may have already exited
+            catch { /* Process may have already exited */ }
+#pragma warning restore CA1031
+        }))
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
     }
 
     public async Task<TimeSpan?> DetectTrimPointAsync(string filepath, CancellationToken cancellationToken = default)
