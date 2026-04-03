@@ -100,13 +100,60 @@ public sealed class FfmpegTrimDetectionTests
         // Arrange — silence_start is 0.2, so window start = max(0, 0.2 - 0.5) = 0
         double silenceStart = 0.2;
         double silenceEnd = 1.0;
-        List<(double PtsTime, double SceneScore)> sceneChanges = [(0.0, 1.0)];
+        List<(double PtsTime, double SceneScore)> sceneChanges = [(0.15, 1.0)];
 
         // Act
         TimeSpan? result = FfmpegService.FindTrimPoint(silenceStart, silenceEnd, sceneChanges);
 
         // Assert
         result.ShouldNotBeNull();
-        result.Value.TotalSeconds.ShouldBe(0.0, 0.001);
+        result.Value.TotalSeconds.ShouldBe(0.15, 0.001);
+    }
+
+    [Fact]
+    public void FindTrimPoint_SkipsSceneChangeBelowMinimumTrimPoint()
+    {
+        // Arrange — scene change at 0.10s is below the 0.15s threshold
+        double silenceStart = 0.0;
+        double silenceEnd = 2.0;
+        List<(double PtsTime, double SceneScore)> sceneChanges = [(0.10, 1.0)];
+
+        // Act
+        TimeSpan? result = FfmpegService.FindTrimPoint(silenceStart, silenceEnd, sceneChanges);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void FindTrimPoint_AcceptsSceneChangeAtExactMinimumTrimPoint()
+    {
+        // Arrange — scene change at exactly 0.15s meets the threshold
+        double silenceStart = 0.0;
+        double silenceEnd = 2.0;
+        List<(double PtsTime, double SceneScore)> sceneChanges = [(0.15, 1.0)];
+
+        // Act
+        TimeSpan? result = FfmpegService.FindTrimPoint(silenceStart, silenceEnd, sceneChanges);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Value.TotalSeconds.ShouldBe(0.15, 0.001);
+    }
+
+    [Fact]
+    public void FindTrimPoint_SkipsSubThresholdSceneChange_ReturnsNextCandidate()
+    {
+        // Arrange — first scene change at 0.05s is below threshold, second at 1.5s qualifies
+        double silenceStart = 0.0;
+        double silenceEnd = 2.0;
+        List<(double PtsTime, double SceneScore)> sceneChanges = [(0.05, 1.0), (1.5, 0.8)];
+
+        // Act
+        TimeSpan? result = FfmpegService.FindTrimPoint(silenceStart, silenceEnd, sceneChanges);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Value.TotalSeconds.ShouldBe(1.5, 0.001);
     }
 }
