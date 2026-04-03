@@ -7,6 +7,7 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
     private const double SilenceDetectionDuration = 15.0;
     private const double WindowPreSlack = 0.5;
     private const double WindowPostSlack = 1.0;
+    private const double MinimumTrimPoint = 0.15;
 
     private readonly string _ffmpegPath = configuration.GetValue("Ruvarr:FfmpegPath", "ffmpeg")!;
 
@@ -172,7 +173,7 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
 
         foreach ((double ptsTime, double _) in sceneChanges)
         {
-            if (ptsTime >= windowStart && ptsTime <= windowEnd)
+            if (ptsTime >= windowStart && ptsTime <= windowEnd && ptsTime >= MinimumTrimPoint)
             {
                 return TimeSpan.FromSeconds(ptsTime);
             }
