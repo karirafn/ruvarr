@@ -4,10 +4,12 @@ namespace Ruvarr.Infrastructure.FFmpeg;
 
 internal sealed class FfmpegService(IConfiguration configuration, ILogger<FfmpegService> logger) : IFfmpegService
 {
-    private const double SilenceDetectionDuration = 15.0;
+    private const double SilenceDetectionDuration = 5.0;
     private const double WindowPreSlack = 0.5;
     private const double WindowPostSlack = 1.0;
     private const double MinimumTrimPoint = 0.15;
+    private const double MinimumSilenceDuration = 1.5;
+    private const int MaxSceneChangesInWindow = 3;
 
     private readonly string _ffmpegPath = configuration.GetValue("Ruvarr:FfmpegPath", "ffmpeg")!;
 
@@ -98,6 +100,13 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
             return null;
         }
 
+        if (silenceEnd.Value - silenceStart.Value < MinimumSilenceDuration)
+        {
+            logger.LogDebug("Silence too short ({Duration:F2}s) in {FilePath}, skipping trim detection",
+                silenceEnd.Value - silenceStart.Value, filepath);
+            return null;
+        }
+
         double sceneDuration = silenceEnd.Value + WindowPostSlack;
 
         List<string> sceneArgs = new FfmpegArgumentsBuilder()
@@ -169,7 +178,13 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
         IReadOnlyList<(double PtsTime, double SceneScore)> sceneChanges)
     {
         double windowStart = Math.Max(0, silenceStart - WindowPreSlack);
-        double windowEnd = silenceEnd + WindowPostSlack;
+        double windowEnd = silenceEnd;
+
+        int sceneChangesInWindow = sceneChanges.Count(sc => sc.PtsTime >= windowStart && sc.PtsTime <= windowEnd);
+        if (sceneChangesInWindow > MaxSceneChangesInWindow)
+        {
+            return null;
+        }
 
         foreach ((double ptsTime, double _) in sceneChanges)
         {
