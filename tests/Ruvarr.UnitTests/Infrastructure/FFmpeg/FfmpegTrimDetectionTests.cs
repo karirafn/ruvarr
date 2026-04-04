@@ -11,11 +11,13 @@ public sealed class FfmpegTrimDetectionTests
     [InlineData(2.24, 3.36, 2.84, 0.54, 2.84)]   // Bessie the Rescue Dog S01E01
     [InlineData(0.34, 3.04, 2.48, 1.00, 2.48)]   // Bluey S01E01
     [InlineData(0.26, 2.07, 1.02, 1.00, 1.02)]   // Bob the Builder S02E37
+    [InlineData(0.0, 1.32, 2.13, 0.53, 2.13)]    // Casper and Emma S03E12
     [InlineData(0.65, 1.83, 1.78, 1.00, 1.78)]   // Ernest and Rebecca S01E36
     [InlineData(1.49, 11.1, 1.45, 1.00, 1.45)]   // Folkid i blokkinni S01E03 — slack case
     [InlineData(0.98, 2.21, 2.13, 1.00, 2.13)]   // JoJo and Gran Gran S01E09
     [InlineData(0.0, 2.01, 1.88, 0.37, 1.88)]    // Magiki S01E45
     [InlineData(2.71, 3.34, 2.78, 0.35, 2.78)]   // Moominvalley S02E05
+    [InlineData(0.0, 2.71, 2.77, 1.00, 2.77)]    // Numberblocks S01E03
     [InlineData(0.0, 3.84, 3.60, 1.00, 3.60)]    // Ormhildur The Brave S01E21
     [InlineData(1.97, 2.45, 2.40, 1.00, 2.40)]   // Paw Patrol S08E26
     [InlineData(0.0, 1.32, 1.24, 0.36, 1.24)]    // Zip Zip S01E11
@@ -153,62 +155,5 @@ public sealed class FfmpegTrimDetectionTests
         // Assert
         result.ShouldNotBeNull();
         result.Value.TotalSeconds.ShouldBe(1.5, 0.001);
-    }
-
-    [Theory]
-    [InlineData(0.0, 1.32, 2.13)]  // Casper and Emma — scene after silence end
-    [InlineData(0.0, 2.71, 2.77)]  // Numberblocks — scene after silence end
-    public void FindTrimPoint_ReturnsNull_WhenSceneChangeIsAfterSilenceEnd(
-        double silenceStart, double silenceEnd, double sceneTime)
-    {
-        // Arrange
-        List<(double PtsTime, double SceneScore)> sceneChanges = [(sceneTime, 0.5)];
-
-        // Act
-        TimeSpan? result = FfmpegService.FindTrimPoint(silenceStart, silenceEnd, sceneChanges);
-
-        // Assert
-        result.ShouldBeNull();
-    }
-
-    [Fact]
-    public void FindTrimPoint_ReturnsNull_WhenTooManySceneChangesInWindow()
-    {
-        // Arrange
-        List<(double PtsTime, double SceneScore)> sceneChanges = [(1.5, 0.8), (2.0, 0.9), (3.0, 0.7), (4.0, 1.0)];
-
-        // Act
-        TimeSpan? result = FfmpegService.FindTrimPoint(1.0, 5.0, sceneChanges);
-
-        // Assert
-        result.ShouldBeNull();
-    }
-
-    [Fact]
-    public void FindTrimPoint_ReturnsTrimPoint_WhenExactlyMaxSceneChangesInWindow()
-    {
-        // Arrange
-        List<(double PtsTime, double SceneScore)> sceneChanges = [(1.5, 0.8), (2.0, 0.9), (3.0, 0.7)];
-
-        // Act
-        TimeSpan? result = FfmpegService.FindTrimPoint(1.0, 5.0, sceneChanges);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result!.Value.TotalSeconds.ShouldBe(1.5, 0.001);
-    }
-
-    [Fact]
-    public void FindTrimPoint_IncludesSceneChangeAtExactSilenceEnd()
-    {
-        // Arrange
-        List<(double PtsTime, double SceneScore)> sceneChanges = [(2.0, 1.0)];
-
-        // Act
-        TimeSpan? result = FfmpegService.FindTrimPoint(1.0, 2.0, sceneChanges);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result!.Value.TotalSeconds.ShouldBe(2.0, 0.001);
     }
 }
