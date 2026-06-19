@@ -123,10 +123,8 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddTmdb(this IServiceCollection services)
+    private static void AddTmdb(this IServiceCollection services)
     {
         services.AddSingleton<TmdbClientProvider>();
-
-        return services;
     }
 }
