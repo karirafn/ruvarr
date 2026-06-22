@@ -208,6 +208,10 @@ public sealed class EpisodeNumberMatchingStrategyTests
         await sut.MatchAsync(context, CancellationToken.None);
 
         // Assert
+        program.Episodes[0].TvdbEpisodes[0].TvdbId.ShouldBe(201);
+        program.Episodes[1].TvdbEpisodes[0].TvdbId.ShouldBe(202);
+        program.Episodes[2].TvdbEpisodes[0].TvdbId.ShouldBe(203);
+        program.Episodes[3].TvdbEpisodes[0].TvdbId.ShouldBe(204);
         program.Episodes[4].TvdbEpisodes[0].TvdbId.ShouldBe(205);
         program.Episodes[5].TvdbEpisodes[0].TvdbId.ShouldBe(206);
     }
