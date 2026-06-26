@@ -20,7 +20,7 @@ namespace Ruvarr.UnitTests.Jobs.RuvEpisodesSyncJobTests;
 public sealed class TitlelessEpisodeSkip
 {
     private const int RuvProgramId = 77;
-    private const string EpisodeId = "ep-titleless";
+    private const string EpisodeId = "ep-tls";
     private const string ProgramName = "Test Program";
 
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();

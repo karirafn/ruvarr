@@ -27,9 +27,9 @@ public sealed class PerProgramIsolation
     private const string GeisliName = "Geisli";
     private const string Program1Name = "Forrit Eitt";
     private const string Program2Name = "Forrit Tvö";
-    private const string TitlelessEpisodeId = "ep-null";
+    private const string TitlelessEpisodeId = "ep-nil";
     private const string ConflictingEpisodeId = "ep-p1x";
-    private const string Program2EpisodeId = "ep-p2-1";
+    private const string Program2EpisodeId = "ep-p21";
 
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
