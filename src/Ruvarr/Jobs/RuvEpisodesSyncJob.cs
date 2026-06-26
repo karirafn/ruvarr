@@ -122,6 +122,13 @@ internal sealed class RuvEpisodesSyncJob(
                     RuvEpisode newEpisode = program.Episodes.First(ep => ep.RuvId == e.Id);
                     logger.LogInformation("Added RÚV episode {Episode}", newEpisode.ToString());
                 }
+                else if (string.IsNullOrWhiteSpace(e.Title))
+                {
+                    logger.LogInformation(
+                        "Skipping titleless RÚV episode {EpisodeId} for program {ProgramName}",
+                        e.Id,
+                        program.Name);
+                }
             }
 
             logger.LogDebug("Removing episodes from RÚV program '{Name}'", program.Name);
