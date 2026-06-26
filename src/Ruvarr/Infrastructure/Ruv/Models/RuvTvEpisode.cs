@@ -12,7 +12,7 @@ public sealed record class RuvTvEpisode(
     [property: JsonPropertyName("duration")] int Duration,
     [property: JsonPropertyName("duration_friendly")] string DurationFriendly,
     [property: JsonPropertyName("event")] int Event,
-    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("title")] string? Title,
     [property: JsonPropertyName("slug")] string Slug,
     [property: JsonPropertyName("description")] IReadOnlyList<string> Description,
     [property: JsonPropertyName("image_renditions")] RuvImageRenditions ImageRenditions,
