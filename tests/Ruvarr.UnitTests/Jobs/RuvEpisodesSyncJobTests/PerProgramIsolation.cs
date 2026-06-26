@@ -161,11 +161,12 @@ public sealed class PerProgramIsolation
     public async Task WhenSaveChangesFailsForFirstProgram_ChangeTrackerIsCleared_SecondProgramSavesItsOwnChangesOnly()
     {
         // Arrange
-        // Seed program1 with one existing episode. The RÚV API will return a new episode for
-        // program1 whose RuvId conflicts with a row we raw-insert into the DB after seeding.
-        // That causes SaveChanges to fail with a unique constraint violation. The per-program
-        // catch block must call ChangeTracker.Clear() before continuing, otherwise program1's
-        // pending-insert state carries over into program2's SaveChanges and causes a second failure.
+        // Program1 is seeded with no episodes so FindRuvProgramAsync loads an empty _episodes list.
+        // When the RÚV client is called for program1, a side-effect inserts a conflicting row into
+        // the DB via a separate context. TryAddEpisode therefore succeeds (no in-memory duplicate),
+        // but the subsequent SaveChangesAsync violates the unique index on episodes.ruv_id and throws.
+        // The per-program catch block must call ChangeTracker.Clear() before continuing; without it,
+        // program1's pending-insert state would carry over into program2's SaveChanges and fail that too.
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using (RuvarrDbContext seedContext = CreateDbContext())
@@ -187,25 +188,26 @@ public sealed class PerProgramIsolation
             seedContext.Set<RuvProgram>().Add(program1);
             seedContext.Set<RuvProgram>().Add(program2);
             await seedContext.SaveChangesAsync(cancellationToken);
-
-            // Raw-insert an episode with ConflictingEpisodeId against program1's surrogate key.
-            // When the job tries to add an episode with the same RuvId, SaveChanges will fail
-            // with a UNIQUE constraint violation on the episodes.ruv_id index.
-            await seedContext.Database.ExecuteSqlAsync(
-                $"""
-                INSERT INTO episodes (ruv_id, uri, title, description, first_run, duration_seconds, lookup_count, program_id)
-                SELECT {ConflictingEpisodeId}, 'http://ruv.is/conflict', 'Conflicting Episode', 'desc', datetime('now'), 1800, 0, id
-                FROM programs WHERE ruv_id = {Program1RuvId}
-                """,
-                cancellationToken);
         }
 
-        // The RÚV API returns an episode with ConflictingEpisodeId for program1 — this will
-        // try to add a duplicate, causing SaveChanges to fail on the unique RuvId index.
+        // The RÚV API returns an episode with ConflictingEpisodeId for program1.
+        // As a side-effect of returning the response, insert that same RuvId into the DB
+        // via a separate context so SaveChanges sees a unique-index collision.
         RuvTvEpisode conflictEpisode = CreateRuvTvEpisode(ConflictingEpisodeId, title: "Conflict Episode");
         RuvTvProgram apiResponse1 = CreateRuvTvProgram(Program1RuvId, Program1Name, episodes: [conflictEpisode]);
         _ruv.GetProgramAsync(Program1RuvId, Arg.Any<CancellationToken>())
-            .Returns(apiResponse1);
+            .Returns(async (_) =>
+            {
+                using RuvarrDbContext sideContext = CreateDbContext();
+                await sideContext.Database.ExecuteSqlAsync(
+                    $"""
+                    INSERT INTO episodes (ruv_id, uri, title, description, first_run, duration_seconds, lookup_count, program_id)
+                    SELECT {ConflictingEpisodeId}, 'http://ruv.is/x', 'Conflict', '', datetime('now'), 1800, 0, id
+                    FROM programs WHERE ruv_id = {Program1RuvId}
+                    """,
+                    cancellationToken);
+                return (RuvTvProgram?)apiResponse1;
+            });
 
         RuvTvEpisode episode2 = CreateRuvTvEpisode(Program2EpisodeId, title: "Episode 1");
         RuvTvProgram apiResponse2 = CreateRuvTvProgram(Program2RuvId, Program2Name, episodes: [episode2]);
@@ -222,15 +224,21 @@ public sealed class PerProgramIsolation
         // Act
         await sut.Execute(null!);
 
-        // Assert — no item stuck in Processing
+        // Assert — no item stuck in Processing; queue fully drained
         _syncQueue.Items.ShouldBeEmpty();
 
-        // Assert — program2's episode is persisted (ChangeTracker.Clear() allowed program2 to save cleanly)
+        // Assert — program2's episode is persisted (ChangeTracker.Clear() isolated program1's failure).
+        // ConflictingEpisodeId exists once from the side-effect insert; program1's SaveChanges threw
+        // before it could duplicate it. Without ChangeTracker.Clear(), program1's pending-insert state
+        // would carry over to program2's SaveChanges and prevent ep-p21 from being saved.
         using RuvarrDbContext assertContext = CreateDbContext();
         List<RuvEpisode> episodes = await assertContext.Set<RuvEpisode>()
             .ToListAsync(cancellationToken);
+
+        episodes.Count(e => e.RuvId == ConflictingEpisodeId).ShouldBe(1,
+            "there must be exactly one ep-p1x row (from the side-effect insert); program1's SaveChanges must have thrown");
         episodes.ShouldContain(e => e.RuvId == Program2EpisodeId,
-            "program2's episode should be saved; ChangeTracker.Clear() must have isolated program1's failure");
+            "program2's episode must be saved; ChangeTracker.Clear() must have isolated program1's failure");
     }
 
     private static RuvTvEpisode CreateRuvTvEpisode(string id, string? title) => new(
