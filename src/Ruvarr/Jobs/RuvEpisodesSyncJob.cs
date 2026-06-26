@@ -44,11 +44,11 @@ internal sealed class RuvEpisodesSyncJob(
             return;
         }
 
-        List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
-            .Include(x => x.Episodes)
-                .ThenInclude(x => x.TvdbEpisodes)
+        var programs = await dbContext.Set<RuvProgram>()
+            .AsNoTracking()
             .Where(x => ruvIds.Contains(x.RuvId))
             .Where(x => x.HasMultipleEpisodes)
+            .Select(x => new { x.RuvId, x.Name })
             .ToListAsync();
 
         HashSet<int> missingTvdbIds;
@@ -59,8 +59,8 @@ internal sealed class RuvEpisodesSyncJob(
             missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
             sonarrSeries = await sonarr.GetSeriesAsync();
         }
-#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
-        catch (Exception ex)
+#pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Sonarr calls failed during RÚV episode sync");
@@ -87,69 +87,39 @@ internal sealed class RuvEpisodesSyncJob(
 
         HashSet<int> loadedIds = [.. programs.Select(p => p.RuvId)];
 
-        foreach (RuvProgram program in programs)
+        foreach (var projection in programs)
         {
-            syncQueue.MarkProcessing(program.RuvId);
+            int ruvId = projection.RuvId;
+            string programName = projection.Name;
 
-            logger.LogDebug("Getting episodes for RÚV program '{Name}'", program.Name);
+            syncQueue.MarkProcessing(ruvId);
 
-            RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(program.RuvId);
-
-            if (ruvProgram is null)
+            try
             {
-                logger.LogInformation("Deleting RÚV program {Name} and {Count} episodes", program.Name, program.Episodes.Count);
-                dbContext.Set<RuvProgram>().Remove(program);
-                await dbContext.SaveChangesAsync();
-                syncQueue.MarkComplete(program.RuvId);
+                await ProcessProgramAsync(
+                    ruvId,
+                    programName,
+                    missingTvdbIds,
+                    monitoredTvdbIds,
+                    missingEpisodesTvdbIds);
+            }
+#pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
+            catch (Exception ex) when (ex is not OperationCanceledException)
+#pragma warning restore CA1031
+            {
+                logger.LogError(
+                    ex,
+                    "Failed to process RÚV program '{ProgramName}' (RuvId: {RuvId}); skipping to next",
+                    programName,
+                    ruvId);
+
+                dbContext.ChangeTracker.Clear();
+                syncQueue.MarkComplete(ruvId);
                 broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
                 continue;
             }
 
-            logger.LogDebug("Adding episodes to RÚV program '{Name}'", program.Name);
-
-            foreach (RuvTvEpisode e in ruvProgram.Episodes)
-            {
-                bool added = program.TryAddEpisode(
-                    id: e.Id,
-                    uri: e.File,
-                    title: e.Title,
-                    description: e.Description.Count > 0 ? e.Description[0] : string.Empty,
-                    firstRun: e.FirstRun,
-                    duration: TimeSpan.FromSeconds(e.Duration));
-
-                if (added)
-                {
-                    RuvEpisode newEpisode = program.Episodes.First(ep => ep.RuvId == e.Id);
-                    logger.LogInformation("Added RÚV episode {Episode}", newEpisode.ToString());
-                }
-            }
-
-            logger.LogDebug("Removing episodes from RÚV program '{Name}'", program.Name);
-            List<RuvEpisode> removed = program.Episodes
-                .Where(entity => !ruvProgram.Episodes.Select(episodeDto => episodeDto.Id).Contains(entity.RuvId))
-                .ToList();
-
-            foreach (RuvEpisode episode in removed)
-            {
-                logger.LogInformation("Removed RÚV episode {Episode}", episode.ToString());
-                program.RemoveEpisode(episode);
-            }
-
-            foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbEpisodes.Count > 0))
-            {
-                episode.UpdateMissingStatus(missingTvdbIds);
-            }
-
-            bool isMonitored = program.Series is not null &&
-                monitoredTvdbIds.Contains(program.Series.TvdbId);
-            program.SetMonitoredStatus(isMonitored);
-
-            bool hasMissingEpisodes = program.Series is not null &&
-                missingEpisodesTvdbIds.Contains(program.Series.TvdbId);
-            program.SetHasMissingEpisodes(hasMissingEpisodes);
-
-            await dbContext.SaveChangesAsync();
-            syncQueue.MarkComplete(program.RuvId);
+            syncQueue.MarkComplete(ruvId);
             broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
         }
 
@@ -160,4 +130,86 @@ internal sealed class RuvEpisodesSyncJob(
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
     }
+
+    private async Task ProcessProgramAsync(
+        int ruvId,
+        string programName,
+        HashSet<int> missingTvdbIds,
+        HashSet<int> monitoredTvdbIds,
+        HashSet<int> missingEpisodesTvdbIds)
+    {
+        logger.LogDebug("Getting episodes for RÚV program '{Name}'", programName);
+
+        if (await dbContext.FindRuvProgramAsync(ruvId, CancellationToken.None) is not RuvProgram program)
+        {
+            logger.LogDebug("RÚV program {RuvId} not found in database; skipping", ruvId);
+            return;
+        }
+
+        RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(ruvId);
+
+        if (ruvProgram is null)
+        {
+            logger.LogInformation("Deleting RÚV program {Name} and {Count} episodes", programName, program.Episodes.Count);
+            dbContext.Set<RuvProgram>().Remove(program);
+            await dbContext.SaveChangesAsync();
+            return;
+        }
+
+        logger.LogDebug("Adding episodes to RÚV program '{Name}'", programName);
+
+        foreach (RuvTvEpisode e in ruvProgram.Episodes)
+        {
+            bool added = program.TryAddEpisode(
+                id: e.Id,
+                uri: e.File,
+                title: e.Title,
+                description: e.Description.Count > 0 ? e.Description[0] : string.Empty,
+                firstRun: e.FirstRun,
+                duration: TimeSpan.FromSeconds(e.Duration));
+
+            if (added)
+            {
+                RuvEpisode newEpisode = program.Episodes.First(ep => ep.RuvId == e.Id);
+                logger.LogInformation("Added RÚV episode {Episode}", StripNewlines(newEpisode.ToString()));
+            }
+            else if (string.IsNullOrWhiteSpace(e.Title))
+            {
+                logger.LogInformation(
+                    "Skipping titleless RÚV episode {EpisodeId} for program {ProgramName}",
+                    StripNewlines(e.Id),
+                    StripNewlines(programName));
+            }
+        }
+
+        logger.LogDebug("Removing episodes from RÚV program '{Name}'", programName);
+        List<RuvEpisode> removed = program.Episodes
+            .Where(entity => !ruvProgram.Episodes.Select(episodeDto => episodeDto.Id).Contains(entity.RuvId))
+            .ToList();
+
+        foreach (RuvEpisode episode in removed)
+        {
+            logger.LogInformation("Removed RÚV episode {Episode}", StripNewlines(episode.ToString()));
+            program.RemoveEpisode(episode);
+        }
+
+        foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbEpisodes.Count > 0))
+        {
+            episode.UpdateMissingStatus(missingTvdbIds);
+        }
+
+        bool isMonitored = program.Series is not null &&
+            monitoredTvdbIds.Contains(program.Series.TvdbId);
+        program.SetMonitoredStatus(isMonitored);
+
+        bool hasMissingEpisodes = program.Series is not null &&
+            missingEpisodesTvdbIds.Contains(program.Series.TvdbId);
+        program.SetHasMissingEpisodes(hasMissingEpisodes);
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static string StripNewlines(string? value) =>
+        value?.Replace("\r", string.Empty, StringComparison.Ordinal)
+              .Replace("\n", string.Empty, StringComparison.Ordinal) ?? string.Empty;
 }
