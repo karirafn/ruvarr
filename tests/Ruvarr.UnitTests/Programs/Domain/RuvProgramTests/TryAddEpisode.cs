@@ -99,4 +99,71 @@ public sealed class TryAddEpisode
         // Assert
         sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
     }
+
+    [Fact]
+    public void WhenTitleIsNull_ReturnsFalse()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+
+        // Act
+        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), null, "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void WhenTitleIsNull_DoesNotAddEpisode()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), null, "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        sut.Episodes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void WhenTitleIsWhitespace_ReturnsFalse()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+
+        // Act
+        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "   ", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void WhenTitleIsWhitespace_DoesNotAddEpisode()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "   ", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        sut.Episodes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void WhenTitleIsBlankAndSeriesIsMatched_DoesNotRaiseEpisodeAddedToMatchedProgramEvent()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.MatchTvdb(TvdbSeries.Create(1, "Test Series"));
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), null, "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
+    }
 }

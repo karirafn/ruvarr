@@ -187,8 +187,13 @@ internal sealed partial class RuvProgram
         NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
     }
 
-    public bool TryAddEpisode(string id, Uri uri, string title, string description, DateTime firstRun, TimeSpan duration)
+    public bool TryAddEpisode(string id, Uri uri, string? title, string description, DateTime firstRun, TimeSpan duration)
     {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return false;
+        }
+
         RuvEpisode? existing = _episodes.FirstOrDefault(x => x.RuvId == id);
         if (existing is not null)
         {
