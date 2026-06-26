@@ -90,7 +90,7 @@ public sealed class TitlelessEpisodeSkip
 
         // Assert
         logger.Entries.ShouldContain(e =>
-            e.LogLevel >= LogLevel.Debug
+            e.LogLevel == LogLevel.Information
             && e.Message.Contains(EpisodeId)
             && e.Message.Contains(ProgramName));
     }
