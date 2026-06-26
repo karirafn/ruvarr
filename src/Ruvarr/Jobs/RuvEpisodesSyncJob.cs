@@ -59,8 +59,8 @@ internal sealed class RuvEpisodesSyncJob(
             missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
             sonarrSeries = await sonarr.GetSeriesAsync();
         }
-#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
-        catch (Exception ex)
+#pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Sonarr calls failed during RÚV episode sync");
@@ -103,8 +103,8 @@ internal sealed class RuvEpisodesSyncJob(
                     monitoredTvdbIds,
                     missingEpisodesTvdbIds);
             }
-#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
-            catch (Exception ex)
+#pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
+            catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
             {
                 logger.LogError(
