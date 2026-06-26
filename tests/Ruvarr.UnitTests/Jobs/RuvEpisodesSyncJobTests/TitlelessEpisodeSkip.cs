@@ -53,6 +53,52 @@ public sealed class TitlelessEpisodeSkip
         _ruv, dbContext, _sonarr, _syncQueue, new DomainEventBroadcaster(), _settingsStore);
 
     [Fact]
+    public async Task WhenEpisodeTitleContainsNewline_LoggedTitleHasNewlineStripped()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using (RuvarrDbContext seedContext = CreateDbContext())
+        {
+            await seedContext.Database.EnsureCreatedAsync(cancellationToken);
+
+            RuvProgram program = new RuvProgramBuilder()
+                .WithRuvId(RuvProgramId)
+                .WithName(ProgramName)
+                .WithMultipleEpisodes()
+                .Build();
+
+            seedContext.Set<RuvProgram>().Add(program);
+            await seedContext.SaveChangesAsync(cancellationToken);
+        }
+
+        RuvTvEpisode episodeWithNewlineTitle = CreateRuvTvEpisode("ep-lf", title: "Title\nFake log line");
+        RuvTvProgram apiResponse = CreateRuvTvProgram(RuvProgramId, episodes: [episodeWithNewlineTitle]);
+
+        _ruv.GetProgramAsync(RuvProgramId, Arg.Any<CancellationToken>())
+            .Returns(apiResponse);
+
+        _syncQueue.Enqueue(RuvProgramId, ProgramName);
+
+        CapturingLogger<RuvEpisodesSyncJob> logger = new();
+
+        using RuvarrDbContext actContext = CreateDbContext();
+        RuvEpisodesSyncJob sut = CreateJob(actContext, logger);
+
+        // Act
+        await sut.Execute(null!);
+
+        // Assert
+        logger.Entries.ShouldContain(e =>
+            e.LogLevel == LogLevel.Information
+            && e.Message.Contains("Added RÚV episode"),
+            "the added-episode log entry must exist");
+
+        logger.Entries.ShouldAllBe(e => !e.Message.Contains('\n'),
+            "no log entry should contain an embedded newline from externally-sourced data");
+    }
+
+    [Fact]
     public async Task WhenEpisodeTitleIsNull_LogsSkipAtInformation()
     {
         // Arrange

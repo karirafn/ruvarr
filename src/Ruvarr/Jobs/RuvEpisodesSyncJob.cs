@@ -171,14 +171,14 @@ internal sealed class RuvEpisodesSyncJob(
             if (added)
             {
                 RuvEpisode newEpisode = program.Episodes.First(ep => ep.RuvId == e.Id);
-                logger.LogInformation("Added RÚV episode {Episode}", newEpisode.ToString());
+                logger.LogInformation("Added RÚV episode {Episode}", StripNewlines(newEpisode.ToString()));
             }
             else if (string.IsNullOrWhiteSpace(e.Title))
             {
                 logger.LogInformation(
                     "Skipping titleless RÚV episode {EpisodeId} for program {ProgramName}",
-                    e.Id,
-                    programName);
+                    StripNewlines(e.Id),
+                    StripNewlines(programName));
             }
         }
 
@@ -189,7 +189,7 @@ internal sealed class RuvEpisodesSyncJob(
 
         foreach (RuvEpisode episode in removed)
         {
-            logger.LogInformation("Removed RÚV episode {Episode}", episode.ToString());
+            logger.LogInformation("Removed RÚV episode {Episode}", StripNewlines(episode.ToString()));
             program.RemoveEpisode(episode);
         }
 
@@ -208,4 +208,8 @@ internal sealed class RuvEpisodesSyncJob(
 
         await dbContext.SaveChangesAsync();
     }
+
+    private static string StripNewlines(string? value) =>
+        value?.Replace("\r", string.Empty, StringComparison.Ordinal)
+              .Replace("\n", string.Empty, StringComparison.Ordinal) ?? string.Empty;
 }
