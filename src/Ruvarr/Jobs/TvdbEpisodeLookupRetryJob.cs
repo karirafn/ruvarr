@@ -22,7 +22,7 @@ internal sealed class TvdbEpisodeLookupRetryJob(
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
             .Where(x => x.Series != null)
             .Where(x => x.Episodes.Any(e => !e.TvdbEpisodes.Any() && e.NextLookup != null && e.NextLookup <= utcNow))
-            .ToListAsync();
+            .ToListAsync(context.CancellationToken);
 
         foreach (RuvProgram program in programs)
         {

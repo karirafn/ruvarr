@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
@@ -19,6 +21,7 @@ namespace Ruvarr.UnitTests.Jobs.TvdbEpisodeLookupJobTests;
 
 public sealed class ExceptionHandling
 {
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly ITvdbClient _tvdb = Substitute.For<ITvdbClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly ITvdbEpisodeMatcher _matcher = Substitute.For<ITvdbEpisodeMatcher>();
@@ -28,7 +31,7 @@ public sealed class ExceptionHandling
 
     public ExceptionHandling()
     {
-        _sonarr.GetMissingEpisodesAsync().Returns([]);
+        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([]);
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
@@ -64,7 +67,7 @@ public sealed class ExceptionHandling
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _notifier.Items.ShouldBeEmpty();
@@ -91,7 +94,7 @@ public sealed class ExceptionHandling
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _notifier.Items.ShouldBeEmpty();

@@ -44,13 +44,15 @@ internal sealed class TvdbSeriesLookupJob(
         lookupQueue.MarkProcessing(ruvId);
         broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
 
+        CancellationToken cancellationToken = context.CancellationToken;
+
         try
         {
             RuvProgram? program = await dbContext.Set<RuvProgram>()
                 .Include(x => x.Series)
                 .Include(x => x.Episodes)
                 .Where(x => x.RuvId == ruvId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (program is null)
             {
@@ -60,17 +62,15 @@ internal sealed class TvdbSeriesLookupJob(
 
             if (program.Series is not null)
             {
-                await RefreshSeriesSlugAsync(program, context.CancellationToken);
+                await RefreshSeriesSlugAsync(program, cancellationToken);
                 return;
             }
-
-            CancellationToken cancellationToken = context.CancellationToken;
 
             Datum? match = await SearchAllStrategiesAsync(program, cancellationToken);
 
             if (match is null)
             {
-                await ScheduleLookupAsync(program, context.CancellationToken);
+                await ScheduleLookupAsync(program, cancellationToken);
                 return;
             }
 
@@ -78,21 +78,21 @@ internal sealed class TvdbSeriesLookupJob(
             {
                 logger.LogWarning("Could not parse TvdbId '{TvdbId}' as integer for TVDB match '{Name}'", match.TvdbId, match.Name);
                 program.ScheduleLookup();
-                await dbContext.SaveChangesAsync(context.CancellationToken);
+                await dbContext.SaveChangesAsync(cancellationToken);
                 return;
             }
 
             TvdbSeries? entity = await dbContext
                 .Set<TvdbSeries>()
                 .Where(x => x.TvdbId == matchTvdbId)
-                .FirstOrDefaultAsync()
+                .FirstOrDefaultAsync(cancellationToken)
                 ?? TvdbSeries.Create(matchTvdbId, match.Name, match.Slug);
 
             entity.UpdateSlug(match.Slug);
 
             program.MatchTvdb(entity);
 
-            await dbContext.SaveChangesAsync(context.CancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
 
             logger.LogInformation("Matched RÚV program '{Program}' with TVDB series '{Series}'", program.Name, entity.Name);
         }

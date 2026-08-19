@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
@@ -23,6 +25,7 @@ public sealed class TitlelessEpisodeSkip
     private const string EpisodeId = "ep-tls";
     private const string ProgramName = "Test Program";
 
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
@@ -86,7 +89,7 @@ public sealed class TitlelessEpisodeSkip
         RuvEpisodesSyncJob sut = CreateJob(actContext, logger);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         logger.Entries.ShouldContain(e =>
@@ -132,7 +135,7 @@ public sealed class TitlelessEpisodeSkip
         RuvEpisodesSyncJob sut = CreateJob(actContext, logger);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         logger.Entries.ShouldContain(e =>
@@ -173,7 +176,7 @@ public sealed class TitlelessEpisodeSkip
         RuvEpisodesSyncJob sut = CreateJob(actContext, new CapturingLogger<RuvEpisodesSyncJob>());
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         using RuvarrDbContext assertContext = CreateDbContext();

@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
@@ -21,6 +23,7 @@ namespace Ruvarr.UnitTests.Jobs.TvdbEpisodeLookupJobTests;
 
 public sealed class Delegation
 {
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly ITvdbClient _tvdb = Substitute.For<ITvdbClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly ITvdbEpisodeMatcher _matcher = Substitute.For<ITvdbEpisodeMatcher>();
@@ -30,7 +33,7 @@ public sealed class Delegation
 
     public Delegation()
     {
-        _sonarr.GetMissingEpisodesAsync().Returns([]);
+        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([]);
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
@@ -65,7 +68,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         await _matcher.Received(1).MatchAsync(
@@ -95,7 +98,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         await _matcher.Received(1).MatchAsync(
@@ -120,7 +123,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         await _matcher.DidNotReceive().MatchAsync(Arg.Any<EpisodeMatchingContext>(), Arg.Any<CancellationToken>());
@@ -144,7 +147,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         program.Episodes[0].NextLookup.ShouldNotBeNull();

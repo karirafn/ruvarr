@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
@@ -31,6 +33,7 @@ public sealed class PerProgramIsolation
     private const string ConflictingEpisodeId = "ep-p1x";
     private const string Program2EpisodeId = "ep-p21";
 
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
@@ -92,7 +95,7 @@ public sealed class PerProgramIsolation
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _syncQueue.Items.ShouldBeEmpty();
@@ -145,7 +148,7 @@ public sealed class PerProgramIsolation
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert — no item stuck in Processing; queue fully drained
         _syncQueue.Items.ShouldBeEmpty();
@@ -222,7 +225,7 @@ public sealed class PerProgramIsolation
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert — no item stuck in Processing; queue fully drained
         _syncQueue.Items.ShouldBeEmpty();

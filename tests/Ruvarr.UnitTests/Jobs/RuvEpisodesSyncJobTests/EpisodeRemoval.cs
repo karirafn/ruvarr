@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
@@ -24,6 +26,7 @@ public sealed class EpisodeRemoval
     private const string KeptEpisodeId = "ep-1";
     private const string RemovedEpisodeId = "ep-2";
 
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
@@ -103,7 +106,7 @@ public sealed class EpisodeRemoval
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         using RuvarrDbContext assertContext = CreateDbContext();

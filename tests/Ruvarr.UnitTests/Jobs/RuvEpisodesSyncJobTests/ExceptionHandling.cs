@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
@@ -19,6 +21,7 @@ namespace Ruvarr.UnitTests.Jobs.RuvEpisodesSyncJobTests;
 
 public sealed class ExceptionHandling
 {
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
@@ -61,7 +64,7 @@ public sealed class ExceptionHandling
         RuvEpisodesSyncJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _syncQueue.Items.ShouldBeEmpty();
