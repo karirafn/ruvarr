@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
     <!--
@@ -12,6 +13,16 @@
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
   </ItemGroup>
   <ItemGroup>
+    <!--
+      Transitive pins for advisories not yet fixed by the direct dependency that pulls them in.
+      GHSA-v5pm-xwqc-g5wc: Microsoft.OpenApi (via Microsoft.AspNetCore.OpenApi) is patched from 2.7.5.
+      GHSA-pgww-w46g-26qg: AngleSharp (via bunit) is patched from 1.5.0.
+      Drop each pin once the direct dependency ships a patched version of its own.
+    -->
+    <PackageVersion Include="AngleSharp" Version="1.7.1" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.12.0" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
@@ -21,11 +32,11 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageVersion>
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.4" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.4" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.4" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.4" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.4" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.9" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageVersion Include="MySql.EntityFrameworkCore" Version="10.0.1" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.18.1" />
