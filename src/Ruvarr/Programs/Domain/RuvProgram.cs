@@ -10,7 +10,6 @@ namespace Ruvarr.Programs.Domain;
 internal sealed partial class RuvProgram
 {
     private const int MaxDescriptionLength = 4096;
-    private static readonly Regex SlugPattern = new(@"^[a-z0-9\-]{1,128}$", RegexOptions.Compiled);
 
     private readonly List<IDomainEvent> _domainEvents = [];
     private readonly List<RuvEpisode> _episodes = [];
@@ -124,7 +123,10 @@ internal sealed partial class RuvProgram
         description?.Length > MaxDescriptionLength ? description[..MaxDescriptionLength] : description;
 
     private static string? SanitizeSlug(string? slug) =>
-        slug is not null && SlugPattern.IsMatch(slug) ? slug : null;
+        slug is not null && SlugPattern().IsMatch(slug) ? slug : null;
+
+    [GeneratedRegex(@"^[a-z0-9\-]{1,128}$")]
+    private static partial Regex SlugPattern();
 
     public void UpdateHasMultipleEpisodes(bool value)
     {

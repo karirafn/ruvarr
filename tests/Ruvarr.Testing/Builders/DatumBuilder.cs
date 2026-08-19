@@ -29,7 +29,7 @@ internal sealed class DatumBuilder
         Aliases: [],
         Country: "IS",
         Id: _tvdbId,
-        ImageUrl: new Uri("http://image.com"),
+        ImageUrl: new Uri("https://image.com"),
         Name: _name,
         FirstAirDate: "2024-01-01",
         Overview: "",

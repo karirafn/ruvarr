@@ -341,8 +341,8 @@
         _isSubmitting = true;
 
         List<int> tvdbIds = [.. _matchEntries
-            .Where(e => e.SelectedEpisodeId is not null)
-            .Select(e => e.SelectedEpisodeId!.Value)];
+            .Select(e => e.SelectedEpisodeId)
+            .OfType<int>()];
 
         if (_ruvId is null || tvdbIds.Count == 0)
         {
@@ -402,7 +402,7 @@
         }
 
         int distinctCount = entries
-            .Select(e => e.SelectedEpisodeId!.Value)
+            .Select(e => e.SelectedEpisodeId)
             .Distinct()
             .Count();
 
@@ -412,8 +412,8 @@
         }
 
         List<int> selectedIds = [.. entries
-            .Where(e => e.SelectedEpisodeId is not null)
-            .Select(e => e.SelectedEpisodeId!.Value)
+            .Select(e => e.SelectedEpisodeId)
+            .OfType<int>()
             .Order()];
 
         List<int> currentIds = [.. currentMatches

@@ -24,7 +24,7 @@ internal sealed class TvdbSeriesDataBuilder
             Id: _id,
             Name: _name,
             Slug: "test-series",
-            Image: new Uri("http://image.com"),
+            Image: new Uri("https://image.com"),
             NameTranslations: [],
             OverviewTranslations: [],
             Episodes: [],

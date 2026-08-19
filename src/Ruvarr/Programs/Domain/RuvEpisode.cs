@@ -50,7 +50,7 @@ internal sealed partial class RuvEpisode
     public Uri? RuvUrl =>
         string.IsNullOrEmpty(Program.Slug)
             ? null
-            : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(Program.Slug!)}/{Program.RuvId}/{RuvId}");
+            : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(Program.Slug)}/{Program.RuvId}/{RuvId}");
 
     public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, string description, DateTime firstRun, TimeSpan duration)
     {
