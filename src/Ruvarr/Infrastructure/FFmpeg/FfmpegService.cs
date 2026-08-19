@@ -9,7 +9,7 @@ internal sealed class FfmpegService(IConfiguration configuration, ILogger<Ffmpeg
     private const double WindowPostSlack = 1.0;
     private const double MinimumTrimPoint = 0.15;
 
-    private readonly string _ffmpegPath = configuration.GetValue("Ruvarr:FfmpegPath", "ffmpeg")!;
+    private readonly string _ffmpegPath = configuration.GetValue("Ruvarr:FfmpegPath", "ffmpeg");
 
     public async Task DownloadAsync(Uri uri, string filepath, string title, IProgress<FfmpegProgressData>? progress = null, CancellationToken cancellationToken = default)
     {

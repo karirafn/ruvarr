@@ -34,7 +34,7 @@ internal sealed class TvdbEpisodeDataBuilder
         Runtime: null,
         NameTranslations: _nameTranslations,
         OverviewTranslations: [],
-        Image: new Uri("http://image.com"),
+        Image: new Uri("https://image.com"),
         ImageType: null,
         IsMovie: 0,
         Number: _number,

@@ -472,7 +472,12 @@ else
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task OpenMatchDialog(string ruvId, IReadOnlyList<TvdbEpisodeSummary> currentMatches, string episodeTitle)
     {
-        await _matchDialog!.OpenAsync(ruvId, currentMatches, _program!.TvdbSeriesId!.Value, episodeTitle, _episodes!);
+        if (_matchDialog is null || _episodes is null || _program?.TvdbSeriesId is null)
+        {
+            return;
+        }
+
+        await _matchDialog.OpenAsync(ruvId, currentMatches, _program.TvdbSeriesId.Value, episodeTitle, _episodes);
     }
 
     internal static string FormatSeasons(IReadOnlyList<TvdbEpisodeSummary> matches)
@@ -503,14 +508,24 @@ else
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task OpenMatchProgramDialog()
     {
-        bool isFixMatch = _program!.TvdbSeriesId is not null || _program.IsMovieMatch;
-        await _matchProgramDialog!.OpenAsync(_program.ProgramRuvId, _program.TvdbSeriesId, _program.ProgramName, isFixMatch);
+        if (_matchProgramDialog is null || _program is null)
+        {
+            return;
+        }
+
+        bool isFixMatch = _program.TvdbSeriesId is not null || _program.IsMovieMatch;
+        await _matchProgramDialog.OpenAsync(_program.ProgramRuvId, _program.TvdbSeriesId, _program.ProgramName, isFixMatch);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task OpenAddToSonarrDialog()
     {
-        await _addToSonarrDialog!.OpenAsync(_program!.ProgramRuvId);
+        if (_addToSonarrDialog is null || _program is null)
+        {
+            return;
+        }
+
+        await _addToSonarrDialog.OpenAsync(_program.ProgramRuvId);
     }
 
     private async Task ReloadProgramAsync()
@@ -530,7 +545,12 @@ else
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task CreateOnTvdb()
     {
-        string clipboardText = $"Name: {_program!.ProgramName}\nNetwork: RÚV\nRemote ID: {_program.ProgramRuvId} (RÚV)";
+        if (_program is null)
+        {
+            return;
+        }
+
+        string clipboardText = $"Name: {_program.ProgramName}\nNetwork: RÚV\nRemote ID: {_program.ProgramRuvId} (RÚV)";
         try
         {
             await Js.InvokeAsync<bool>("copyToClipboard", clipboardText);

@@ -1,8 +1,12 @@
+using Microsoft.Extensions.Caching.Memory;
+
 namespace Ruvarr.Infrastructure.Sonarr;
 
 internal static class ServiceCollectionExtensions
 {
-    private static readonly Uri PlaceholderBaseAddress = new("http://unconfigured");
+    // Never dialled: SonarrDelegatingHandler rewrites every request against the configured
+    // base address. It exists only because HttpClient requires an absolute BaseAddress.
+    private static readonly Uri PlaceholderBaseAddress = new("https://unconfigured");
 
     internal static IServiceCollection AddSonarr(this IServiceCollection services)
     {
@@ -16,7 +20,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ISonarrClient>(sp =>
             new CachingSonarrClient(
                 () => sp.GetRequiredService<SonarrClient>(),
-                sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+                sp.GetRequiredService<IMemoryCache>(),
                 sp.GetRequiredService<ILogger<CachingSonarrClient>>()));
 
         return services;

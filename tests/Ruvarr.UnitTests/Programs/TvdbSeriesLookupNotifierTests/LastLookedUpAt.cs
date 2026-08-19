@@ -46,6 +46,6 @@ public sealed class LastLookedUpAt
 
         // Assert
         sut.LastLookedUpAt.ShouldNotBeNull();
-        sut.LastLookedUpAt!.Value.ShouldBeGreaterThanOrEqualTo(first!.Value);
+        sut.LastLookedUpAt.Value.ShouldBeGreaterThanOrEqualTo(first!.Value);
     }
 }

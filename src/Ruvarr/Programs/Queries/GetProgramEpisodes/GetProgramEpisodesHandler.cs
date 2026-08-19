@@ -50,7 +50,7 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
             x.FirstRun,
             string.IsNullOrEmpty(x.ProgramSlug)
                 ? null
-                : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(x.ProgramSlug!)}/{x.ProgramRuvId}/{x.RuvId}"),
+                : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(x.ProgramSlug)}/{x.ProgramRuvId}/{x.RuvId}"),
             x.Duration))
             .ToList();
     }
