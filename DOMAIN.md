@@ -21,6 +21,7 @@ The process of linking each `RuvEpisode` to its TVDB season/episode so it can be
   - **Part-One Sibling matching** — Matches a "part two" episode by locating its already-matched "part one" sibling and resolving the adjacent TVDB episode by name.
   - **Translation matching** — Matches by comparing the RÚV title against the episode's Icelandic (`isl`) TVDB title translation.
 - **Matching season resolution** — Choosing which TVDB season a program's episodes belong to: the program's explicit season number when set, otherwise the unique TVDB season whose episode count equals the program's total episode count.
+- **Default season** — The TVDB season the manual match dialog offers first: the lowest season already matched by the program's other episodes, falling back to the program's earliest available TVDB season. Distinct from **matching season resolution**, which is the automated strategy's rule — the default season only shapes what the UI presents.
 - **Generic episode title** — A RÚV title of the form "Þáttur N af M" ("Episode N of M"), carrying the episode number but no descriptive name. Number-based matching is the only viable strategy for these.
 
 ## Lookup & Refresh
