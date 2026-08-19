@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
@@ -19,6 +21,7 @@ namespace Ruvarr.UnitTests.Jobs.RuvProgramRefreshJobTests;
 
 public sealed class KnownProgramRefreshEnqueue
 {
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
@@ -89,7 +92,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _syncQueue.Items.ShouldContain(x => x.RuvId == 99);
@@ -113,7 +116,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert — program 1 should appear exactly once in the queue
         _syncQueue.Items.Count(x => x.RuvId == 1).ShouldBe(1);
@@ -137,7 +140,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _syncQueue.Items.ShouldNotContain(x => x.RuvId == 99);
@@ -162,7 +165,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _syncQueue.Items.ShouldContain(x => x.RuvId == 90);

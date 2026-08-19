@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
@@ -19,6 +21,7 @@ namespace Ruvarr.UnitTests.Jobs.RuvProgramRefreshJobTests;
 
 public sealed class SlugRefreshEnqueue
 {
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
@@ -88,7 +91,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _tvdbLookupQueue.Items.ShouldHaveSingleItem();
@@ -108,7 +111,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _tvdbLookupQueue.Items.ShouldBeEmpty();
@@ -125,7 +128,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert - unmatched program goes via the unmatched path (only one enqueue total)
         _tvdbLookupQueue.Items.ShouldHaveSingleItem();
@@ -156,7 +159,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         _tvdbLookupQueue.Items.Count.ShouldBe(1);

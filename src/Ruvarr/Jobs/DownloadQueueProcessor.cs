@@ -38,6 +38,12 @@ internal class DownloadQueueProcessor(
 
         logger.LogDebug("Starting download queue processor job");
 
+        CancellationToken cancellationToken = context.CancellationToken;
+
+        // Outcome writes must land even when the scheduler is shutting down — a cancelled save
+        // leaves the item stuck in Downloading with no record of what happened to it.
+        CancellationToken outcomeWrite = CancellationToken.None;
+
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
             .Include(x => x.Episode)
                 .ThenInclude(x => x.Program)
@@ -45,7 +51,7 @@ internal class DownloadQueueProcessor(
                 .ThenInclude(x => x.TvdbEpisodes)
             .Where(x => x.Status == DownloadQueueStatus.Pending)
             .OrderBy(x => x.Created)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (item is null)
         {
@@ -54,7 +60,7 @@ internal class DownloadQueueProcessor(
         }
 
         item.MarkDownloading();
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         string episodeSubdirectory = settingsStore.Current.EpisodeDownloadDirectory;
 
@@ -85,7 +91,7 @@ internal class DownloadQueueProcessor(
         {
             logger.LogError(ex, "Failed to resolve download path for {Episode}", item.Episode.ToString());
             item.MarkFailed();
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(outcomeWrite);
             return;
         }
 
@@ -93,7 +99,7 @@ internal class DownloadQueueProcessor(
 
         StreamSizeEstimate? estimate = await streamInspector.EstimateStreamSizeAsync(
             item.Episode.Uri,
-            context.CancellationToken);
+            cancellationToken);
 
         string? seasonEpisodeLabel = BuildSeasonEpisodeLabel(item.Episode);
         progressNotifier.StartDownload(
@@ -106,7 +112,7 @@ internal class DownloadQueueProcessor(
 
         try
         {
-            await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title, progress, context.CancellationToken);
+            await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title, progress, cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
         catch (Exception ex)
@@ -115,17 +121,17 @@ internal class DownloadQueueProcessor(
             logger.LogError(ex, "FFmpeg download failed for {Episode}", item.Episode.ToString());
             item.MarkFailed();
             progressNotifier.FailDownload();
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(outcomeWrite);
             return;
         }
 
         try
         {
-            TimeSpan? trimPoint = await ffmpeg.DetectTrimPointAsync(filepath, context.CancellationToken);
+            TimeSpan? trimPoint = await ffmpeg.DetectTrimPointAsync(filepath, cancellationToken);
             if (trimPoint is not null)
             {
                 logger.LogInformation("Trimming {TrimPoint:g} from start of {Episode}", trimPoint, item.Episode.ToString());
-                await ffmpeg.TrimStartAsync(filepath, trimPoint.Value, context.CancellationToken);
+                await ffmpeg.TrimStartAsync(filepath, trimPoint.Value, cancellationToken);
             }
         }
 #pragma warning disable CA1031 // Trim failures should not fail the download
@@ -138,7 +144,7 @@ internal class DownloadQueueProcessor(
         item.MarkDownloaded();
         progressNotifier.CompleteDownload();
 
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(outcomeWrite);
 
         if (item.Episode.TvdbEpisodes.Count == 0)
         {
@@ -148,7 +154,7 @@ internal class DownloadQueueProcessor(
 
         try
         {
-            IReadOnlyList<Series> sonarrSeries = await sonarr.GetSeriesAsync(context.CancellationToken);
+            IReadOnlyList<Series> sonarrSeries = await sonarr.GetSeriesAsync(cancellationToken);
             int? sonarrSeriesId = sonarrSeries
                 .FirstOrDefault(s => s.TvdbId == item.Episode.Program.Series?.TvdbId)
                 ?.Id;
@@ -156,7 +162,7 @@ internal class DownloadQueueProcessor(
             IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(
                 settingsStore.Current.ResolvedEpisodeDownloadDirectory,
                 seriesId: null,
-                context.CancellationToken);
+                cancellationToken);
 
             ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
 
@@ -178,7 +184,7 @@ internal class DownloadQueueProcessor(
                     ReleaseGroup: "RUV");
 
                 logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
-                await sonarr.ManualImportFilesAsync([request]);
+                await sonarr.ManualImportFilesAsync([request], cancellationToken);
                 return;
             }
 
@@ -215,7 +221,7 @@ internal class DownloadQueueProcessor(
                 ReleaseGroup: "RUV");
 
             logger.LogInformation("Importing {Episode} into Sonarr using fallback episode matching", item.Episode.ToString());
-            await sonarr.ManualImportFilesAsync([fallbackRequest]);
+            await sonarr.ManualImportFilesAsync([fallbackRequest], cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
         catch (Exception ex)
@@ -223,7 +229,7 @@ internal class DownloadQueueProcessor(
         {
             logger.LogError(ex, "Sonarr import failed for {Episode}", item.Episode.ToString());
             item.MarkFailed();
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(outcomeWrite);
         }
     }
 

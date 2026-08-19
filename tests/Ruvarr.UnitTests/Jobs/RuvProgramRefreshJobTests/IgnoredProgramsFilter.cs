@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Quartz;
+
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Ruv.Models;
@@ -18,6 +20,7 @@ namespace Ruvarr.UnitTests.Jobs.RuvProgramRefreshJobTests;
 
 public sealed class IgnoredProgramsFilter
 {
+    private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly ProgramRefreshNotifier _syncQueue = new();
@@ -85,7 +88,7 @@ public sealed class IgnoredProgramsFilter
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>().ToListAsync(TestContext.Current.CancellationToken);
@@ -108,7 +111,7 @@ public sealed class IgnoredProgramsFilter
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>().ToListAsync(TestContext.Current.CancellationToken);
@@ -131,7 +134,7 @@ public sealed class IgnoredProgramsFilter
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(null!);
+        await sut.Execute(_context);
 
         // Assert
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>().ToListAsync(TestContext.Current.CancellationToken);

@@ -28,7 +28,9 @@ internal sealed class RuvProgramRefreshJob(
     {
         logger.LogDebug("Starting RÚV programs refresh job");
 
-        List<RuvTvProgram> programs = await FetchRuvPrograms();
+        CancellationToken cancellationToken = context.CancellationToken;
+
+        List<RuvTvProgram> programs = await FetchRuvPrograms(cancellationToken);
 
         if (programs is [])
         {
@@ -37,30 +39,30 @@ internal sealed class RuvProgramRefreshJob(
 
         HashSet<int> apiRuvIds = [.. programs.Select(x => x.Id)];
 
-        List<RuvProgram> existingTvPrograms = await SyncPrograms(programs);
+        List<RuvProgram> existingTvPrograms = await SyncPrograms(programs, cancellationToken);
 
         UpdateExistingProgramMetadata(existingTvPrograms, programs);
 
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         EnqueueProgramRefreshes(programs);
 
-        await EnqueueKnownProgramRefreshes(apiRuvIds);
+        await EnqueueKnownProgramRefreshes(apiRuvIds, cancellationToken);
 
-        await EnqueueUnmatchedProgramsForLookup();
+        await EnqueueUnmatchedProgramsForLookup(cancellationToken);
 
-        await EnqueueSlugMissingProgramsForLookup();
+        await EnqueueSlugMissingProgramsForLookup(cancellationToken);
 
         broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
     }
 
-    private async Task<List<RuvTvProgram>> FetchRuvPrograms()
+    private async Task<List<RuvTvProgram>> FetchRuvPrograms(CancellationToken cancellationToken)
     {
-        RuvFeaturedTv? kidsCategory = await ruv.GetKidsTvAsync();
+        RuvFeaturedTv? kidsCategory = await ruv.GetKidsTvAsync(cancellationToken);
         List<RuvTvProgram> kidsPrograms = kidsCategory?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
         logger.LogDebug("Found {Count} Krakka RÚV programs", kidsPrograms.Count);
 
-        RuvFeaturedTv? featured = await ruv.GetFeaturedTv();
+        RuvFeaturedTv? featured = await ruv.GetFeaturedTv(cancellationToken);
         List<RuvTvProgram> featuredPrograms = featured?.Panels.SelectMany(x => x.Programs).ToList() ?? [];
         logger.LogDebug("Found {Count} featured RÚV programs", featuredPrograms.Count);
 
@@ -79,14 +81,14 @@ internal sealed class RuvProgramRefreshJob(
         return programs;
     }
 
-    private async Task<List<RuvProgram>> SyncPrograms(List<RuvTvProgram> programs)
+    private async Task<List<RuvProgram>> SyncPrograms(List<RuvTvProgram> programs, CancellationToken cancellationToken)
     {
         List<int> ruvIds = [.. programs.Select(x => x.Id)];
 
         List<RuvProgram> existingTvPrograms = await dbContext.Set<RuvProgram>()
             .IgnoreAutoIncludes()
             .Where(x => ruvIds.Contains(x.RuvId))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
         logger.LogDebug("Found {Count} RÚV programs in database", existingTvPrograms.Count);
 
         List<int> existingRuvIds = [.. existingTvPrograms.Select(x => x.RuvId)];
@@ -163,13 +165,13 @@ internal sealed class RuvProgramRefreshJob(
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
     }
 
-    private async Task EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds)
+    private async Task EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds, CancellationToken cancellationToken)
     {
         List<RuvProgram> knownPrograms = await dbContext.Set<RuvProgram>()
             .IgnoreAutoIncludes()
             .Where(x => x.HasMultipleEpisodes)
             .Where(x => !apiRuvIds.Contains(x.RuvId))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         foreach (RuvProgram program in knownPrograms)
         {
@@ -179,13 +181,13 @@ internal sealed class RuvProgramRefreshJob(
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
     }
 
-    private async Task EnqueueUnmatchedProgramsForLookup()
+    private async Task EnqueueUnmatchedProgramsForLookup(CancellationToken cancellationToken)
     {
         List<RuvProgram> unmatchedPrograms = await dbContext.Set<RuvProgram>()
             .Where(x => x.HasMultipleEpisodes)
             .Where(x => x.Series == null)
             .Where(x => x.NextLookup == null || x.NextLookup <= DateTime.UtcNow)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         foreach (RuvProgram program in unmatchedPrograms)
         {
@@ -193,14 +195,14 @@ internal sealed class RuvProgramRefreshJob(
         }
     }
 
-    private async Task EnqueueSlugMissingProgramsForLookup()
+    private async Task EnqueueSlugMissingProgramsForLookup(CancellationToken cancellationToken)
     {
         List<RuvProgram> slugMissingPrograms = await dbContext.Set<RuvProgram>()
             .Include(x => x.Series)
             .Where(x => x.HasMultipleEpisodes)
             .Where(x => x.Series != null)
             .Where(x => x.Series!.Slug == null)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         HashSet<int> enqueuedTvdbIds = [];
 

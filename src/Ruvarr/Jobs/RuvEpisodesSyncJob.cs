@@ -44,20 +44,22 @@ internal sealed class RuvEpisodesSyncJob(
             return;
         }
 
+        CancellationToken cancellationToken = context.CancellationToken;
+
         var programs = await dbContext.Set<RuvProgram>()
             .AsNoTracking()
             .Where(x => ruvIds.Contains(x.RuvId))
             .Where(x => x.HasMultipleEpisodes)
             .Select(x => new { x.RuvId, x.Name })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         HashSet<int> missingTvdbIds;
         IReadOnlyList<Series> sonarrSeries;
 
         try
         {
-            missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
-            sonarrSeries = await sonarr.GetSeriesAsync();
+            missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
+            sonarrSeries = await sonarr.GetSeriesAsync(cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -101,7 +103,8 @@ internal sealed class RuvEpisodesSyncJob(
                     programName,
                     missingTvdbIds,
                     monitoredTvdbIds,
-                    missingEpisodesTvdbIds);
+                    missingEpisodesTvdbIds,
+                    cancellationToken);
             }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -136,23 +139,24 @@ internal sealed class RuvEpisodesSyncJob(
         string programName,
         HashSet<int> missingTvdbIds,
         HashSet<int> monitoredTvdbIds,
-        HashSet<int> missingEpisodesTvdbIds)
+        HashSet<int> missingEpisodesTvdbIds,
+        CancellationToken cancellationToken)
     {
         logger.LogDebug("Getting episodes for RÚV program '{Name}'", programName);
 
-        if (await dbContext.FindRuvProgramAsync(ruvId, CancellationToken.None) is not RuvProgram program)
+        if (await dbContext.FindRuvProgramAsync(ruvId, cancellationToken) is not RuvProgram program)
         {
             logger.LogDebug("RÚV program {RuvId} not found in database; skipping", ruvId);
             return;
         }
 
-        RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(ruvId);
+        RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(ruvId, cancellationToken);
 
         if (ruvProgram is null)
         {
             logger.LogInformation("Deleting RÚV program {Name} and {Count} episodes", programName, program.Episodes.Count);
             dbContext.Set<RuvProgram>().Remove(program);
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -206,7 +210,7 @@ internal sealed class RuvEpisodesSyncJob(
             missingEpisodesTvdbIds.Contains(program.Series.TvdbId);
         program.SetHasMissingEpisodes(hasMissingEpisodes);
 
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static string StripNewlines(string? value) =>

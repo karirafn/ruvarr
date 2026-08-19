@@ -43,6 +43,8 @@ internal sealed class TvdbEpisodeLookupJob(
         lookupQueue.MarkProcessing(ruvId);
         broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
 
+        CancellationToken cancellationToken = context.CancellationToken;
+
         try
         {
             RuvProgram? program = await dbContext.Set<RuvProgram>()
@@ -50,7 +52,7 @@ internal sealed class TvdbEpisodeLookupJob(
                 .Include(x => x.Episodes)
                     .ThenInclude(x => x.TvdbEpisodes)
                 .Where(x => x.RuvId == ruvId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (program is null || program.Series is null)
             {
@@ -59,20 +61,20 @@ internal sealed class TvdbEpisodeLookupJob(
             }
 
             logger.LogDebug("Getting TVDB series data");
-            SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId);
+            SeriesData? seriesData = await tvdb.GetSeriesAsync(program.Series.TvdbId, cancellationToken: cancellationToken);
 
             if (seriesData is null)
             {
-                await ScheduleLookupAsync(program);
+                await ScheduleLookupAsync(program, cancellationToken);
                 return;
             }
 
-            HashSet<int> missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(context?.CancellationToken ?? CancellationToken.None);
+            HashSet<int> missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
 
             EpisodeMatchingContext matchingContext = new(program, seriesData, missingTvdbIds);
-            await matcher.MatchAsync(matchingContext, context?.CancellationToken ?? CancellationToken.None);
+            await matcher.MatchAsync(matchingContext, cancellationToken);
 
-            await ScheduleLookupAsync(program);
+            await ScheduleLookupAsync(program, cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
         catch (Exception ex)
@@ -87,13 +89,13 @@ internal sealed class TvdbEpisodeLookupJob(
         }
     }
 
-    private async Task ScheduleLookupAsync(RuvProgram program)
+    private async Task ScheduleLookupAsync(RuvProgram program, CancellationToken cancellationToken)
     {
         foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbEpisodes.Count == 0))
         {
             episode.ScheduleLookup();
         }
 
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
