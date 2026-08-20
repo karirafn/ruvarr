@@ -7,7 +7,7 @@ using NSubstitute;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
-using Ruvarr.Programs;
+using Ruvarr.Programs.Components;
 using Ruvarr.Programs.Commands.MatchProgram;
 using Ruvarr.Programs.Queries.SearchTvdbSeries;
 
