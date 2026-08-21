@@ -1,0 +1,57 @@
+@namespace Ruvarr.Programs.Components
+@using Ruvarr.Contracts
+
+@* Markup will be added in step 4 *@
+
+@code {
+    public const int MaxResults = 100;
+
+    internal static string BuildLabel(TvdbSeriesEpisode episode)
+    {
+        string sxxExx = $"S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
+
+        return string.IsNullOrWhiteSpace(episode.Name)
+            ? sxxExx
+            : $"{sxxExx} · {episode.Name}";
+    }
+
+    internal static bool Matches(TvdbSeriesEpisode episode, string query)
+    {
+        return BuildLabel(episode).Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static IReadOnlyList<TvdbSeriesEpisode> FilterAndOrder(
+        IReadOnlyList<TvdbSeriesEpisode> episodes,
+        string query,
+        int? selectedEpisodeId,
+        int? defaultSeason)
+    {
+        IEnumerable<TvdbSeriesEpisode> filtered;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            if (selectedEpisodeId is not null)
+            {
+                TvdbSeriesEpisode? selected = episodes.FirstOrDefault(e => e.TvdbId == selectedEpisodeId);
+                int? selectedSeason = selected?.SeasonNumber;
+                filtered = selectedSeason is not null
+                    ? episodes.Where(e => e.SeasonNumber == selectedSeason)
+                    : [];
+            }
+            else
+            {
+                filtered = defaultSeason is not null
+                    ? episodes.Where(e => e.SeasonNumber == defaultSeason)
+                    : [];
+            }
+        }
+        else
+        {
+            filtered = episodes.Where(e => Matches(e, query));
+        }
+
+        return [.. filtered
+            .OrderBy(e => e.SeasonNumber)
+            .ThenBy(e => e.EpisodeNumber)];
+    }
+}
