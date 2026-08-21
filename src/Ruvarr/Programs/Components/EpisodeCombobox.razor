@@ -1,10 +1,362 @@
 @namespace Ruvarr.Programs.Components
 @using Ruvarr.Contracts
+@inject IJSRuntime Js
 
-@* Markup will be added in step 4 *@
+<div class="episode-combobox">
+    <label id="@_labelId" class="episode-combobox-label">Episode</label>
+    <div class="episode-combobox-control">
+        <input @ref="_inputRef"
+               class="episode-combobox-input"
+               role="combobox"
+               aria-autocomplete="list"
+               aria-haspopup="listbox"
+               aria-expanded="@_isPopupOpen.ToString().ToLowerInvariant()"
+               aria-controls="@_listboxId"
+               aria-labelledby="@_labelId"
+               @attributes="ActiveDescendantAttribute"
+               autocomplete="off"
+               value="@_query"
+               @oninput="OnInputAsync"
+               @onblur="OnBlurAsync"
+               @onclick="OnClickInputAsync"
+               @onkeydown="OnKeyDownAsync"
+               @onkeydown:preventDefault="_isPopupOpen" />
+        <button class="episode-combobox-chevron"
+                type="button"
+                aria-label="Show episodes"
+                tabindex="-1"
+                @onmousedown:preventDefault
+                @onclick="OnChevronClickAsync">
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M1 1l4 4 4-4" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+    </div>
+
+    @if (_isPopupOpen)
+    {
+        <ul id="@_listboxId"
+            class="episode-combobox-popup"
+            role="listbox"
+            aria-labelledby="@_labelId">
+            @if (_filteredEpisodes.Count == 0)
+            {
+                <li class="episode-combobox-empty" role="presentation">No episodes match &quot;@_query&quot;</li>
+            }
+            else
+            {
+                @foreach (TvdbSeriesEpisode episode in _filteredEpisodes)
+                {
+                    string optionId = OptionId(episode.TvdbId);
+                    bool isHighlighted = episode.TvdbId == _highlightedId;
+                    bool isSelected = episode.TvdbId == SelectedEpisodeId;
+                    string cssClass = BuildOptionCssClass(isHighlighted, isSelected);
+                    int capturedTvdbId = episode.TvdbId;
+                    <li id="@optionId"
+                        class="@cssClass"
+                        role="option"
+                        aria-selected="@isSelected.ToString().ToLowerInvariant()"
+                        @onmousedown:preventDefault
+                        @onmousedown="() => CommitOptionAsync(capturedTvdbId)">
+                        @BuildLabel(episode)
+                    </li>
+                }
+                @if (_totalCount > MaxResults)
+                {
+                    <li class="episode-combobox-cap" role="presentation">
+                        Showing @MaxResults of @_totalCount matches &mdash; keep typing to narrow
+                    </li>
+                }
+            }
+        </ul>
+    }
+
+    <div aria-live="polite" aria-atomic="true" class="visually-hidden">@_liveText</div>
+</div>
 
 @code {
     public const int MaxResults = 100;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<TvdbSeriesEpisode> Episodes { get; set; } = [];
+
+    [Parameter]
+    public int? SelectedEpisodeId { get; set; }
+
+    [Parameter]
+    public EventCallback<int?> SelectedEpisodeIdChanged { get; set; }
+
+    [Parameter]
+    public int? DefaultSeason { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmitRequested { get; set; }
+
+    private readonly string _id = $"episode-combobox-{Guid.NewGuid():N}";
+    private string _labelId => $"{_id}-label";
+    private string _listboxId => $"{_id}-listbox";
+
+    private string _query = string.Empty;
+    private bool _isPopupOpen;
+    private int? _highlightedId;
+    private ElementReference _inputRef;
+
+    private IReadOnlyList<TvdbSeriesEpisode> _filteredEpisodes = [];
+    private int _totalCount;
+    private string _liveText = string.Empty;
+
+    private Dictionary<string, object> ActiveDescendantAttribute =>
+        _isPopupOpen && _highlightedId is not null
+            ? new Dictionary<string, object> { ["aria-activedescendant"] = OptionId(_highlightedId.Value) }
+            : [];
+
+    private string OptionId(int tvdbId) => $"{_id}-opt-{tvdbId}";
+
+    public async ValueTask FocusAndSelectAsync()
+    {
+        await Js.InvokeVoidAsync("selectElementText", _inputRef);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_isPopupOpen)
+        {
+            return;
+        }
+
+        _query = SelectedEpisodeId is not null
+            ? FindSelectedLabel()
+            : string.Empty;
+    }
+
+    private string FindSelectedLabel()
+    {
+        if (SelectedEpisodeId is null)
+        {
+            return string.Empty;
+        }
+
+        TvdbSeriesEpisode? episode = Episodes.FirstOrDefault(e => e.TvdbId == SelectedEpisodeId);
+        return episode is not null ? BuildLabel(episode) : string.Empty;
+    }
+
+    private void RecomputeFiltered()
+    {
+        IReadOnlyList<TvdbSeriesEpisode> all = FilterAndOrder(Episodes, _query, SelectedEpisodeId, DefaultSeason);
+        _totalCount = all.Count;
+        _filteredEpisodes = _totalCount > MaxResults ? [.. all.Take(MaxResults)] : all;
+        _liveText = BuildLiveText();
+    }
+
+    private static string BuildOptionCssClass(bool isHighlighted, bool isSelected)
+    {
+        return (isHighlighted, isSelected) switch
+        {
+            (true, true) => "episode-combobox-option is-highlighted is-selected",
+            (true, false) => "episode-combobox-option is-highlighted",
+            (false, true) => "episode-combobox-option is-selected",
+            _ => "episode-combobox-option",
+        };
+    }
+
+    private string BuildLiveText()
+    {
+        if (_filteredEpisodes.Count == 0)
+        {
+            return $"No episodes match \"{_query}\"";
+        }
+
+        if (_totalCount > MaxResults)
+        {
+            return $"Showing {MaxResults} of {_totalCount} matches";
+        }
+
+        return $"{_filteredEpisodes.Count} episodes";
+    }
+
+    private int NextIndexGoingUp(int currentIndex)
+    {
+        return currentIndex <= 0 ? _filteredEpisodes.Count - 1 : currentIndex - 1;
+    }
+
+    private async Task OnClickInputAsync()
+    {
+        if (!_isPopupOpen)
+        {
+            RecomputeFiltered();
+            HighlightSelected();
+            _isPopupOpen = true;
+            await ScrollToHighlightedAsync();
+        }
+    }
+
+    private async Task OnInputAsync(ChangeEventArgs e)
+    {
+        _query = e.Value?.ToString() ?? string.Empty;
+        RecomputeFiltered();
+        _highlightedId = _filteredEpisodes.Count > 0 ? _filteredEpisodes[0].TvdbId : null;
+        _isPopupOpen = true;
+        await ScrollToHighlightedAsync();
+    }
+
+    private Task OnBlurAsync()
+    {
+        _isPopupOpen = false;
+        _highlightedId = null;
+        _query = FindSelectedLabel();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                await HandleArrowDownAsync();
+                break;
+            case "ArrowUp":
+                await HandleArrowUpAsync();
+                break;
+            case "Enter":
+                await HandleEnterAsync();
+                break;
+            case "Escape":
+                HandleEscape();
+                break;
+        }
+    }
+
+    private async Task HandleArrowDownAsync()
+    {
+        if (!_isPopupOpen)
+        {
+            RecomputeFiltered();
+            _highlightedId = _filteredEpisodes.Count > 0 ? _filteredEpisodes[0].TvdbId : null;
+            _isPopupOpen = true;
+        }
+        else
+        {
+            MoveHighlight(1);
+        }
+
+        await ScrollToHighlightedAsync();
+    }
+
+    private async Task HandleArrowUpAsync()
+    {
+        if (!_isPopupOpen)
+        {
+            RecomputeFiltered();
+            _highlightedId = _filteredEpisodes.Count > 0 ? _filteredEpisodes[^1].TvdbId : null;
+            _isPopupOpen = true;
+        }
+        else
+        {
+            MoveHighlight(-1);
+        }
+
+        await ScrollToHighlightedAsync();
+    }
+
+    private void MoveHighlight(int direction)
+    {
+        if (_filteredEpisodes.Count == 0)
+        {
+            return;
+        }
+
+        int currentIndex = _highlightedId is not null
+            ? _filteredEpisodes.ToList().FindIndex(e => e.TvdbId == _highlightedId)
+            : -1;
+
+        int nextIndex = direction > 0
+            ? (currentIndex + 1) % _filteredEpisodes.Count
+            : NextIndexGoingUp(currentIndex);
+
+        _highlightedId = _filteredEpisodes[nextIndex].TvdbId;
+    }
+
+    private async Task HandleEnterAsync()
+    {
+        if (_isPopupOpen)
+        {
+            if (_highlightedId is not null)
+            {
+                await CommitOptionAsync(_highlightedId.Value);
+            }
+            else
+            {
+                _isPopupOpen = false;
+            }
+        }
+        else
+        {
+            await OnSubmitRequested.InvokeAsync();
+        }
+    }
+
+    private void HandleEscape()
+    {
+        if (_isPopupOpen)
+        {
+            _isPopupOpen = false;
+            _highlightedId = null;
+            _query = FindSelectedLabel();
+        }
+    }
+
+    private async Task CommitOptionAsync(int tvdbId)
+    {
+        TvdbSeriesEpisode? episode = Episodes.FirstOrDefault(e => e.TvdbId == tvdbId);
+        if (episode is null)
+        {
+            return;
+        }
+
+        _query = BuildLabel(episode);
+        _isPopupOpen = false;
+        _highlightedId = null;
+
+        await SelectedEpisodeIdChanged.InvokeAsync(tvdbId);
+    }
+
+    private async Task OnChevronClickAsync()
+    {
+        if (_isPopupOpen)
+        {
+            _isPopupOpen = false;
+            _highlightedId = null;
+        }
+        else
+        {
+            RecomputeFiltered();
+            HighlightSelected();
+            _isPopupOpen = true;
+            await ScrollToHighlightedAsync();
+        }
+
+        await Js.InvokeVoidAsync("focusElement", _inputRef);
+    }
+
+    private void HighlightSelected()
+    {
+        if (SelectedEpisodeId is not null && _filteredEpisodes.Any(e => e.TvdbId == SelectedEpisodeId))
+        {
+            _highlightedId = SelectedEpisodeId;
+        }
+        else
+        {
+            _highlightedId = null;
+        }
+    }
+
+    private async Task ScrollToHighlightedAsync()
+    {
+        if (_highlightedId is not null)
+        {
+            await Js.InvokeVoidAsync("scrollOptionIntoView", OptionId(_highlightedId.Value));
+        }
+    }
 
     internal static string BuildLabel(TvdbSeriesEpisode episode)
     {
