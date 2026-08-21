@@ -33,6 +33,7 @@ public sealed class HandleKeyDown : BunitContext
         Services.AddTransient(_ => _matchHandler);
         Services.AddTransient(_ => _episodesHandler);
         Services.AddSingleton(Substitute.For<IJSRuntime>());
+        JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
     [Fact]
@@ -41,11 +42,11 @@ public sealed class HandleKeyDown : BunitContext
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
         await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
-        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
+        await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
-        // Season auto-selected, episode auto-selected via title parsing
-        // Act
-        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        // Season auto-selected, episode auto-selected via title parsing — combobox popup is closed
+        // Act — Enter with popup closed triggers submit shortcut
+        await cut.Find("input[role=combobox]").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
         // Assert
         await _matchHandler.Received(1).Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
@@ -61,11 +62,11 @@ public sealed class HandleKeyDown : BunitContext
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
         await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "Mynd", siblingEpisodes: []);
-        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
+        await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
         // Episode not auto-selected because title doesn't match "þáttur N" pattern
-        // Act
-        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        // Act — Enter with popup closed triggers submit shortcut, but match is disabled so no submit
+        await cut.Find("input[role=combobox]").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
         // Assert
         await _matchHandler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
@@ -78,11 +79,11 @@ public sealed class HandleKeyDown : BunitContext
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
         List<TvdbEpisodeSummary> currentMatches = [new(99999, 1, 1, false, false, null)];
         await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
-        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
+        await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
         // Episode auto-selected to 99999 which equals current match
-        // Act
-        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+        // Act — Enter with popup closed triggers submit shortcut, but match is disabled (same as current)
+        await cut.Find("input[role=combobox]").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
         // Assert
         await _matchHandler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());
@@ -94,10 +95,10 @@ public sealed class HandleKeyDown : BunitContext
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
         await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
-        await cut.WaitForStateAsync(() => cut.FindAll("select").Count == 2);
+        await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
-        // Act
-        await cut.FindAll("select")[1].KeyDownAsync(new KeyboardEventArgs { Key = "a" });
+        // Act — a non-Enter key does not submit
+        await cut.Find("input[role=combobox]").KeyDownAsync(new KeyboardEventArgs { Key = "a" });
 
         // Assert
         await _matchHandler.DidNotReceive().Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>());

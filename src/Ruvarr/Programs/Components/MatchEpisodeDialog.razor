@@ -19,7 +19,7 @@
     {
         <p class="dialog-error">@_errorMessage</p>
     }
-    else if (_seasons.Count == 0)
+    else if (_allEpisodes.Count == 0)
     {
         <p class="dialog-error">No episodes found for this series.</p>
     }
@@ -31,47 +31,12 @@
             MatchEntry entry = _matchEntries[index];
             <fieldset class="match-entry">
                 <legend class="visually-hidden">Match @(index + 1)</legend>
-                <label>
-                    Season
-                    <select class="dialog-select" @ref="entry.SeasonSelectRef" value="@entry.SelectedSeason" @onchange="e => OnEntrySeasonChanged(index, e)">
-                        @if (entry.SelectedSeason is null)
-                        {
-                            <option value="">Select a season</option>
-                        }
-                        @foreach (int season in _seasons)
-                        {
-                            <option value="@season">Season @season</option>
-                        }
-                    </select>
-                </label>
-                <label>
-                    Episode
-                    <select class="dialog-select"
-                            disabled="@(entry.SelectedSeason is null || entry.SeasonEpisodes.Count == 0)"
-                            value="@entry.SelectedEpisodeId"
-                            @onchange="e => OnEntryEpisodeChanged(index, e)"
-                            @onkeydown="HandleKeyDown">
-                        @if (entry.SelectedSeason is null)
-                        {
-                            <option value="">Select a season first</option>
-                        }
-                        else if (entry.SeasonEpisodes.Count == 0)
-                        {
-                            <option value="">No episodes found</option>
-                        }
-                        else
-                        {
-                            @if (entry.SelectedEpisodeId is null)
-                            {
-                                <option value="">Select an episode</option>
-                            }
-                            @foreach (TvdbSeriesEpisode episode in entry.SeasonEpisodes)
-                            {
-                                <option value="@episode.TvdbId">E@(episode.EpisodeNumber.ToString("D2")) - @episode.Name</option>
-                            }
-                        }
-                    </select>
-                </label>
+                <EpisodeCombobox
+                    Episodes="_allEpisodes"
+                    @bind-SelectedEpisodeId="entry.SelectedEpisodeId"
+                    DefaultSeason="ResolveDefaultSeason(_siblingEpisodes, [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)])"
+                    OnSubmitRequested="HandleSubmitRequested"
+                    @ref="entry.ComboboxRef" />
                 @if (_matchEntries.Count > 1)
                 {
                     <button class="match-entry-remove" type="button" @onclick="() => RemoveEntry(index)" aria-label="Remove match @(index + 1)">Remove</button>
@@ -109,7 +74,6 @@
     private readonly CancellationTokenSource _cts = new();
 
     private IReadOnlyList<TvdbSeriesEpisode> _allEpisodes = [];
-    private List<int> _seasons = [];
     private List<MatchEntry> _matchEntries = [];
     private int _tvdbSeriesId;
     private string _episodeTitle = string.Empty;
@@ -125,7 +89,6 @@
         _isLoading = true;
         _errorMessage = null;
         _allEpisodes = [];
-        _seasons = [];
         _matchEntries = [new MatchEntry()];
 
         await InvokeAsync(StateHasChanged);
@@ -142,7 +105,6 @@
             IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>> handler =
                 scope.ServiceProvider.GetRequiredService<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>>();
             _allEpisodes = await handler.Handle(new GetTvdbSeriesEpisodesQuery(_tvdbSeriesId), _cts.Token);
-            _seasons = [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)];
 
             if (_currentMatches.Count > 0)
             {
@@ -151,8 +113,6 @@
                 {
                     MatchEntry entry = new()
                     {
-                        SelectedSeason = match.SeasonNumber,
-                        SeasonEpisodes = [.. _allEpisodes.Where(e => e.SeasonNumber == match.SeasonNumber)],
                         SelectedEpisodeId = match.TvdbId,
                     };
                     _matchEntries.Add(entry);
@@ -160,13 +120,7 @@
             }
             else
             {
-                int? autoSeason = ResolveDefaultSeason(_siblingEpisodes, _seasons);
-                if (autoSeason is not null)
-                {
-                    _matchEntries[0].SelectedSeason = autoSeason;
-                    _matchEntries[0].SeasonEpisodes = [.. _allEpisodes.Where(e => e.SeasonNumber == autoSeason)];
-                    TryAutoSelectEpisode(_matchEntries[0]);
-                }
+                TryAutoSelectEpisode(_matchEntries[0]);
             }
         }
         catch (Exception)
@@ -178,49 +132,45 @@
             _isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
-    }
 
-    private void OnEntrySeasonChanged(int index, ChangeEventArgs e)
-    {
-        MatchEntry entry = _matchEntries[index];
-        if (int.TryParse(e.Value?.ToString(), out int season))
+        if (_errorMessage is null && _matchEntries.Count > 0)
         {
-            entry.SelectedSeason = season;
-            entry.SeasonEpisodes = [.. _allEpisodes.Where(ep => ep.SeasonNumber == season)];
-        }
-        else
-        {
-            entry.SelectedSeason = null;
-            entry.SeasonEpisodes = [];
-        }
-        entry.SelectedEpisodeId = null;
-
-        if (index == 0)
-        {
-            TryAutoSelectEpisode(entry);
+            await Task.Yield();
+            await FocusFirstEntryAsync();
         }
     }
 
-    private void OnEntryEpisodeChanged(int index, ChangeEventArgs e)
+    private async Task FocusFirstEntryAsync()
     {
-        MatchEntry entry = _matchEntries[index];
-        entry.SelectedEpisodeId = int.TryParse(e.Value?.ToString(), out int id) ? id : null;
+        if (_matchEntries.Count > 0 && _matchEntries[0].ComboboxRef is EpisodeCombobox combobox)
+        {
+            await combobox.FocusAndSelectAsync();
+        }
     }
 
     private void TryAutoSelectEpisode(MatchEntry entry)
     {
-        if (entry.SeasonEpisodes.Count == 0)
+        if (_allEpisodes.Count == 0)
         {
             return;
         }
 
-        if (TryGetEpisodeNumber(_episodeTitle, out int episodeNumber))
+        if (!TryGetEpisodeNumber(_episodeTitle, out int episodeNumber))
         {
-            TvdbSeriesEpisode? match = entry.SeasonEpisodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
-            if (match is not null)
-            {
-                entry.SelectedEpisodeId = match.TvdbId;
-            }
+            return;
+        }
+
+        List<int> availableSeasons = [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)];
+        int? defaultSeason = ResolveDefaultSeason(_siblingEpisodes, availableSeasons);
+
+        IEnumerable<TvdbSeriesEpisode> candidateEpisodes = defaultSeason is not null
+            ? _allEpisodes.Where(e => e.SeasonNumber == defaultSeason)
+            : _allEpisodes;
+
+        TvdbSeriesEpisode? match = candidateEpisodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
+        if (match is not null)
+        {
+            entry.SelectedEpisodeId = match.TvdbId;
         }
     }
 
@@ -229,11 +179,9 @@
     {
         MatchEntry? lastEntry = _matchEntries.Count > 0 ? _matchEntries[^1] : null;
         MatchEntry entry = new();
-        if (lastEntry?.SelectedSeason is not null)
+        if (lastEntry?.SelectedEpisodeId is not null)
         {
-            entry.SelectedSeason = lastEntry.SelectedSeason;
-            entry.SeasonEpisodes = [.. _allEpisodes.Where(e => e.SeasonNumber == lastEntry.SelectedSeason)];
-            entry.SelectedEpisodeId = GetNextEpisodeId(entry.SeasonEpisodes, lastEntry.SelectedEpisodeId);
+            entry.SelectedEpisodeId = GetNextEpisodeId([.. _allEpisodes], lastEntry.SelectedEpisodeId);
         }
         _matchEntries.Add(entry);
     }
@@ -257,7 +205,11 @@
         else
         {
             int focusIndex = index > 0 ? index - 1 : 0;
-            await Js.InvokeVoidAsync("focusElement", _matchEntries[focusIndex].SeasonSelectRef);
+            EpisodeCombobox? combobox = _matchEntries[focusIndex].ComboboxRef;
+            if (combobox is not null)
+            {
+                await combobox.FocusAndSelectAsync();
+            }
         }
     }
 
@@ -274,21 +226,29 @@
         return int.TryParse(parts[1], out number);
     }
 
-    internal static int? GetNextEpisodeId(List<TvdbSeriesEpisode> seasonEpisodes, int? currentEpisodeId)
+    internal static int? GetNextEpisodeId(IReadOnlyList<TvdbSeriesEpisode> episodes, int? currentEpisodeId)
     {
         if (currentEpisodeId is null)
         {
             return null;
         }
 
-        int currentIndex = seasonEpisodes.FindIndex(e => e.TvdbId == currentEpisodeId);
+        int currentIndex = -1;
+        for (int i = 0; i < episodes.Count; i++)
+        {
+            if (episodes[i].TvdbId == currentEpisodeId)
+            {
+                currentIndex = i;
+                break;
+            }
+        }
 
-        if (currentIndex < 0 || currentIndex >= seasonEpisodes.Count - 1)
+        if (currentIndex < 0 || currentIndex >= episodes.Count - 1)
         {
             return null;
         }
 
-        return seasonEpisodes[currentIndex + 1].TvdbId;
+        return episodes[currentIndex + 1].TvdbId;
     }
 
     internal static int? ResolveDefaultSeason(List<EpisodeSummary> siblingEpisodes, List<int> availableSeasons)
@@ -323,7 +283,6 @@
         _ruvId = null;
         _currentMatches = [];
         _allEpisodes = [];
-        _seasons = [];
         _matchEntries = [];
         _errorMessage = null;
         _episodeTitle = string.Empty;
@@ -369,10 +328,9 @@
         await OnMatchComplete.InvokeAsync();
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onkeydown")]
-    private async Task HandleKeyDown(KeyboardEventArgs e)
+    private async Task HandleSubmitRequested()
     {
-        if (e.Key == "Enter" && !IsMatchDisabled(_matchEntries, _currentMatches, _isSubmitting))
+        if (!IsMatchDisabled(_matchEntries, _currentMatches, _isSubmitting))
         {
             await SubmitMatch();
         }
@@ -425,9 +383,7 @@
 
     internal sealed class MatchEntry
     {
-        public int? SelectedSeason { get; set; }
         public int? SelectedEpisodeId { get; set; }
-        public List<TvdbSeriesEpisode> SeasonEpisodes { get; set; } = [];
-        public ElementReference SeasonSelectRef { get; set; }
+        public EpisodeCombobox? ComboboxRef { get; set; }
     }
 }
