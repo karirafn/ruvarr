@@ -459,6 +459,8 @@ dialog {
     border-radius: 8px;
     padding: 1.5rem;
     min-width: 20rem;
+    /* overflow: visible so the #374 episode combobox popup can overlay outside the padding box */
+    overflow: visible;
 }
 
 dialog::backdrop {
@@ -1100,4 +1102,100 @@ dialog input[type="number"]:focus {
     .nav           { transition: none; }
     .nav-backdrop  { transition: none; }
     .icon--spinning { animation: none; }
+}
+
+/* ── Episode combobox (#374) ──────────────────────────────────────────── */
+
+.episode-combobox {
+    position: relative;
+}
+
+.episode-combobox-control {
+    display: flex;
+    align-items: center;
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.episode-combobox-control:focus-within {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 1px;
+}
+
+.episode-combobox-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 0.95rem;
+    padding: 0.5rem 0.6rem;
+    outline: none;
+    min-width: 0;
+}
+
+.episode-combobox-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.episode-combobox-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    padding: 0 0.5rem;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.episode-combobox-popup {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background-color: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    max-height: min(18rem, 40vh);
+    overflow-y: auto;
+}
+
+.episode-combobox-option {
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.episode-combobox-option.is-highlighted {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.episode-combobox-option.is-selected {
+    border-left: 2px solid rgba(96, 165, 250, 0.8);
+    background-color: rgba(96, 165, 250, 0.1);
+    color: var(--color-blue);
+    padding-left: calc(0.6rem - 2px);
+}
+
+.episode-combobox-empty,
+.episode-combobox-cap {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+@media (pointer: coarse) {
+    .episode-combobox-input {
+        min-height: 44px;
+    }
+
+    .episode-combobox-option {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
 }
