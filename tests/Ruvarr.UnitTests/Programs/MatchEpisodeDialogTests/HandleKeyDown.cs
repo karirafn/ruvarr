@@ -37,7 +37,7 @@ public sealed class HandleKeyDown : BunitContext
     }
 
     [Fact]
-    public async Task EnterKey_WhenMatchEnabled_InvokesSubmitMatch()
+    public async Task WhenMatchEnabled_EnterKeyInvokesSubmitMatch()
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
@@ -53,7 +53,7 @@ public sealed class HandleKeyDown : BunitContext
     }
 
     [Fact]
-    public async Task EnterKey_WhenNoEpisodeSelected_DoesNotInvokeSubmitMatch()
+    public async Task WhenNoEpisodeSelected_EnterKeyDoesNotInvokeSubmitMatch()
     {
         // Arrange
         _episodesHandler
@@ -73,7 +73,7 @@ public sealed class HandleKeyDown : BunitContext
     }
 
     [Fact]
-    public async Task EnterKey_WhenSelectedMatchesCurrentMatches_DoesNotInvokeSubmitMatch()
+    public async Task WhenSelectedMatchesCurrentMatches_EnterKeyDoesNotInvokeSubmitMatch()
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
@@ -90,7 +90,7 @@ public sealed class HandleKeyDown : BunitContext
     }
 
     [Fact]
-    public async Task OtherKey_DoesNotInvokeSubmitMatch()
+    public async Task WhenNonEnterKeyPressed_DoesNotInvokeSubmitMatch()
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();

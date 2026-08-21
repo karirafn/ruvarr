@@ -7,8 +7,8 @@
 @inject IServiceScopeFactory ScopeFactory
 @inject IJSRuntime Js
 
-<dialog @ref="_dialog" @onclose="OnDialogClose">
-    <h2>Match to TVDB</h2>
+<dialog @ref="_dialog" @onclose="OnDialogClose" aria-labelledby="match-episode-dialog-title">
+    <h2 id="match-episode-dialog-title">Match to TVDB</h2>
     @if (_isLoading)
     {
         <div class="dialog-spinner-container" role="status" aria-label="Loading episodes">
@@ -34,7 +34,7 @@
                 <EpisodeCombobox
                     Episodes="_allEpisodes"
                     @bind-SelectedEpisodeId="entry.SelectedEpisodeId"
-                    DefaultSeason="ResolveDefaultSeason(_siblingEpisodes, [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)])"
+                    DefaultSeason="_defaultSeason"
                     OnSubmitRequested="HandleSubmitRequested"
                     @ref="entry.ComboboxRef" />
                 @if (_matchEntries.Count > 1)
@@ -78,6 +78,7 @@
     private int _tvdbSeriesId;
     private string _episodeTitle = string.Empty;
     private List<EpisodeSummary> _siblingEpisodes = [];
+    private int? _defaultSeason;
 
     public async Task OpenAsync(string ruvId, IReadOnlyList<TvdbEpisodeSummary> currentMatches, int tvdbSeriesId, string episodeTitle, List<EpisodeSummary> siblingEpisodes)
     {
@@ -106,6 +107,9 @@
                 scope.ServiceProvider.GetRequiredService<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>>();
             _allEpisodes = await handler.Handle(new GetTvdbSeriesEpisodesQuery(_tvdbSeriesId), _cts.Token);
 
+            List<int> availableSeasons = [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)];
+            _defaultSeason = ResolveDefaultSeason(_siblingEpisodes, availableSeasons);
+
             if (_currentMatches.Count > 0)
             {
                 _matchEntries.Clear();
@@ -123,7 +127,7 @@
                 TryAutoSelectEpisode(_matchEntries[0]);
             }
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _errorMessage = "Failed to load episodes. Please try again.";
         }
@@ -160,11 +164,8 @@
             return;
         }
 
-        List<int> availableSeasons = [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)];
-        int? defaultSeason = ResolveDefaultSeason(_siblingEpisodes, availableSeasons);
-
-        IEnumerable<TvdbSeriesEpisode> candidateEpisodes = defaultSeason is not null
-            ? _allEpisodes.Where(e => e.SeasonNumber == defaultSeason)
+        IEnumerable<TvdbSeriesEpisode> candidateEpisodes = _defaultSeason is not null
+            ? _allEpisodes.Where(e => e.SeasonNumber == _defaultSeason)
             : _allEpisodes;
 
         TvdbSeriesEpisode? match = candidateEpisodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
@@ -251,7 +252,7 @@
         return episodes[currentIndex + 1].TvdbId;
     }
 
-    internal static int? ResolveDefaultSeason(List<EpisodeSummary> siblingEpisodes, List<int> availableSeasons)
+    internal static int? ResolveDefaultSeason(IReadOnlyList<EpisodeSummary> siblingEpisodes, IReadOnlyList<int> availableSeasons)
     {
         List<int> matchedSeasons = [.. siblingEpisodes
             .SelectMany(e => e.TvdbMatches)
@@ -287,6 +288,7 @@
         _errorMessage = null;
         _episodeTitle = string.Empty;
         _siblingEpisodes = [];
+        _defaultSeason = null;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
@@ -316,7 +318,7 @@
                 scope.ServiceProvider.GetRequiredService<IRequestHandler<MatchEpisodeCommand>>();
             await handler.Handle(new MatchEpisodeCommand(_ruvId, tvdbIds), _cts.Token);
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _errorMessage = "Failed to match episode. Please try again.";
             _isSubmitting = false;
@@ -342,7 +344,7 @@
         _cts.Dispose();
     }
 
-    internal static bool IsMatchDisabled(List<MatchEntry> entries, List<TvdbEpisodeSummary> currentMatches, bool isSubmitting)
+    internal static bool IsMatchDisabled(IReadOnlyList<MatchEntry> entries, IReadOnlyList<TvdbEpisodeSummary> currentMatches, bool isSubmitting)
     {
         if (isSubmitting)
         {
