@@ -8,7 +8,7 @@ namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 public sealed class ResolveDefaultSeason
 {
     [Fact]
-    public void ReturnsLowestMatchedSeasonFromSiblings()
+    public void WhenSiblingMatchesExist_ReturnsLowestMatchedSeason()
     {
         // Arrange
         List<EpisodeSummary> siblings =
@@ -26,7 +26,7 @@ public sealed class ResolveDefaultSeason
     }
 
     [Fact]
-    public void IgnoresSeasonZeroFromSiblings()
+    public void WhenSiblingHasSeasonZero_SeasonZeroIsIgnored()
     {
         // Arrange
         List<EpisodeSummary> siblings =
@@ -44,7 +44,7 @@ public sealed class ResolveDefaultSeason
     }
 
     [Fact]
-    public void FallsBackToFirstAvailableSeasonWhenNoSiblingMatches()
+    public void WhenNoSiblingMatches_FallsBackToFirstAvailableSeason()
     {
         // Arrange
         List<EpisodeSummary> siblings = [];
@@ -58,7 +58,7 @@ public sealed class ResolveDefaultSeason
     }
 
     [Fact]
-    public void FallsBackToFirstAvailableSeasonWhenSiblingSeasonNotInAvailable()
+    public void WhenSiblingSeasonNotInAvailable_FallsBackToFirstAvailableSeason()
     {
         // Arrange
         List<EpisodeSummary> siblings =
@@ -75,7 +75,7 @@ public sealed class ResolveDefaultSeason
     }
 
     [Fact]
-    public void ReturnsNullWhenNoAvailableSeasons()
+    public void WhenNoAvailableSeasons_ReturnsNull()
     {
         // Arrange
         List<EpisodeSummary> siblings = [];
@@ -89,7 +89,7 @@ public sealed class ResolveDefaultSeason
     }
 
     [Fact]
-    public void FallsBackToFirstAvailableWhenAllSiblingsUnmatched()
+    public void WhenAllSiblingsUnmatched_FallsBackToFirstAvailableSeason()
     {
         // Arrange
         List<EpisodeSummary> siblings =

@@ -8,7 +8,7 @@ namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 public sealed class IsMatchDisabled
 {
     [Fact]
-    public void ReturnsTrueWhenNoEntries()
+    public void WhenNoEntries_ReturnsTrue()
     {
         // Act
         bool result = MatchEpisodeDialog.IsMatchDisabled([], [], isSubmitting: false);
@@ -18,7 +18,7 @@ public sealed class IsMatchDisabled
     }
 
     [Fact]
-    public void ReturnsTrueWhenAnyEntryHasNoSelection()
+    public void WhenAnyEntryHasNoSelection_ReturnsTrue()
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries = [new() { SelectedEpisodeId = null }];
@@ -31,7 +31,7 @@ public sealed class IsMatchDisabled
     }
 
     [Fact]
-    public void ReturnsFalseWhenAllEntriesSelectedAndNoCurrentMatches()
+    public void WhenAllEntriesSelectedAndNoCurrentMatches_ReturnsFalse()
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries = [new() { SelectedEpisodeId = 12345 }];
@@ -44,7 +44,7 @@ public sealed class IsMatchDisabled
     }
 
     [Fact]
-    public void ReturnsTrueWhenSelectionsMatchCurrentMatches()
+    public void WhenSelectionsMatchCurrentMatches_ReturnsTrue()
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries = [new() { SelectedEpisodeId = 12345 }];
@@ -58,7 +58,7 @@ public sealed class IsMatchDisabled
     }
 
     [Fact]
-    public void ReturnsFalseWhenSelectionsDifferFromCurrentMatches()
+    public void WhenSelectionsDifferFromCurrentMatches_ReturnsFalse()
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries = [new() { SelectedEpisodeId = 12345 }];
@@ -72,7 +72,7 @@ public sealed class IsMatchDisabled
     }
 
     [Fact]
-    public void ReturnsTrueWhenIsSubmitting()
+    public void WhenIsSubmitting_ReturnsTrue()
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries = [new() { SelectedEpisodeId = 12345 }];
@@ -85,7 +85,7 @@ public sealed class IsMatchDisabled
     }
 
     [Fact]
-    public void ReturnsFalseWhenDifferentNumberOfMatches()
+    public void WhenDifferentNumberOfMatches_ReturnsFalse()
     {
         // Arrange
         List<MatchEpisodeDialog.MatchEntry> entries =
