@@ -5,7 +5,7 @@ using Shouldly;
 
 namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 
-public sealed class ResolveAutoSelectedSeason
+public sealed class ResolveDefaultSeason
 {
     [Fact]
     public void ReturnsLowestMatchedSeasonFromSiblings()
@@ -19,7 +19,7 @@ public sealed class ResolveAutoSelectedSeason
         List<int> availableSeasons = [1, 2, 3];
 
         // Act
-        int? result = MatchEpisodeDialog.ResolveAutoSelectedSeason(siblings, availableSeasons);
+        int? result = MatchEpisodeDialog.ResolveDefaultSeason(siblings, availableSeasons);
 
         // Assert
         result.ShouldBe(2);
@@ -37,7 +37,7 @@ public sealed class ResolveAutoSelectedSeason
         List<int> availableSeasons = [1, 2];
 
         // Act
-        int? result = MatchEpisodeDialog.ResolveAutoSelectedSeason(siblings, availableSeasons);
+        int? result = MatchEpisodeDialog.ResolveDefaultSeason(siblings, availableSeasons);
 
         // Assert
         result.ShouldBe(2);
@@ -51,7 +51,7 @@ public sealed class ResolveAutoSelectedSeason
         List<int> availableSeasons = [1, 2, 3];
 
         // Act
-        int? result = MatchEpisodeDialog.ResolveAutoSelectedSeason(siblings, availableSeasons);
+        int? result = MatchEpisodeDialog.ResolveDefaultSeason(siblings, availableSeasons);
 
         // Assert
         result.ShouldBe(1);
@@ -68,7 +68,7 @@ public sealed class ResolveAutoSelectedSeason
         List<int> availableSeasons = [1, 2, 3];
 
         // Act
-        int? result = MatchEpisodeDialog.ResolveAutoSelectedSeason(siblings, availableSeasons);
+        int? result = MatchEpisodeDialog.ResolveDefaultSeason(siblings, availableSeasons);
 
         // Assert
         result.ShouldBe(1);
@@ -82,7 +82,7 @@ public sealed class ResolveAutoSelectedSeason
         List<int> availableSeasons = [];
 
         // Act
-        int? result = MatchEpisodeDialog.ResolveAutoSelectedSeason(siblings, availableSeasons);
+        int? result = MatchEpisodeDialog.ResolveDefaultSeason(siblings, availableSeasons);
 
         // Assert
         result.ShouldBeNull();
@@ -100,7 +100,7 @@ public sealed class ResolveAutoSelectedSeason
         List<int> availableSeasons = [2, 3];
 
         // Act
-        int? result = MatchEpisodeDialog.ResolveAutoSelectedSeason(siblings, availableSeasons);
+        int? result = MatchEpisodeDialog.ResolveDefaultSeason(siblings, availableSeasons);
 
         // Assert
         result.ShouldBe(2);
