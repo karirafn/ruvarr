@@ -188,12 +188,12 @@ public sealed class KeyboardInteraction : BunitContext
     }
 
     [Fact]
-    public async Task WhenEscapePopupOpen_PreventDefaultIsActive()
+    public async Task WhenEscapePopupOpen_ClosesPopupInternally()
     {
-        // Arrange — the @onkeydown:preventDefault="_isPopupOpen" binding means that
-        // when the popup is open, ALL keydown events have preventDefault called.
-        // In bUnit we verify this by checking that the component's _isPopupOpen was
-        // true at the time Escape was dispatched (i.e., the markup attribute is bound).
+        // Arrange — a JS keydown listener (registered via registerComboboxKeys) calls
+        // event.preventDefault() selectively for ArrowUp/ArrowDown/Enter/Escape when
+        // aria-expanded is "true", so the native <dialog> Escape-close is suppressed.
+        // In bUnit we verify that the C# handler closes the popup correctly.
         IRenderedComponent<EpisodeCombobox> cut = Render<EpisodeCombobox>(parameters => parameters
             .Add(p => p.Episodes, TestEpisodes)
             .Add(p => p.DefaultSeason, 1));
@@ -257,5 +257,31 @@ public sealed class KeyboardInteraction : BunitContext
         // Assert
         IElement liveRegion = cut.Find("[aria-live=polite]");
         liveRegion.TextContent.ShouldContain("zzz");
+    }
+
+    [Fact]
+    public async Task WhenEnterPopupOpenWithNoHighlight_ClosesPopupWithoutCommitting()
+    {
+        // Arrange — type a non-matching query so popup is open with no options and no highlight
+        bool submitRequested = false;
+        int? capturedId = null;
+
+        IRenderedComponent<EpisodeCombobox> cut = Render<EpisodeCombobox>(parameters => parameters
+            .Add(p => p.Episodes, TestEpisodes)
+            .Add(p => p.DefaultSeason, 1)
+            .Add(p => p.OnSubmitRequested, EventCallback.Factory.Create(this, () => submitRequested = true))
+            .Add(p => p.SelectedEpisodeIdChanged, EventCallback.Factory.Create<int?>(this, id => capturedId = id)));
+
+        // Open popup with no matches — _highlightedId will be null
+        await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "zzz" });
+        cut.Find("input").GetAttribute("aria-expanded").ShouldBe("true");
+
+        // Act — Enter with popup open but no highlighted option
+        await cut.Find("input").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+
+        // Assert — popup closes, no commit and no submit
+        cut.Find("input").GetAttribute("aria-expanded").ShouldBe("false");
+        capturedId.ShouldBeNull();
+        submitRequested.ShouldBeFalse();
     }
 }

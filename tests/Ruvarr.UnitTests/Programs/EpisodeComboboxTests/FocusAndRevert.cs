@@ -82,7 +82,7 @@ public sealed class FocusAndRevert : BunitContext
     }
 
     [Fact]
-    public async Task FocusAndSelectAsync_InvokesSelectElementText()
+    public async Task WhenFocusAndSelectAsyncCalled_InvokesSelectElementText()
     {
         // Arrange
         IRenderedComponent<EpisodeCombobox> cut = Render<EpisodeCombobox>(parameters => parameters

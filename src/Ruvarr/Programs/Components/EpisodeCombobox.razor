@@ -1,11 +1,13 @@
 @namespace Ruvarr.Programs.Components
 @using Ruvarr.Contracts
+@implements IAsyncDisposable
 @inject IJSRuntime Js
 
 <div class="episode-combobox">
-    <label id="@_labelId" class="episode-combobox-label">Episode</label>
+    <label id="@_labelId" for="@_inputId" class="episode-combobox-label">Episode</label>
     <div class="episode-combobox-control">
         <input @ref="_inputRef"
+               id="@_inputId"
                class="episode-combobox-input"
                role="combobox"
                aria-autocomplete="list"
@@ -19,8 +21,7 @@
                @oninput="OnInputAsync"
                @onblur="OnBlurAsync"
                @onclick="OnClickInputAsync"
-               @onkeydown="OnKeyDownAsync"
-               @onkeydown:preventDefault="_isPopupOpen" />
+               @onkeydown="OnKeyDownAsync" />
         <button class="episode-combobox-chevron"
                 type="button"
                 aria-label="Show episodes"
@@ -33,12 +34,13 @@
         </button>
     </div>
 
-    @if (_isPopupOpen)
-    {
-        <ul id="@_listboxId"
-            class="episode-combobox-popup"
-            role="listbox"
-            aria-labelledby="@_labelId">
+    <ul id="@_listboxId"
+        class="episode-combobox-popup"
+        role="listbox"
+        aria-labelledby="@_labelId"
+        hidden="@(!_isPopupOpen)">
+        @if (_isPopupOpen)
+        {
             @if (_filteredEpisodes.Count == 0)
             {
                 <li class="episode-combobox-empty" role="presentation">No episodes match &quot;@_query&quot;</li>
@@ -52,7 +54,8 @@
                     bool isSelected = episode.TvdbId == SelectedEpisodeId;
                     string cssClass = BuildOptionCssClass(isHighlighted, isSelected);
                     int capturedTvdbId = episode.TvdbId;
-                    <li id="@optionId"
+                    <li @key="episode.TvdbId"
+                        id="@optionId"
                         class="@cssClass"
                         role="option"
                         aria-selected="@isSelected.ToString().ToLowerInvariant()"
@@ -68,8 +71,8 @@
                     </li>
                 }
             }
-        </ul>
-    }
+        }
+    </ul>
 
     <div aria-live="polite" aria-atomic="true" class="visually-hidden">@_liveText</div>
 </div>
@@ -93,8 +96,19 @@
     public EventCallback OnSubmitRequested { get; set; }
 
     private readonly string _id = $"episode-combobox-{Guid.NewGuid():N}";
-    private string _labelId => $"{_id}-label";
-    private string _listboxId => $"{_id}-listbox";
+
+    // _labelId, _inputId, _listboxId are computed once from _id in the constructor so they
+    // are readonly fields rather than expression-bodied properties that allocate on every render.
+    private readonly string _labelId;
+    private readonly string _inputId;
+    private readonly string _listboxId;
+
+    public EpisodeCombobox()
+    {
+        _labelId = $"{_id}-label";
+        _inputId = $"{_id}-input";
+        _listboxId = $"{_id}-listbox";
+    }
 
     private string _query = string.Empty;
     private bool _isPopupOpen;
@@ -115,6 +129,19 @@
     public async ValueTask FocusAndSelectAsync()
     {
         await Js.InvokeVoidAsync("selectElementText", _inputRef);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Js.InvokeVoidAsync("unregisterComboboxKeys", _inputRef);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Js.InvokeVoidAsync("registerComboboxKeys", _inputRef);
+        }
     }
 
     protected override void OnParametersSet()
@@ -168,7 +195,7 @@
 
         if (_totalCount > MaxResults)
         {
-            return $"Showing {MaxResults} of {_totalCount} matches";
+            return $"Showing {MaxResults} of {_totalCount} matches — keep typing to narrow";
         }
 
         return $"{_filteredEpisodes.Count} episodes";
@@ -265,9 +292,18 @@
             return;
         }
 
-        int currentIndex = _highlightedId is not null
-            ? _filteredEpisodes.ToList().FindIndex(e => e.TvdbId == _highlightedId)
-            : -1;
+        int currentIndex = -1;
+        if (_highlightedId is not null)
+        {
+            for (int i = 0; i < _filteredEpisodes.Count; i++)
+            {
+                if (_filteredEpisodes[i].TvdbId == _highlightedId)
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+        }
 
         int nextIndex = direction > 0
             ? (currentIndex + 1) % _filteredEpisodes.Count
