@@ -160,7 +160,7 @@
             }
             else
             {
-                int? autoSeason = ResolveAutoSelectedSeason(_siblingEpisodes, _seasons);
+                int? autoSeason = ResolveDefaultSeason(_siblingEpisodes, _seasons);
                 if (autoSeason is not null)
                 {
                     _matchEntries[0].SelectedSeason = autoSeason;
@@ -291,7 +291,7 @@
         return seasonEpisodes[currentIndex + 1].TvdbId;
     }
 
-    internal static int? ResolveAutoSelectedSeason(List<EpisodeSummary> siblingEpisodes, List<int> availableSeasons)
+    internal static int? ResolveDefaultSeason(List<EpisodeSummary> siblingEpisodes, List<int> availableSeasons)
     {
         List<int> matchedSeasons = [.. siblingEpisodes
             .SelectMany(e => e.TvdbMatches)
