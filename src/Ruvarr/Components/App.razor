@@ -37,6 +37,29 @@
         window.focusElement = (el) => { if (el) el.focus(); };
         window.selectElementText = (el) => { if (el) { el.focus(); el.select(); } };
         window.scrollOptionIntoView = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ block: 'nearest' }); };
+        // Selectively prevents default for combobox navigation keys (ArrowUp/ArrowDown/Enter/Escape)
+        // only while the popup is open (aria-expanded="true"), so Tab always moves focus normally.
+        // Escape is also covered so the native <dialog> close is suppressed when the popup is open.
+        const _comboboxListeners = new Map();
+        window.registerComboboxKeys = (el) => {
+            if (!el || _comboboxListeners.has(el)) return;
+            const handler = (e) => {
+                const navKeys = ['ArrowUp', 'ArrowDown', 'Enter', 'Escape'];
+                if (navKeys.includes(e.key) && el.getAttribute('aria-expanded') === 'true') {
+                    e.preventDefault();
+                }
+            };
+            el.addEventListener('keydown', handler);
+            _comboboxListeners.set(el, handler);
+        };
+        window.unregisterComboboxKeys = (el) => {
+            if (!el) return;
+            const handler = _comboboxListeners.get(el);
+            if (handler) {
+                el.removeEventListener('keydown', handler);
+                _comboboxListeners.delete(el);
+            }
+        };
         window._trackedScrollY = 0;
         window._scrollTracker = null;
         window.startScrollTracking = () => {

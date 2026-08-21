@@ -180,4 +180,26 @@ public sealed class EpisodeFiltering : BunitContext
             .First(o => o.GetAttribute("aria-selected") == "true");
         selectedOption.TextContent.Trim().ShouldContain("S01E01");
     }
+
+    [Fact]
+    public async Task WhenMoreThan100Matches_AriaLiveAnnouncesCapWithNarrowHint()
+    {
+        // Arrange
+        IReadOnlyList<TvdbSeriesEpisode> manyEpisodes = [.. Enumerable
+            .Range(1, 120)
+            .Select(i => new TvdbSeriesEpisode(TvdbId: i, Name: "ep", SeasonNumber: 1, EpisodeNumber: i))];
+
+        IRenderedComponent<EpisodeCombobox> cut = Render<EpisodeCombobox>(parameters => parameters
+            .Add(p => p.Episodes, manyEpisodes)
+            .Add(p => p.DefaultSeason, 1));
+
+        // Act — type something that matches all 120
+        await cut.Find("input").InputAsync(new ChangeEventArgs { Value = "ep" });
+
+        // Assert — aria-live region contains cap count, total count, and "narrow" hint
+        IElement liveRegion = cut.Find("[aria-live=polite]");
+        liveRegion.TextContent.ShouldContain("100");
+        liveRegion.TextContent.ShouldContain("120");
+        liveRegion.TextContent.ShouldContain("narrow");
+    }
 }
