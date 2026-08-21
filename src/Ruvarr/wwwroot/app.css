@@ -1110,6 +1110,13 @@ dialog input[type="number"]:focus {
     position: relative;
 }
 
+.episode-combobox-label {
+    display: block;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.4rem;
+}
+
 .episode-combobox-control {
     display: flex;
     align-items: center;
@@ -1185,11 +1192,15 @@ dialog input[type="number"]:focus {
 .episode-combobox-cap {
     padding: 0.4rem 0.6rem;
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.6);
 }
 
 @media (pointer: coarse) {
     .episode-combobox-input {
+        min-height: 44px;
+    }
+
+    .episode-combobox-chevron {
         min-height: 44px;
     }
 
