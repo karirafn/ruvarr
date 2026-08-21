@@ -133,7 +133,18 @@
 
     public async ValueTask DisposeAsync()
     {
-        await Js.InvokeVoidAsync("unregisterComboboxKeys", _inputRef);
+        try
+        {
+            await Js.InvokeVoidAsync("unregisterComboboxKeys", _inputRef);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Expected when the circuit is disconnected during disposal
+        }
+        catch (ObjectDisposedException)
+        {
+            // Expected when the JS runtime is disposed during disposal
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

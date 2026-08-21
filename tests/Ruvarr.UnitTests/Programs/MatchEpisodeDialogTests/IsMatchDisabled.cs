@@ -10,6 +10,8 @@ public sealed class IsMatchDisabled
     [Fact]
     public void WhenNoEntries_ReturnsTrue()
     {
+        // Arrange
+
         // Act
         bool result = MatchEpisodeDialog.IsMatchDisabled([], [], isSubmitting: false);
 
@@ -79,6 +81,23 @@ public sealed class IsMatchDisabled
 
         // Act
         bool result = MatchEpisodeDialog.IsMatchDisabled(entries, [], isSubmitting: true);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void WhenTwoEntriesSelectSameEpisode_ReturnsTrue()
+    {
+        // Arrange
+        List<MatchEpisodeDialog.MatchEntry> entries =
+        [
+            new() { SelectedEpisodeId = 12345 },
+            new() { SelectedEpisodeId = 12345 },
+        ];
+
+        // Act
+        bool result = MatchEpisodeDialog.IsMatchDisabled(entries, [], isSubmitting: false);
 
         // Assert
         result.ShouldBeTrue();
