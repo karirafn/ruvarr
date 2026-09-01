@@ -16,6 +16,8 @@ The process of linking each `RuvEpisode` to its TVDB season/episode so it can be
 - **Matched episode** — A `RuvEpisode` that has at least one `TvdbEpisode` link row.
 - **Unmatched episode** — A `RuvEpisode` with no `TvdbEpisode` link row. The lookup job repeatedly attempts to match these.
 - **Partially-matched program** — A `RuvProgram` where some episodes are matched and some remain unmatched. Commonly arises when RÚV publishes later episodes after the earlier ones were already matched.
+- **Multi-episode match** — A `RuvEpisode` linked to more than one `TvdbEpisode` (up to 10), because RÚV publishes as a single video what TVDB lists as separate episodes. Produced only by manual matching — every **matching strategy** links exactly one. Distinct from `RuvProgram.HasMultipleEpisodes`, which means the program is a series rather than a one-off.
+- **Multi-episode file** — The download produced by a **multi-episode match**, named in Sonarr's `Repeat` multi-episode style (`S01E01E02`) with one `E` segment per linked TVDB episode.
 - **Matching strategy** — A focused rule that attempts to match unmatched episodes. Strategies run in sequence; each only touches episodes still unmatched after the previous ran:
   - **Episode Number matching** — Matches by episode number when the TVDB season's episode count equals the program's total episode count (a 1:1 season alignment). Handles **generic episode titles**.
   - **Part-One Sibling matching** — Matches a "part two" episode by locating its already-matched "part one" sibling and resolving the adjacent TVDB episode by name.
