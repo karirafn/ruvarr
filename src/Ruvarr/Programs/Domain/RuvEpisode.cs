@@ -52,6 +52,30 @@ internal sealed partial class RuvEpisode
             ? null
             : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(Program.Slug)}/{Program.RuvId}/{RuvId}");
 
+    public string? SeasonEpisodeLabel
+    {
+        get
+        {
+            if (_tvdbEpisodes.Count == 0)
+            {
+                return null;
+            }
+
+            List<TvdbEpisode> ordered = [.. _tvdbEpisodes
+                .OrderBy(e => e.SeasonNumber)
+                .ThenBy(e => e.EpisodeNumber)];
+
+            StringBuilder builder = new();
+            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}", ordered[0].SeasonNumber);
+            foreach (TvdbEpisode episode in ordered)
+            {
+                builder.AppendFormat(CultureInfo.InvariantCulture, "E{0:D2}", episode.EpisodeNumber);
+            }
+
+            return builder.ToString();
+        }
+    }
+
     public static RuvEpisode Create(RuvProgram program, string id, Uri uri, string title, string description, DateTime firstRun, TimeSpan duration)
     {
         return new RuvEpisode()
@@ -68,55 +92,17 @@ internal sealed partial class RuvEpisode
 
     public override string ToString()
     {
-        if (_tvdbEpisodes.Count > 0)
-        {
-            List<TvdbEpisode> ordered = [.. _tvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber)];
-            StringBuilder sb = new();
-            sb.Append(Program.Name);
-            sb.Append(' ');
-            sb.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}", ordered[0].SeasonNumber);
-            foreach (TvdbEpisode ep in ordered)
-            {
-                sb.AppendFormat(CultureInfo.InvariantCulture, "E{0:D2}", ep.EpisodeNumber);
-            }
-            sb.Append(" - ");
-            sb.Append(Title);
-            return sb.ToString();
-        }
-
-        return $"{Program.Name} - {Title}";
+        string? label = SeasonEpisodeLabel;
+        return label is null
+            ? $"{Program.Name} - {Title}"
+            : $"{Program.Name} {label} - {Title}";
     }
 
     public string ToFilename()
     {
-        StringBuilder builder = new();
-
-        if (string.IsNullOrWhiteSpace(Program.Series?.Name))
-        {
-            builder.Append(Program.Name);
-        }
-        else
-        {
-            builder.Append(Program.Series.Name);
-        }
-
-        builder.Append(' ');
-
-        if (_tvdbEpisodes.Count > 0)
-        {
-            List<TvdbEpisode> ordered = [.. _tvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber)];
-            builder.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}", ordered[0].SeasonNumber);
-            foreach (TvdbEpisode ep in ordered)
-            {
-                builder.AppendFormat(CultureInfo.InvariantCulture, "E{0:D2}", ep.EpisodeNumber);
-            }
-        }
-        else
-        {
-            builder.Append(Title);
-        }
-
-        string filename = builder.ToString()
+        string namePart = string.IsNullOrWhiteSpace(Program.Series?.Name) ? Program.Name : Program.Series.Name;
+        string episodePart = SeasonEpisodeLabel ?? Title;
+        string filename = $"{namePart} {episodePart}"
             .Sanitized()
             .Replace(' ', '.');
 
@@ -197,6 +183,26 @@ internal sealed partial class RuvEpisode
         _domainEvents.Add(new EpisodeLookupScheduledEvent(this));
         LookupCount++;
         NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
+    }
+
+    public bool TryResolveSonarrEpisodeIds(
+        IReadOnlyDictionary<int, int> tvdbIdToSonarrEpisodeId,
+        out IReadOnlyList<int> sonarrEpisodeIds)
+    {
+        List<int> resolved = [];
+        foreach (TvdbEpisode episode in _tvdbEpisodes)
+        {
+            if (!tvdbIdToSonarrEpisodeId.TryGetValue(episode.TvdbId, out int sonarrId))
+            {
+                sonarrEpisodeIds = [];
+                return false;
+            }
+
+            resolved.Add(sonarrId);
+        }
+
+        sonarrEpisodeIds = resolved;
+        return _tvdbEpisodes.Count > 0;
     }
 
     public bool TryGetEpisodeNumber(out int number)
