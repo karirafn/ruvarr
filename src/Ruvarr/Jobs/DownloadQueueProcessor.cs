@@ -1,8 +1,4 @@
-﻿
-using System.Globalization;
-using System.Text;
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
@@ -13,7 +9,6 @@ using Ruvarr.Infrastructure.FFmpeg;
 using Ruvarr.Infrastructure.Ruv;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
-using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
 
 namespace Ruvarr.Jobs;
@@ -101,7 +96,7 @@ internal class DownloadQueueProcessor(
             item.Episode.Uri,
             cancellationToken);
 
-        string? seasonEpisodeLabel = BuildSeasonEpisodeLabel(item.Episode);
+        string? seasonEpisodeLabel = item.Episode.SeasonEpisodeLabel;
         progressNotifier.StartDownload(
             item.Episode.Program.Name,
             item.Episode.Title,
@@ -164,64 +159,64 @@ internal class DownloadQueueProcessor(
                 seriesId: null,
                 cancellationToken);
 
-            ManualImportFile file = manualImportFiles.First(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
-
-            if (file.Series is not null)
+            ManualImportFile? file = manualImportFiles
+                .FirstOrDefault(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
+            if (file is null)
             {
-                if (file.Episodes.Count == 0)
-                {
-                    logger.LogWarning("Sonarr matched {Episode} to series {SeriesId} but found no episodes. Skipping import",
-                        item.Episode.ToString(), file.Series.Id);
-                    return;
-                }
-
-                ManualImportRequest request = new(
-                    Path: file.Path,
-                    SeriesId: file.Series.Id,
-                    EpisodeIds: file.Episodes.Select(e => e.Id).ToList(),
-                    Quality: file.Quality,
-                    Languages: file.Languages,
-                    ReleaseGroup: "RUV");
-
-                logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
-                await sonarr.ManualImportFilesAsync([request], cancellationToken);
+                logger.LogWarning(
+                    "Sonarr scan of {Folder} did not include {Filename}. Marking {Episode} failed",
+                    settingsStore.Current.ResolvedEpisodeDownloadDirectory, filename, item.Episode.ToString());
+                item.MarkFailed();
+                await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
             }
 
-            if (sonarrSeriesId is null)
+            int? resolvedSeriesId = sonarrSeriesId ?? file.Series?.Id;
+            if (resolvedSeriesId is null)
             {
-                logger.LogWarning("Sonarr did not match {Episode} to a series and no Sonarr series ID is known. Skipping import",
+                logger.LogWarning(
+                    "Sonarr has no series for {Episode} (no TVDB-id match and no scan-matched series). Marking failed",
                     item.Episode.ToString());
+                item.MarkFailed();
+                await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
             }
 
             IReadOnlyList<SonarrEpisode> sonarrEpisodes = await sonarr.GetEpisodesAsync(
-                sonarrSeriesId.Value, context.CancellationToken);
+                resolvedSeriesId.Value, cancellationToken);
 
-            List<int> matchedEpisodeIds = item.Episode.TvdbEpisodes
-                .Select(tvdbEp => sonarrEpisodes
-                    .FirstOrDefault(se => se.SeasonNumber == tvdbEp.SeasonNumber && se.EpisodeNumber == tvdbEp.EpisodeNumber))
-                .Where(se => se is not null)
-                .Select(se => se!.Id)
-                .ToList();
-
-            if (matchedEpisodeIds.Count == 0)
+            Dictionary<int, int> tvdbIdToSonarrEpisodeId = [];
+            foreach (SonarrEpisode sonarrEpisode in sonarrEpisodes)
             {
-                logger.LogWarning("Sonarr series {SeriesId} has no episodes matching {Episode}. Skipping import",
-                    sonarrSeriesId.Value, item.Episode.ToString());
+                if (sonarrEpisode.TvdbId != 0)
+                {
+                    tvdbIdToSonarrEpisodeId.TryAdd(sonarrEpisode.TvdbId, sonarrEpisode.Id);
+                }
+            }
+
+            if (!item.Episode.TryResolveSonarrEpisodeIds(tvdbIdToSonarrEpisodeId, out IReadOnlyList<int> episodeIds))
+            {
+                IEnumerable<int> unresolved = item.Episode.TvdbEpisodes
+                    .Select(e => e.TvdbId)
+                    .Where(id => !tvdbIdToSonarrEpisodeId.ContainsKey(id));
+                logger.LogWarning(
+                    "Sonarr series {SeriesId} is missing episodes for TVDB ids {UnresolvedTvdbIds}. Skipping import of {Episode}",
+                    resolvedSeriesId.Value, string.Join(", ", unresolved), item.Episode.ToString());
+                item.MarkFailed();
+                await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
             }
 
-            ManualImportRequest fallbackRequest = new(
+            ManualImportRequest request = new(
                 Path: file.Path,
-                SeriesId: sonarrSeriesId.Value,
-                EpisodeIds: matchedEpisodeIds,
+                SeriesId: resolvedSeriesId.Value,
+                EpisodeIds: episodeIds,
                 Quality: file.Quality,
                 Languages: file.Languages,
                 ReleaseGroup: "RUV");
 
-            logger.LogInformation("Importing {Episode} into Sonarr using fallback episode matching", item.Episode.ToString());
-            await sonarr.ManualImportFilesAsync([fallbackRequest], cancellationToken);
+            logger.LogInformation("Importing {Episode} into Sonarr", item.Episode.ToString());
+            await sonarr.ManualImportFilesAsync([request], cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
         catch (Exception ex)
@@ -231,26 +226,5 @@ internal class DownloadQueueProcessor(
             item.MarkFailed();
             await dbContext.SaveChangesAsync(outcomeWrite);
         }
-    }
-
-    private static string? BuildSeasonEpisodeLabel(RuvEpisode episode)
-    {
-        if (episode.TvdbEpisodes.Count == 0)
-        {
-            return null;
-        }
-
-        List<TvdbEpisode> ordered = [.. episode.TvdbEpisodes
-            .OrderBy(e => e.SeasonNumber)
-            .ThenBy(e => e.EpisodeNumber)];
-
-        StringBuilder sb = new();
-        sb.AppendFormat(CultureInfo.InvariantCulture, "S{0:D2}", ordered[0].SeasonNumber);
-        foreach (TvdbEpisode ep in ordered)
-        {
-            sb.AppendFormat(CultureInfo.InvariantCulture, "E{0:D2}", ep.EpisodeNumber);
-        }
-
-        return sb.ToString();
     }
 }
