@@ -200,7 +200,7 @@ internal class DownloadQueueProcessor(
                     .Select(e => e.TvdbId)
                     .Where(id => !tvdbIdToSonarrEpisodeId.ContainsKey(id));
                 logger.LogWarning(
-                    "Sonarr series {SeriesId} is missing episodes for TVDB ids {UnresolvedTvdbIds}. Skipping import of {Episode}",
+                    "Sonarr series {SeriesId} is missing episodes for TVDB ids {UnresolvedTvdbIds}. Marking {Episode} failed",
                     resolvedSeriesId.Value, string.Join(", ", unresolved), item.Episode.ToString());
                 item.MarkFailed();
                 await dbContext.SaveChangesAsync(outcomeWrite);
