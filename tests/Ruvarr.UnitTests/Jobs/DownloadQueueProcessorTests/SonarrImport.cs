@@ -186,7 +186,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 1) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1) });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
@@ -219,7 +219,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 99, EpisodeNumber: 99) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 99, EpisodeNumber: 99) });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
@@ -252,9 +252,9 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[]
             {
-                new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 1),
-                new SonarrEpisode(Id: 202, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 2),
-                new SonarrEpisode(Id: 203, SeriesId: 42, SeasonNumber: 2, EpisodeNumber: 1),
+                new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1),
+                new SonarrEpisode(Id: 202, SeriesId: 42, TvdbId: 5002, SeasonNumber: 1, EpisodeNumber: 2),
+                new SonarrEpisode(Id: 203, SeriesId: 42, TvdbId: 5003, SeasonNumber: 2, EpisodeNumber: 1),
             });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
