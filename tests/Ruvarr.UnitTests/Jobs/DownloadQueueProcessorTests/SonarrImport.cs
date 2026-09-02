@@ -89,7 +89,7 @@ public sealed class SonarrImport : IDisposable
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        await SeedMatchedEpisodeAsync(dbContext);
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
 
         // file.Episodes has 4 entries (divergent from Ruvarr's 1 TVDB link) to prove
         // the import uses TvdbId resolution, not file.Episodes
@@ -122,6 +122,8 @@ public sealed class SonarrImport : IDisposable
                 reqs.First().SeriesId == 42 &&
                 reqs.First().EpisodeIds.SequenceEqual(expectedEpisodeIds)),
             Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Complete);
     }
 
     [Fact]
@@ -226,7 +228,7 @@ public sealed class SonarrImport : IDisposable
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        await SeedMatchedEpisodeAsync(dbContext);
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
 
         ManualImportFile file = CreateManualImportFile(
             seriesId: null,
@@ -249,6 +251,8 @@ public sealed class SonarrImport : IDisposable
         await _sonarr.DidNotReceive().ManualImportFilesAsync(
             Arg.Any<IEnumerable<ManualImportRequest>>(),
             Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Failed);
     }
 
     [Fact]
