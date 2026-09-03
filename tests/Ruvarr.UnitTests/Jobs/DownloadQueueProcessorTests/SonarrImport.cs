@@ -6,6 +6,7 @@ using NSubstitute;
 using Quartz;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
@@ -16,6 +17,8 @@ using Ruvarr.Jobs;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
 using Ruvarr.Testing.Builders;
+
+using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.DownloadQueueProcessorTests;
 
@@ -86,14 +89,20 @@ public sealed class SonarrImport : IDisposable
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        await SeedMatchedEpisodeAsync(dbContext);
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
 
+        // file.Episodes has 4 entries (divergent from Ruvarr's 1 TVDB link) to prove
+        // the import uses TvdbId resolution, not file.Episodes
         ManualImportFile file = CreateManualImportFile(
             seriesId: 42,
-            episodeIds: [101]);
+            episodeIds: [101, 102, 103, 104]);
 
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Series>());
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
+        _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1) });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
@@ -106,12 +115,15 @@ public sealed class SonarrImport : IDisposable
             null,
             Arg.Any<CancellationToken>());
 
-        int[] expectedEpisodeIds = [101];
+        // Episode ids come from TVDB-id join (201), not from file.Episodes ([101,102,103,104])
+        int[] expectedEpisodeIds = [201];
         await _sonarr.Received(1).ManualImportFilesAsync(
             Arg.Is<IEnumerable<ManualImportRequest>>(reqs =>
                 reqs.First().SeriesId == 42 &&
                 reqs.First().EpisodeIds.SequenceEqual(expectedEpisodeIds)),
             Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Complete);
     }
 
     [Fact]
@@ -119,7 +131,7 @@ public sealed class SonarrImport : IDisposable
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        await SeedMatchedEpisodeAsync(dbContext);
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
 
         ManualImportFile file = CreateManualImportFile(
             seriesId: null,
@@ -142,21 +154,28 @@ public sealed class SonarrImport : IDisposable
         await _sonarr.DidNotReceive().ManualImportFilesAsync(
             Arg.Any<IEnumerable<ManualImportRequest>>(),
             Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Failed);
     }
 
     [Fact]
-    public async Task SkipsImport_WhenEpisodesListIsEmpty()
+    public async Task WhenTvdbLinksHaveNoSonarrMatch_MarksItemFailed_AndSkipsImport()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        await SeedMatchedEpisodeAsync(dbContext);
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
 
         ManualImportFile file = CreateManualImportFile(
             seriesId: 42,
             episodeIds: []);
 
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Series>());
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
+        // Sonarr episode has a different TvdbId — no match for episode's TvdbId 5001
+        _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 1, EpisodeNumber: 1) });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
@@ -167,6 +186,8 @@ public sealed class SonarrImport : IDisposable
         await _sonarr.DidNotReceive().ManualImportFilesAsync(
             Arg.Any<IEnumerable<ManualImportRequest>>(),
             Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Failed);
     }
 
     [Fact]
@@ -186,7 +207,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 1) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1) });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
@@ -207,7 +228,7 @@ public sealed class SonarrImport : IDisposable
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
-        await SeedMatchedEpisodeAsync(dbContext);
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
 
         ManualImportFile file = CreateManualImportFile(
             seriesId: null,
@@ -219,7 +240,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 99, EpisodeNumber: 99) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 99, EpisodeNumber: 99) });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
@@ -230,6 +251,8 @@ public sealed class SonarrImport : IDisposable
         await _sonarr.DidNotReceive().ManualImportFilesAsync(
             Arg.Any<IEnumerable<ManualImportRequest>>(),
             Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Failed);
     }
 
     [Fact]
@@ -252,9 +275,9 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[]
             {
-                new SonarrEpisode(Id: 201, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 1),
-                new SonarrEpisode(Id: 202, SeriesId: 42, SeasonNumber: 1, EpisodeNumber: 2),
-                new SonarrEpisode(Id: 203, SeriesId: 42, SeasonNumber: 2, EpisodeNumber: 1),
+                new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1),
+                new SonarrEpisode(Id: 202, SeriesId: 42, TvdbId: 5002, SeasonNumber: 1, EpisodeNumber: 2),
+                new SonarrEpisode(Id: 203, SeriesId: 42, TvdbId: 5003, SeasonNumber: 2, EpisodeNumber: 1),
             });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
@@ -269,6 +292,36 @@ public sealed class SonarrImport : IDisposable
                 reqs.First().SeriesId == 42 &&
                 reqs.First().EpisodeIds.SequenceEqual(expectedEpisodeIds)),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WhenSonarrScanDoesNotIncludeFile_MarksItemFailed_WithoutThrowing()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
+
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Series>());
+        // Return a file with a different path — the downloaded filename is not in the scan results
+        ManualImportFile unrelatedFile = CreateManualImportFile(
+            seriesId: 42,
+            episodeIds: [],
+            filename: "Some.Other.Show.S01E01-RUV.mp4");
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns([unrelatedFile]);
+
+        DownloadQueueProcessor sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        await _sonarr.DidNotReceive().ManualImportFilesAsync(
+            Arg.Any<IEnumerable<ManualImportRequest>>(),
+            Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Failed);
     }
 
     private static async Task<DownloadQueueItem> SeedMatchedEpisodeWithMultipleTvdbEpisodesAsync(RuvarrDbContext dbContext)
