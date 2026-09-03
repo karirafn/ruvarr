@@ -3,6 +3,7 @@ using System.Text.Json;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -37,8 +38,17 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
                 services.Remove(descriptor);
             }
 
+            // Disable connection pooling so that EnsureDeletedAsync's implicit
+            // SqliteConnection.ClearAllPools() call cannot dispose connections held
+            // by other test classes running in parallel on their own databases.
+            SqliteConnectionStringBuilder connectionString = new()
+            {
+                DataSource = _dbPath,
+                Pooling = false,
+            };
+
             services.AddDbContext<RuvarrDbContext>(options =>
-                options.UseSqlite($"Data Source={_dbPath}")
+                options.UseSqlite(connectionString.ToString())
                        .UseSnakeCaseNamingConvention());
 
             services.RemoveAll<SettingsStore>();
