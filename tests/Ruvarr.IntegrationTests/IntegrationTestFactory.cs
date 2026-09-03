@@ -73,6 +73,13 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
         await dbContext.Database.MigrateAsync();
     }
 
+    public async Task ResetSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        await using AsyncServiceScope scope = Services.CreateAsyncScope();
+        ISettingsStore store = scope.ServiceProvider.GetRequiredService<ISettingsStore>();
+        await store.SaveAsync(store.Current with { IgnoredChannels = [], IgnoredPrograms = [] }, cancellationToken);
+    }
+
     public new async Task DisposeAsync()
     {
         if (File.Exists(_dbPath))

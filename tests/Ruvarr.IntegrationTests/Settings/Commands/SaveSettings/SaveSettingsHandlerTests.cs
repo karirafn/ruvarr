@@ -20,6 +20,7 @@ public sealed class SaveSettingsHandlerTests(IntegrationTestFactory factory)
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.MigrateAsync();
+        await factory.ResetSettingsAsync();
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
