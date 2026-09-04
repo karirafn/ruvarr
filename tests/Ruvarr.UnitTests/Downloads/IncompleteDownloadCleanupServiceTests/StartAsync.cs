@@ -171,7 +171,8 @@ public sealed class StartAsync : IDisposable
         // Act
         await sut.StartAsync(TestContext.Current.CancellationToken);
 
-        // Assert — status stays Downloading; the queue processor handles cleanup transitions
+        // Assert — status stays Downloading; the sweep deletes files only and never mutates item status.
+        // Failed-item visibility and retry are deferred to #384.
         item.Status.ShouldBe(DownloadQueueStatus.Downloading);
     }
 

@@ -15,7 +15,7 @@ using Ruvarr.Settings;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal class DownloadQueueProcessor(
+internal sealed class DownloadQueueProcessor(
     ILogger<DownloadQueueProcessor> logger,
     RuvarrDbContext dbContext,
     ISonarrClient sonarr,

@@ -141,6 +141,12 @@ public sealed class SonarrImport : IDisposable
                 reqs.First().EpisodeIds.SequenceEqual(expectedEpisodeIds)),
             Arg.Any<CancellationToken>());
 
+        string expectedCompletedPath = DownloadFileStore.CompletedPath(_settingsStore.Current, item.FileName!);
+        await _sonarr.Received(1).ManualImportFilesAsync(
+            Arg.Is<IEnumerable<ManualImportRequest>>(reqs =>
+                reqs.First().Path == expectedCompletedPath),
+            Arg.Any<CancellationToken>());
+
         item.Status.ShouldBe(DownloadQueueStatus.Complete);
     }
 
@@ -458,8 +464,8 @@ public sealed class SonarrImport : IDisposable
                 Id: id)).ToList();
 
         return new ManualImportFile(
-            Path: $"{_tempDownloadsRoot}/episodes/test/{filename}",
-            RelativePath: $"test/{filename}",
+            Path: $"{_tempDownloadsRoot}/episodes/{filename}",
+            RelativePath: filename,
             Name: filename,
             Size: 1000,
             Series: series,

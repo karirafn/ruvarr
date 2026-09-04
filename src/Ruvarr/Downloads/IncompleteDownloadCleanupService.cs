@@ -21,6 +21,7 @@ internal sealed class IncompleteDownloadCleanupService(
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         List<DownloadQueueItem> orphans = await dbContext.Set<DownloadQueueItem>()
+            .AsNoTracking()
             .Where(x => x.Status == DownloadQueueStatus.Downloading)
             .ToListAsync(cancellationToken);
 
