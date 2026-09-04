@@ -28,5 +28,7 @@ internal sealed record RuvarrSettings(
 
     public string ResolvedMovieDownloadDirectory => Path.Join(DownloadsRoot, MovieDownloadDirectory);
 
+    public string ResolvedIncompleteDirectory => Path.Join(DownloadsRoot, "incomplete");
+
     public static RuvarrSettings Empty => new();
 }
