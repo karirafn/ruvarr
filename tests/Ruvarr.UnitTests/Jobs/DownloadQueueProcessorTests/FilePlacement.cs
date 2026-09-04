@@ -276,6 +276,7 @@ public sealed class FilePlacement : IDisposable
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("FFmpeg download failed");
 
         string incompleteDir = _settings.ResolvedIncompleteDirectory;
         bool partialFileExists = Directory.Exists(incompleteDir)
@@ -317,6 +318,7 @@ public sealed class FilePlacement : IDisposable
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("Failed to move file to completed directory");
 
         // Incomplete file must still be on disk (not deleted on move failure)
         string incompleteDir = _settings.ResolvedIncompleteDirectory;

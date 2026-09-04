@@ -180,6 +180,7 @@ public sealed class SonarrImport : IDisposable
             Arg.Any<CancellationToken>());
 
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("Sonarr has no matching series");
     }
 
     [Fact]
@@ -212,6 +213,7 @@ public sealed class SonarrImport : IDisposable
             Arg.Any<CancellationToken>());
 
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("Sonarr is missing episodes");
     }
 
     [Fact]
@@ -277,6 +279,7 @@ public sealed class SonarrImport : IDisposable
             Arg.Any<CancellationToken>());
 
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("Sonarr is missing episodes");
     }
 
     [Fact]
@@ -346,6 +349,7 @@ public sealed class SonarrImport : IDisposable
             Arg.Any<CancellationToken>());
 
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("Sonarr scan did not include the file");
     }
 
     private static async Task<DownloadQueueItem> SeedMatchedEpisodeWithMultipleTvdbEpisodesAsync(RuvarrDbContext dbContext)

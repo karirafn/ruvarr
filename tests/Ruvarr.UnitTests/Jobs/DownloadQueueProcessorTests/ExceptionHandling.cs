@@ -113,5 +113,6 @@ public sealed class ExceptionHandling : IDisposable
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("Sonarr import failed");
     }
 }
