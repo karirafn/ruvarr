@@ -1,0 +1,229 @@
+@page "/downloads"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@namespace Ruvarr.Downloads
+@implements IAsyncDisposable
+@using Ruvarr.Abstractions
+@using Ruvarr.Components
+@using Ruvarr.Contracts
+@using Ruvarr.Downloads.Commands.RetryDownloadQueueItem
+@using Ruvarr.Downloads.Domain
+@using Ruvarr.Downloads.Events
+@using Ruvarr.Downloads.Queries.GetDownloadQueue
+@inject IServiceScopeFactory ScopeFactory
+@inject IDomainEventBroadcaster Broadcaster
+
+<h1>Downloads</h1>
+
+@if (_items is null)
+{
+    <div class="spinner" role="status" aria-label="Loading"></div>
+}
+else if (_items.Count == 0)
+{
+    <p class="empty-message">No downloads in the queue.</p>
+}
+else
+{
+    <table class="queue-table downloads-table">
+        <caption class="visually-hidden">Download queue, failed and exhausted items first</caption>
+        <thead>
+            <tr>
+                <th scope="col">Program</th>
+                <th scope="col">Episode</th>
+                <th scope="col">Status</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Retries</th>
+                <th scope="col">Next retry</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (DownloadQueueItemSummary item in _items)
+            {
+                <tr>
+                    <td>
+                        <a class="program-link" href="/program/@item.ProgramRuvId">@item.ProgramName</a>
+                    </td>
+                    <td>@item.EpisodeTitle</td>
+                    <td>
+                        @switch (item.Status)
+                        {
+                            case DownloadQueueStatus.Failed:
+                                <span class="status-pill status-pill--failed">
+                                    <Icon Type="IconType.Warning" Class="icon" AriaLabel="Failed" /> Failed
+                                </span>
+                                break;
+                            case DownloadQueueStatus.Exhausted:
+                                <span class="status-pill status-pill--exhausted">
+                                    <Icon Type="IconType.Warning" Class="icon" AriaLabel="Exhausted" /> Exhausted
+                                </span>
+                                break;
+                            case DownloadQueueStatus.Downloading:
+                                <span class="status-pill status-pill--downloading">
+                                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Downloading" /> Downloading
+                                </span>
+                                break;
+                            case DownloadQueueStatus.Pending:
+                                <span class="status-pill status-pill--pending">
+                                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Pending" /> Pending
+                                </span>
+                                break;
+                            case DownloadQueueStatus.Complete:
+                                <span class="status-pill status-pill--complete">
+                                    <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Complete" /> Complete
+                                </span>
+                                break;
+                        }
+                    </td>
+                    <td class="downloads-reason">
+                        @if (item.FailureReason is { } reason)
+                        {
+                            <span class="downloads-reason__text" title="@reason">@reason</span>
+                        }
+                        else
+                        {
+                            <span class="unmatched-dash">—</span>
+                        }
+                    </td>
+                    <td class="downloads-retries">
+                        @if (item.Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted)
+                        {
+                            <span class="downloads-retries__count">@item.RetryCount<span class="downloads-retries__cap">/@RetrySchedule.MaxRetries</span></span>
+                        }
+                        else
+                        {
+                            <span class="unmatched-dash">—</span>
+                        }
+                    </td>
+                    <td class="downloads-next-retry">
+                        @if (item.Status is DownloadQueueStatus.Exhausted)
+                        {
+                            <span class="unmatched-dash" title="Automatic retries exhausted — use Retry now">—</span>
+                        }
+                        else if (item.NextRetryAt is { } next)
+                        {
+                            <span title="@next.ToLocalTime().ToString("yyyy-MM-dd HH:mm")">@FormatRelative(next)</span>
+                        }
+                        else
+                        {
+                            <span class="unmatched-dash">—</span>
+                        }
+                    </td>
+                    <td>
+                        <div class="row-actions">
+                            @if (item.Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted)
+                            {
+                                <button class="action-button downloads-retry-button"
+                                        type="button"
+                                        @onclick="() => RetryAsync(item.EpisodeRuvId)"
+                                        disabled="@_retrying.Contains(item.EpisodeRuvId)"
+                                        aria-label="Retry download of @item.EpisodeTitle now">
+                                    @if (_retrying.Contains(item.EpisodeRuvId))
+                                    {
+                                        <span class="button-spinner" aria-hidden="true"></span><text> Retrying...</text>
+                                    }
+                                    else
+                                    {
+                                        <Icon Type="IconType.Refresh" Width="12" Height="12" /><text> Retry now</text>
+                                    }
+                                </button>
+                                @if (_retryErrors.TryGetValue(item.EpisodeRuvId, out string? errorMessage))
+                                {
+                                    <span class="queue-delete-error" role="alert">@errorMessage</span>
+                                }
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<DownloadQueueItemSummary>? _items;
+    private readonly HashSet<string> _retrying = [];
+    private readonly Dictionary<string, string> _retryErrors = [];
+    private readonly CancellationTokenSource _cts = new();
+
+    protected override Task OnInitializedAsync()
+    {
+        _ = LoadAsync();
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadStartedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadCompletedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadFailedEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadRetryScheduledEvent>(_cts.Token));
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadAsync()
+    {
+        _items = await QueryAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task WatchAsync<T>(IAsyncEnumerable<T> events) where T : class
+    {
+        await foreach (T _ in events)
+        {
+            _items = await QueryAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<IReadOnlyList<DownloadQueueItemSummary>> QueryAsync()
+    {
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<GetDownloadQueueQuery, IReadOnlyList<DownloadQueueItemSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDownloadQueueQuery, IReadOnlyList<DownloadQueueItemSummary>>>();
+        return await handler.Handle(new GetDownloadQueueQuery(), _cts.Token);
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task RetryAsync(string episodeRuvId)
+    {
+        _retrying.Add(episodeRuvId);
+        _retryErrors.Remove(episodeRuvId);
+
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        IRequestHandler<RetryDownloadQueueItemCommand> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<RetryDownloadQueueItemCommand>>();
+        RuvarrResult result = await handler.Handle(new RetryDownloadQueueItemCommand(episodeRuvId), _cts.Token);
+
+        _retrying.Remove(episodeRuvId);
+        if (result.IsFailure)
+        {
+            _retryErrors[episodeRuvId] = result.Error.Description;
+        }
+
+        _items = await QueryAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string FormatRelative(DateTime nextUtc)
+    {
+        TimeSpan remaining = nextUtc - DateTime.UtcNow;
+        if (remaining <= TimeSpan.Zero)
+        {
+            return "due now";
+        }
+
+        if (remaining.TotalHours < 1)
+        {
+            return $"in ~{Math.Max(1, (int)remaining.TotalMinutes)}m";
+        }
+
+        if (remaining.TotalHours < 24)
+        {
+            return $"in ~{(int)remaining.TotalHours}h";
+        }
+
+        return $"in ~{(int)remaining.TotalDays}d";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _cts.Dispose();
+    }
+}
