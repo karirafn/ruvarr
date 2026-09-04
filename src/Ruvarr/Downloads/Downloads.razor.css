@@ -1,0 +1,115 @@
+/* Downloads page — extends .queue-table from app.css */
+
+.downloads-table th,
+.downloads-table td {
+    vertical-align: middle;
+}
+
+/* Override global queue-table nth-child widths for the 7-column layout */
+.downloads-table th:nth-child(3),
+.downloads-table td:nth-child(3) {
+    width: auto;
+    white-space: nowrap;
+}
+
+.downloads-table th:nth-child(7),
+.downloads-table td:nth-child(7) {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.downloads-reason__text {
+    display: inline-block;
+    max-width: 22rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+}
+
+.downloads-retries {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.downloads-retries__cap {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.8em;
+}
+
+.downloads-next-retry {
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+}
+
+.downloads-retry-button {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+/* Status pills — extend .status-pill (app.css) with inline-flex for icon+text alignment */
+.downloads-table .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.downloads-table .status-pill .icon {
+    width: 0.85rem;
+    height: 0.85rem;
+    color: currentColor;
+}
+
+.status-pill--failed {
+    color: var(--color-red);
+    background: rgba(253, 70, 70, 0.12);
+    border: 1px solid rgba(253, 70, 70, 0.3);
+}
+
+.status-pill--exhausted {
+    color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-pill--downloading {
+    color: var(--color-blue);
+    background: rgba(96, 165, 250, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.status-pill--pending {
+    color: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-pill--complete {
+    color: var(--color-green);
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+@media (max-width: 640px) {
+    /* Drop Retries (col 5) and Next retry (col 6) on phones */
+    .downloads-table th:nth-child(5),
+    .downloads-table td:nth-child(5),
+    .downloads-table th:nth-child(6),
+    .downloads-table td:nth-child(6) {
+        display: none;
+    }
+
+    /* Let the reason wrap instead of truncating on narrow screens */
+    .downloads-reason__text {
+        white-space: normal;
+        max-width: none;
+    }
+
+    .downloads-retry-button {
+        padding: 0.3rem 0.5rem;
+    }
+}
