@@ -36,6 +36,7 @@ try
 {
     RuvarrSettings settings = app.Services.GetRequiredService<ISettingsStore>().Current;
     Directory.CreateDirectory(settings.DownloadsRoot);
+    Directory.CreateDirectory(settings.ResolvedIncompleteDirectory);
     Directory.CreateDirectory(settings.ResolvedEpisodeDownloadDirectory);
     Directory.CreateDirectory(settings.ResolvedMovieDownloadDirectory);
 }
