@@ -159,6 +159,40 @@ public sealed class GetDownloadQueueHandlerTests
     }
 
     [Fact]
+    public async Task WhenCompleteItemExists_ExcludesItFromResult()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+
+        RuvProgram program = new RuvProgramBuilder().Build();
+        program.TryAddEpisode("ep-complete", new Uri("http://ruv.is/ep-c"), "Complete Episode", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep-pending", new Uri("http://ruv.is/ep-p"), "Pending Episode", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        DownloadQueueItem completeItem = new DownloadQueueItemBuilder()
+            .WithEpisode(program.Episodes.First(e => e.RuvId == "ep-complete"))
+            .Downloaded()
+            .Build();
+
+        DownloadQueueItem pendingItem = DownloadQueueItem.Create(
+            program.Episodes.First(e => e.RuvId == "ep-pending"));
+
+        dbContext.Set<DownloadQueueItem>().AddRange(completeItem, pendingItem);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        GetDownloadQueueHandler sut = new(dbContext);
+
+        // Act
+        IReadOnlyList<DownloadQueueItemSummary> result = await sut.Handle(
+            new GetDownloadQueueQuery(), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Count.ShouldBe(1);
+        result[0].EpisodeRuvId.ShouldBe("ep-pending");
+    }
+
+    [Fact]
     public async Task WhenNoItems_ReturnsEmptyList()
     {
         // Arrange
