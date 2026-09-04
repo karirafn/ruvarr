@@ -49,7 +49,7 @@ public sealed class Retry
         // Arrange
         DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
 
-        // Act / Assert
+        // Act
         Should.Throw<InvalidOperationException>(() => sut.RequeueForRetry());
     }
 
@@ -59,7 +59,7 @@ public sealed class Retry
         // Arrange
         DownloadQueueItem sut = new DownloadQueueItemBuilder().Exhausted().Build();
 
-        // Act / Assert
+        // Act
         Should.Throw<InvalidOperationException>(() => sut.RequeueForRetry());
     }
 
@@ -69,7 +69,7 @@ public sealed class Retry
         // Arrange — Failed item with NextRetryAt in the future
         DownloadQueueItem sut = new DownloadQueueItemBuilder().Failed("reason").Build();
 
-        // Act / Assert
+        // Act
         Should.Throw<InvalidOperationException>(() => sut.RequeueForRetry());
     }
 
@@ -233,7 +233,7 @@ public sealed class Retry
         // Arrange
         DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
 
-        // Act / Assert
+        // Act
         Should.Throw<InvalidOperationException>(() => sut.RetryNow());
     }
 
@@ -244,7 +244,7 @@ public sealed class Retry
         DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
         sut.MarkDownloading();
 
-        // Act / Assert
+        // Act
         Should.Throw<InvalidOperationException>(() => sut.RetryNow());
     }
 
@@ -256,7 +256,7 @@ public sealed class Retry
         sut.MarkDownloading();
         sut.MarkDownloaded();
 
-        // Act / Assert
+        // Act
         Should.Throw<InvalidOperationException>(() => sut.RetryNow());
     }
 }

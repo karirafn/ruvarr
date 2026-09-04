@@ -118,7 +118,8 @@ public sealed class RetryDownloadQueueItemHandlerTests(IntegrationTestFactory fa
         saved.ShouldSatisfyAllConditions(
             () => saved.Status.ShouldBe(DownloadQueueStatus.Pending),
             () => saved.NextRetryAt.ShouldBeNull(),
-            () => saved.FailureReason.ShouldBeNull());
+            () => saved.FailureReason.ShouldBeNull(),
+            () => saved.RetryCount.ShouldBe(RetrySchedule.MaxRetries + 1));
     }
 
     [Theory]

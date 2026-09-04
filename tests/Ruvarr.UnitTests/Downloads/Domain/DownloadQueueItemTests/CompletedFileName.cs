@@ -1,4 +1,5 @@
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -10,8 +11,11 @@ public sealed class CompletedFileName
     [Fact]
     public void IsNull_WhenPending()
     {
-        // Arrange / Act
-        DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
+        // Arrange
+        RuvEpisode episode = new RuvEpisodeBuilder().Build();
+
+        // Act
+        DownloadQueueItem sut = DownloadQueueItem.Create(episode);
 
         // Assert
         sut.CompletedFileName.ShouldBeNull();
