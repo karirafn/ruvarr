@@ -203,7 +203,7 @@ public sealed class FileReuse : IDisposable
 
         // Assert: a fresh download was performed (file was absent even though dir existed)
         ffmpegCalled.ShouldBeTrue();
-        item.Status.ShouldNotBe(DownloadQueueStatus.Downloading);
+        item.Status.ShouldBe(DownloadQueueStatus.Complete);
     }
 
     // Primary scenario: failed during Sonarr import, completed file already on disk.

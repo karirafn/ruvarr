@@ -14,6 +14,8 @@
 
 <h1>Downloads</h1>
 
+<div class="queue-delete-error downloads-retry-error" role="alert" aria-live="assertive">@_latestRetryError</div>
+
 @if (_items is null)
 {
     <div class="spinner" role="status" aria-label="Loading"></div>
@@ -24,10 +26,6 @@ else if (_items.Count == 0)
 }
 else
 {
-    @if (_latestRetryError is { } retryError)
-    {
-        <div class="queue-delete-error downloads-retry-error" role="alert" aria-live="assertive">@retryError</div>
-    }
     <table class="queue-table downloads-table">
         <caption class="visually-hidden">Download queue, failed and exhausted items first</caption>
         <thead>
