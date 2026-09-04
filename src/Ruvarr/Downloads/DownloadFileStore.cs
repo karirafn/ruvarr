@@ -13,6 +13,9 @@ internal sealed class DownloadFileStore(ILogger<DownloadFileStore> logger)
     public static void EnsureIncompleteDirectory(RuvarrSettings settings) =>
         Directory.CreateDirectory(settings.ResolvedIncompleteDirectory);
 
+    public static bool CompletedFileExists(RuvarrSettings settings, string fileName) =>
+        File.Exists(CompletedPath(settings, fileName));
+
     public static string MoveToCompleted(RuvarrSettings settings, string fileName)
     {
         string incompletePath = IncompletePath(settings, fileName);

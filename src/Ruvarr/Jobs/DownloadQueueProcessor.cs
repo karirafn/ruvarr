@@ -61,69 +61,78 @@ internal sealed class DownloadQueueProcessor(
 
         RuvarrSettings settings = settingsStore.Current;
         string fileName = item.FileName!;
-        string incompletePath = DownloadFileStore.IncompletePath(settings, fileName);
-        DownloadFileStore.EnsureIncompleteDirectory(settings);
+        string completedPath = DownloadFileStore.CompletedPath(settings, fileName);
+        bool reuseExisting = DownloadFileStore.CompletedFileExists(settings, fileName);
 
-        logger.LogInformation("Downloading {Episode}", item.Episode.ToString());
-
-        StreamSizeEstimate? estimate = await streamInspector.EstimateStreamSizeAsync(
-            item.Episode.Uri,
-            cancellationToken);
-
-        string? seasonEpisodeLabel = item.Episode.SeasonEpisodeLabel;
-        progressNotifier.StartDownload(
-            item.Episode.Program.Name,
-            item.Episode.Title,
-            seasonEpisodeLabel,
-            totalSize: estimate?.EstimatedBytes);
-
-        Progress<FfmpegProgressData> progress = new(data => progressNotifier.ReportProgress(data));
-
-        try
+        if (!reuseExisting)
         {
-            await ffmpeg.DownloadAsync(item.Episode.Uri, incompletePath, item.Episode.Title, progress, cancellationToken);
-        }
-#pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
-        catch (Exception ex) when (ex is not OperationCanceledException)
-#pragma warning restore CA1031
-        {
-            logger.LogError(ex, "FFmpeg download failed for {Episode}", item.Episode.ToString());
-            fileStore.DeleteIncomplete(settings, fileName);
-            item.MarkFailed("FFmpeg download failed");
-            progressNotifier.FailDownload();
-            await dbContext.SaveChangesAsync(outcomeWrite);
-            return;
-        }
+            string incompletePath = DownloadFileStore.IncompletePath(settings, fileName);
+            DownloadFileStore.EnsureIncompleteDirectory(settings);
 
-        try
-        {
-            TimeSpan? trimPoint = await ffmpeg.DetectTrimPointAsync(incompletePath, cancellationToken);
-            if (trimPoint is not null)
+            logger.LogInformation("Downloading {Episode}", item.Episode.ToString());
+
+            StreamSizeEstimate? estimate = await streamInspector.EstimateStreamSizeAsync(
+                item.Episode.Uri,
+                cancellationToken);
+
+            string? seasonEpisodeLabel = item.Episode.SeasonEpisodeLabel;
+            progressNotifier.StartDownload(
+                item.Episode.Program.Name,
+                item.Episode.Title,
+                seasonEpisodeLabel,
+                totalSize: estimate?.EstimatedBytes);
+
+            Progress<FfmpegProgressData> progress = new(data => progressNotifier.ReportProgress(data));
+
+            try
             {
-                logger.LogInformation("Trimming {TrimPoint:g} from start of {Episode}", trimPoint, item.Episode.ToString());
-                await ffmpeg.TrimStartAsync(incompletePath, trimPoint.Value, cancellationToken);
+                await ffmpeg.DownloadAsync(item.Episode.Uri, incompletePath, item.Episode.Title, progress, cancellationToken);
+            }
+#pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
+            catch (Exception ex) when (ex is not OperationCanceledException)
+#pragma warning restore CA1031
+            {
+                logger.LogError(ex, "FFmpeg download failed for {Episode}", item.Episode.ToString());
+                fileStore.DeleteIncomplete(settings, fileName);
+                item.MarkFailed("FFmpeg download failed");
+                progressNotifier.FailDownload();
+                await dbContext.SaveChangesAsync(outcomeWrite);
+                return;
+            }
+
+            try
+            {
+                TimeSpan? trimPoint = await ffmpeg.DetectTrimPointAsync(incompletePath, cancellationToken);
+                if (trimPoint is not null)
+                {
+                    logger.LogInformation("Trimming {TrimPoint:g} from start of {Episode}", trimPoint, item.Episode.ToString());
+                    await ffmpeg.TrimStartAsync(incompletePath, trimPoint.Value, cancellationToken);
+                }
+            }
+#pragma warning disable CA1031 // Trim failures should not fail the download
+            catch (Exception ex) when (ex is not OperationCanceledException)
+#pragma warning restore CA1031
+            {
+                logger.LogWarning(ex, "Trim detection/execution failed for {Episode}. Continuing with untrimmed file", item.Episode.ToString());
+            }
+
+            try
+            {
+                completedPath = DownloadFileStore.MoveToCompleted(settings, fileName);
+            }
+#pragma warning disable CA1031 // Move failure must not leave item stuck in Downloading state
+            catch (Exception ex) when (ex is not OperationCanceledException)
+#pragma warning restore CA1031
+            {
+                logger.LogError(ex, "Failed to move {FileName} to completed directory for {Episode}", fileName, item.Episode.ToString());
+                item.MarkFailed("Failed to move file to completed directory");
+                await dbContext.SaveChangesAsync(outcomeWrite);
+                return;
             }
         }
-#pragma warning disable CA1031 // Trim failures should not fail the download
-        catch (Exception ex) when (ex is not OperationCanceledException)
-#pragma warning restore CA1031
+        else
         {
-            logger.LogWarning(ex, "Trim detection/execution failed for {Episode}. Continuing with untrimmed file", item.Episode.ToString());
-        }
-
-        string completedPath;
-        try
-        {
-            completedPath = DownloadFileStore.MoveToCompleted(settings, fileName);
-        }
-#pragma warning disable CA1031 // Move failure must not leave item stuck in Downloading state
-        catch (Exception ex) when (ex is not OperationCanceledException)
-#pragma warning restore CA1031
-        {
-            logger.LogError(ex, "Failed to move {FileName} to completed directory for {Episode}", fileName, item.Episode.ToString());
-            item.MarkFailed("Failed to move file to completed directory");
-            await dbContext.SaveChangesAsync(outcomeWrite);
-            return;
+            logger.LogInformation("Reusing existing completed file for {Episode}", item.Episode.ToString());
         }
 
         item.MarkDownloaded();
