@@ -27,6 +27,20 @@
     vertical-align: bottom;
     color: rgba(255, 255, 255, 0.6);
     font-size: 0.85rem;
+    cursor: default;
+    border-radius: 2px;
+}
+
+.downloads-reason__text:hover,
+.downloads-reason__text:focus {
+    white-space: normal;
+    overflow: visible;
+    outline: 2px solid var(--color-blue);
+    outline-offset: 2px;
+}
+
+.downloads-retry-error {
+    margin-bottom: 0.75rem;
 }
 
 .downloads-retries {
@@ -49,6 +63,14 @@
 .downloads-retry-button {
     margin-bottom: 0;
     white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+    .downloads-retry-button {
+        min-height: 44px;
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+    }
 }
 
 /* Status pills — extend .status-pill (app.css) with inline-flex for icon+text alignment */
