@@ -10,7 +10,7 @@ Stage every download under `<DownloadsRoot>/incomplete` (a flat, non-configurabl
 
 The directory is non-configurable specifically to guarantee that the source and destination of the rename share a filesystem, making it an atomic `rename(2)` rather than a cross-device copy. A separate `DownloadsRoot` setting already exists for user-controlled placement; `incomplete` is derived from it automatically.
 
-A startup sweep handles orphans left behind by a crash — any `DownloadQueueItem` still in `Downloading` status at startup has its file cleaned up and the item reset.
+A startup sweep handles orphans left behind by a crash — any `DownloadQueueItem` still in `Downloading` status at startup has its incomplete file (and the accompanying `.tmp.mp4` sibling) deleted from disk; the item's status is deliberately left unchanged. Failed-item visibility and retry are deferred to issue #384, which this issue blocks.
 
 ## Considered Options
 
