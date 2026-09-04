@@ -26,6 +26,14 @@ The process of linking each `RuvEpisode` to its TVDB season/episode so it can be
 - **Default season** — The TVDB season the manual match dialog offers first: the lowest season already matched by the program's other episodes, falling back to the program's earliest available TVDB season. Distinct from **matching season resolution**, which is the automated strategy's rule — the default season only shapes what the UI presents.
 - **Generic episode title** — A RÚV title of the form "Þáttur N af M" ("Episode N of M"), carrying the episode number but no descriptive name. Number-based matching is the only viable strategy for these.
 
+## Downloads
+
+The lifecycle of a file from download start to import-ready.
+
+- **Incomplete directory** — `<DownloadsRoot>/incomplete`. Flat, derived from `DownloadsRoot`, not user-configurable. Holds a download while it is being written and trimmed. Shared with other download clients, so Ruvarr only ever touches paths it recorded — it never enumerates the directory.
+- **Completed directory** — the resolved `EpisodeDownloadDirectory`. A file arrives here only by a single rename, already downloaded and trimmed. Presence there means the file is final and ready for Sonarr to import.
+- **Download file name** — the filename recorded on a `DownloadQueueItem` when its download starts. Both directories are derived from it plus *current* settings, so the item can locate its own file even if the episode is re-matched or the download directories are reconfigured afterwards.
+
 ## Lookup & Refresh
 
 - **Lookup schedule** — The exponential backoff governing when an unmatched program or episode is next re-attempted (1h → 2h → 4h → 1d → 7d), tracked via `LookupCount` and `NextLookup`.
