@@ -23,6 +23,8 @@ internal sealed class DownloadQueueItem
 
     public DateTime? Downloaded { get; private set; }
 
+    public string? FileName { get; private set; }
+
     public DownloadQueueStatus Status { get; private set; } = DownloadQueueStatus.Pending;
 
     public static DownloadQueueItem Create(RuvEpisode episode) => new()
@@ -33,6 +35,7 @@ internal sealed class DownloadQueueItem
 
     public void MarkDownloading()
     {
+        FileName = Episode.ToFilename();
         Status = DownloadQueueStatus.Downloading;
         _domainEvents.Add(new DownloadStartedEvent(this));
     }
