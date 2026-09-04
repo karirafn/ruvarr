@@ -33,12 +33,6 @@ internal static partial class StringExtensions
     internal static bool EqualsSanitized(this string a, string b) => a.Sanitized()
         .Equals(b.Sanitized(), StringComparison.OrdinalIgnoreCase);
 
-    internal static string SanitizedForPath(this string input) => input
-        .Replace("/", string.Empty, StringComparison.Ordinal)
-        .Replace("\\", string.Empty, StringComparison.Ordinal)
-        .Replace("\0", string.Empty, StringComparison.Ordinal)
-        .Replace("..", string.Empty, StringComparison.Ordinal);
-
     internal static string Sanitized(this string input) => input
         .Replace(".", string.Empty, StringComparison.OrdinalIgnoreCase)
         .RemoveSoftHyphens()
