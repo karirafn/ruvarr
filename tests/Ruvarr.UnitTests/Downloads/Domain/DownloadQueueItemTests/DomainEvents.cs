@@ -43,7 +43,7 @@ public sealed class DomainEvents
         DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
 
         // Act
-        sut.MarkFailed();
+        sut.MarkFailed("test reason");
 
         // Assert
         DownloadFailedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<DownloadFailedEvent>();

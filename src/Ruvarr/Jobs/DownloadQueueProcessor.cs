@@ -89,7 +89,7 @@ internal sealed class DownloadQueueProcessor(
         {
             logger.LogError(ex, "FFmpeg download failed for {Episode}", item.Episode.ToString());
             fileStore.DeleteIncomplete(settings, fileName);
-            item.MarkFailed();
+            item.MarkFailed("FFmpeg download failed");
             progressNotifier.FailDownload();
             await dbContext.SaveChangesAsync(outcomeWrite);
             return;
@@ -121,7 +121,7 @@ internal sealed class DownloadQueueProcessor(
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Failed to move {FileName} to completed directory for {Episode}", fileName, item.Episode.ToString());
-            item.MarkFailed();
+            item.MarkFailed("Failed to move file to completed directory");
             await dbContext.SaveChangesAsync(outcomeWrite);
             return;
         }
@@ -156,7 +156,7 @@ internal sealed class DownloadQueueProcessor(
                 logger.LogWarning(
                     "Sonarr scan of {Folder} did not include {Filename}. Marking {Episode} failed",
                     settings.ResolvedEpisodeDownloadDirectory, fileName, item.Episode.ToString());
-                item.MarkFailed();
+                item.MarkFailed("Sonarr scan did not include the file");
                 await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
             }
@@ -167,7 +167,7 @@ internal sealed class DownloadQueueProcessor(
                 logger.LogWarning(
                     "Sonarr has no series for {Episode} (no TVDB-id match and no scan-matched series). Marking failed",
                     item.Episode.ToString());
-                item.MarkFailed();
+                item.MarkFailed("Sonarr has no matching series");
                 await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
             }
@@ -192,7 +192,7 @@ internal sealed class DownloadQueueProcessor(
                 logger.LogWarning(
                     "Sonarr series {SeriesId} is missing episodes for TVDB ids {UnresolvedTvdbIds}. Marking {Episode} failed",
                     resolvedSeriesId.Value, string.Join(", ", unresolved), item.Episode.ToString());
-                item.MarkFailed();
+                item.MarkFailed("Sonarr is missing episodes");
                 await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
             }
@@ -213,7 +213,7 @@ internal sealed class DownloadQueueProcessor(
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Sonarr import failed for {Episode}", item.Episode.ToString());
-            item.MarkFailed();
+            item.MarkFailed("Sonarr import failed");
             await dbContext.SaveChangesAsync(outcomeWrite);
         }
     }

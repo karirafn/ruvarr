@@ -6,4 +6,5 @@ public enum DownloadQueueStatus
     Downloading,
     Complete,
     Failed,
+    Exhausted,
 }
