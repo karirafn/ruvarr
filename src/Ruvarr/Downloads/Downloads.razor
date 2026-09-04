@@ -24,6 +24,10 @@ else if (_items.Count == 0)
 }
 else
 {
+    @if (_latestRetryError is { } retryError)
+    {
+        <div class="queue-delete-error downloads-retry-error" role="alert" aria-live="assertive">@retryError</div>
+    }
     <table class="queue-table downloads-table">
         <caption class="visually-hidden">Download queue, failed and exhausted items first</caption>
         <thead>
@@ -40,7 +44,7 @@ else
         <tbody>
             @foreach (DownloadQueueItemSummary item in _items)
             {
-                <tr>
+                <tr @key="item.EpisodeRuvId">
                     <td>
                         <a class="program-link" href="/program/@item.ProgramRuvId">@item.ProgramName</a>
                     </td>
@@ -50,27 +54,27 @@ else
                         {
                             case DownloadQueueStatus.Failed:
                                 <span class="status-pill status-pill--failed">
-                                    <Icon Type="IconType.Warning" Class="icon" AriaLabel="Failed" /> Failed
+                                    <Icon Type="IconType.Warning" Class="icon" /> Failed
                                 </span>
                                 break;
                             case DownloadQueueStatus.Exhausted:
                                 <span class="status-pill status-pill--exhausted">
-                                    <Icon Type="IconType.Warning" Class="icon" AriaLabel="Exhausted" /> Exhausted
+                                    <Icon Type="IconType.Warning" Class="icon" /> Exhausted
                                 </span>
                                 break;
                             case DownloadQueueStatus.Downloading:
                                 <span class="status-pill status-pill--downloading">
-                                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Downloading" /> Downloading
+                                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" /> Downloading
                                 </span>
                                 break;
                             case DownloadQueueStatus.Pending:
                                 <span class="status-pill status-pill--pending">
-                                    <Icon Type="IconType.Clock" Class="icon" AriaLabel="Pending" /> Pending
+                                    <Icon Type="IconType.Clock" Class="icon" /> Pending
                                 </span>
                                 break;
                             case DownloadQueueStatus.Complete:
                                 <span class="status-pill status-pill--complete">
-                                    <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Complete" /> Complete
+                                    <Icon Type="IconType.Checkmark" Class="icon" /> Complete
                                 </span>
                                 break;
                         }
@@ -78,7 +82,7 @@ else
                     <td class="downloads-reason">
                         @if (item.FailureReason is { } reason)
                         {
-                            <span class="downloads-reason__text" title="@reason">@reason</span>
+                            <span class="downloads-reason__text" tabindex="0" title="@reason">@reason</span>
                         }
                         else
                         {
@@ -117,7 +121,7 @@ else
                                         type="button"
                                         @onclick="() => RetryAsync(item.EpisodeRuvId)"
                                         disabled="@_retrying.Contains(item.EpisodeRuvId)"
-                                        aria-label="Retry download of @item.EpisodeTitle now">
+                                        aria-label="@BuildRetryLabel(item)">
                                     @if (_retrying.Contains(item.EpisodeRuvId))
                                     {
                                         <span class="button-spinner" aria-hidden="true"></span><text> Retrying...</text>
@@ -127,10 +131,6 @@ else
                                         <Icon Type="IconType.Refresh" Width="12" Height="12" /><text> Retry now</text>
                                     }
                                 </button>
-                                @if (_retryErrors.TryGetValue(item.EpisodeRuvId, out string? errorMessage))
-                                {
-                                    <span class="queue-delete-error" role="alert">@errorMessage</span>
-                                }
                             }
                         </div>
                     </td>
@@ -143,7 +143,7 @@ else
 @code {
     private IReadOnlyList<DownloadQueueItemSummary>? _items;
     private readonly HashSet<string> _retrying = [];
-    private readonly Dictionary<string, string> _retryErrors = [];
+    private string? _latestRetryError;
     private readonly CancellationTokenSource _cts = new();
 
     protected override Task OnInitializedAsync()
@@ -183,7 +183,7 @@ else
     private async Task RetryAsync(string episodeRuvId)
     {
         _retrying.Add(episodeRuvId);
-        _retryErrors.Remove(episodeRuvId);
+        _latestRetryError = null;
 
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<RetryDownloadQueueItemCommand> handler =
@@ -193,11 +193,19 @@ else
         _retrying.Remove(episodeRuvId);
         if (result.IsFailure)
         {
-            _retryErrors[episodeRuvId] = result.Error.Description;
+            _latestRetryError = result.Error.Description;
         }
 
         _items = await QueryAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private static string BuildRetryLabel(DownloadQueueItemSummary item)
+    {
+        string subject = string.IsNullOrWhiteSpace(item.EpisodeTitle)
+            ? $"episode from {item.ProgramName}"
+            : item.EpisodeTitle;
+        return $"Retry download of {subject} now";
     }
 
     private static string FormatRelative(DateTime nextUtc)
