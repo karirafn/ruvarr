@@ -7,6 +7,7 @@ using Quartz;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
+using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
@@ -21,7 +22,7 @@ using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.DownloadQueueProcessorTests;
 
-public sealed class EarlyReturns
+public sealed class EarlyReturns : IDisposable
 {
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
     private readonly IFfmpegService _ffmpeg = Substitute.For<IFfmpegService>();
@@ -31,13 +32,45 @@ public sealed class EarlyReturns
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly DownloadProgressNotifier _progressNotifier = new(
         Substitute.For<IDomainEventBroadcaster>(), TimeProvider.System);
+    private readonly DownloadFileStore _fileStore;
+    private readonly string _tempRoot;
 
     public EarlyReturns()
     {
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"ruvarr-er-{Guid.NewGuid()}");
+        Directory.CreateDirectory(_tempRoot);
+
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
-            TvdbApiKey: "tvdb-key", TmdbApiKey: "tmdb-key"));
+            TvdbApiKey: "tvdb-key", TmdbApiKey: "tmdb-key")
+        {
+            DownloadsRoot = _tempRoot
+        });
+
+        _fileStore = new DownloadFileStore(NullLogger<DownloadFileStore>.Instance);
+
+        _ffmpeg
+            .DownloadAsync(
+                Arg.Any<Uri>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<IProgress<FfmpegProgressData>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(async callInfo =>
+            {
+                string targetPath = callInfo.ArgAt<string>(1);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+                await File.WriteAllTextAsync(targetPath, "fake", CancellationToken.None);
+            });
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempRoot))
+        {
+            Directory.Delete(_tempRoot, recursive: true);
+        }
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -48,7 +81,7 @@ public sealed class EarlyReturns
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier);
+        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore);
 
     private static async Task<DownloadQueueItem> SeedPendingItemAsync(RuvarrDbContext dbContext)
     {
@@ -71,7 +104,10 @@ public sealed class EarlyReturns
         using RuvarrDbContext dbContext = CreateDbContext();
         DownloadQueueItem item = await SeedPendingItemAsync(dbContext);
         _settingsStore.Current.Returns(new RuvarrSettings(
-            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key"));
+            SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key")
+        {
+            DownloadsRoot = _tempRoot
+        });
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act

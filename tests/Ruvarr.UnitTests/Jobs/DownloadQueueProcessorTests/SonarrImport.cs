@@ -7,6 +7,7 @@ using Quartz;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
+using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
@@ -32,6 +33,7 @@ public sealed class SonarrImport : IDisposable
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly DownloadProgressNotifier _progressNotifier = new(
         Substitute.For<IDomainEventBroadcaster>(), TimeProvider.System);
+    private readonly DownloadFileStore _fileStore;
     private readonly string _tempDownloadsRoot;
 
     public SonarrImport()
@@ -46,6 +48,22 @@ public sealed class SonarrImport : IDisposable
         {
             DownloadsRoot = _tempDownloadsRoot
         });
+
+        _fileStore = new DownloadFileStore(NullLogger<DownloadFileStore>.Instance);
+
+        _ffmpeg
+            .DownloadAsync(
+                Arg.Any<Uri>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<IProgress<FfmpegProgressData>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(async callInfo =>
+            {
+                string targetPath = callInfo.ArgAt<string>(1);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
+                await File.WriteAllTextAsync(targetPath, "fake", CancellationToken.None);
+            });
     }
 
     public void Dispose()
@@ -64,7 +82,7 @@ public sealed class SonarrImport : IDisposable
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier);
+        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore);
 
     private static async Task<DownloadQueueItem> SeedMatchedEpisodeAsync(RuvarrDbContext dbContext)
     {
