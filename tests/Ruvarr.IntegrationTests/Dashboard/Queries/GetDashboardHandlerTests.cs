@@ -313,7 +313,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         RuvEpisode failedEp = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "dl-failed", cancellationToken);
         DownloadQueueItem failedItem = DownloadQueueItem.Create(failedEp);
         failedItem.MarkDownloading();
-        failedItem.MarkFailed();
+        failedItem.MarkFailed("test failure");
 
         dbContext.Set<DownloadQueueItem>().AddRange(downloadingItem, failedItem);
         await dbContext.SaveChangesAsync(cancellationToken);

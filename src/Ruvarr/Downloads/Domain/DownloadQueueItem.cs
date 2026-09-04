@@ -27,6 +27,16 @@ internal sealed class DownloadQueueItem
 
     public DownloadQueueStatus Status { get; private set; } = DownloadQueueStatus.Pending;
 
+    public int RetryCount { get; private set; }
+
+    public DateTime? NextRetryAt { get; private set; }
+
+    public string? FailureReason { get; private set; }
+
+    public string? CompletedFileName => Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted
+        ? FileName
+        : null;
+
     public static DownloadQueueItem Create(RuvEpisode episode) => new()
     {
         Episode = episode,
@@ -47,9 +57,59 @@ internal sealed class DownloadQueueItem
         _domainEvents.Add(new DownloadCompletedEvent(this));
     }
 
-    public void MarkFailed()
+    public void MarkFailed(string reason)
     {
-        Status = DownloadQueueStatus.Failed;
+        FailureReason = reason;
+        RetryCount++;
+
+        if (RetryCount <= RetrySchedule.MaxRetries)
+        {
+            Status = DownloadQueueStatus.Failed;
+            NextRetryAt = RetrySchedule.ComputeNextRetry(RetryCount);
+        }
+        else
+        {
+            Status = DownloadQueueStatus.Exhausted;
+            NextRetryAt = null;
+        }
+
         _domainEvents.Add(new DownloadFailedEvent(this));
+    }
+
+    public void RequeueForRetry()
+    {
+        if (Status is not DownloadQueueStatus.Failed)
+        {
+            throw new InvalidOperationException("Only Failed items can be automatically requeued for retry.");
+        }
+
+        if (NextRetryAt is null || NextRetryAt > DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Item is not yet due for retry.");
+        }
+
+        Status = DownloadQueueStatus.Pending;
+        NextRetryAt = null;
+        _domainEvents.Add(new DownloadRetryScheduledEvent(this));
+    }
+
+    public void RetryNow()
+    {
+        if (Status is not DownloadQueueStatus.Failed and not DownloadQueueStatus.Exhausted)
+        {
+            throw new InvalidOperationException("Only Failed or Exhausted items can be manually retried.");
+        }
+
+        Status = DownloadQueueStatus.Pending;
+        NextRetryAt = null;
+        FailureReason = null;
+        _domainEvents.Add(new DownloadRetryScheduledEvent(this));
+    }
+
+    // Exposed internal for test builders to simulate time passing (NextRetryAt becoming due).
+    // Production code never calls this — only DownloadQueueItemBuilder.FailedAndDue() does.
+    internal void BackdateNextRetryAt()
+    {
+        NextRetryAt = DateTime.UtcNow.AddHours(-1);
     }
 }

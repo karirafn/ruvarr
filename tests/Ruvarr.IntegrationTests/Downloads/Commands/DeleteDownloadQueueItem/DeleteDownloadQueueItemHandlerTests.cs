@@ -77,7 +77,7 @@ public sealed class DeleteDownloadQueueItemHandlerTests(IntegrationTestFactory f
 
         RuvEpisode episode = program.Episodes[0];
         DownloadQueueItem item = DownloadQueueItem.Create(episode);
-        item.MarkFailed();
+        item.MarkFailed("test failure");
         arrangeContext.Set<DownloadQueueItem>().Add(item);
         await arrangeContext.SaveChangesAsync(cancellationToken);
 
