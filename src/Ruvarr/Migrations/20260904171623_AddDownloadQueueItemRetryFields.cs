@@ -15,6 +15,7 @@ namespace Ruvarr.Migrations
                 name: "failure_reason",
                 table: "download_queue",
                 type: "TEXT",
+                maxLength: 512,
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(

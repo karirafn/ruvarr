@@ -100,16 +100,12 @@ internal sealed class DownloadQueueItem
             throw new InvalidOperationException("Only Failed or Exhausted items can be manually retried.");
         }
 
+        // RetryCount is deliberately preserved, not reset. A manual retry that immediately re-fails
+        // should land on the correct backoff rung (or remain Exhausted if the budget is spent), rather
+        // than resetting the bounded-backoff budget and allowing unlimited retry cycles.
         Status = DownloadQueueStatus.Pending;
         NextRetryAt = null;
         FailureReason = null;
         _domainEvents.Add(new DownloadRetryScheduledEvent(this));
-    }
-
-    // Exposed internal for test builders to simulate time passing (NextRetryAt becoming due).
-    // Production code never calls this — only DownloadQueueItemBuilder.FailedAndDue() does.
-    internal void BackdateNextRetryAt()
-    {
-        NextRetryAt = DateTime.UtcNow.AddHours(-1);
     }
 }

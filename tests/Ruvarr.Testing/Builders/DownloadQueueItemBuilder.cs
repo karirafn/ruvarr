@@ -13,7 +13,6 @@ internal sealed class DownloadQueueItemBuilder
     {
         Pending,
         Failed,
-        FailedAndDue,
         Exhausted,
         Downloaded,
     }
@@ -21,6 +20,12 @@ internal sealed class DownloadQueueItemBuilder
     public DownloadQueueItemBuilder WithEpisode(RuvEpisode episode)
     {
         _episode = episode;
+        return this;
+    }
+
+    public DownloadQueueItemBuilder WithFailedReason(string reason)
+    {
+        _failedReason = reason;
         return this;
     }
 
@@ -32,17 +37,6 @@ internal sealed class DownloadQueueItemBuilder
     {
         _failedReason = reason;
         _state = ItemState.Failed;
-        return this;
-    }
-
-    /// <summary>
-    /// Configures the builder to produce a Failed item that is already due for retry.
-    /// NextRetryAt is backdated to the past.
-    /// </summary>
-    public DownloadQueueItemBuilder FailedAndDue(string reason)
-    {
-        _failedReason = reason;
-        _state = ItemState.FailedAndDue;
         return this;
     }
 
@@ -74,12 +68,6 @@ internal sealed class DownloadQueueItemBuilder
             case ItemState.Failed:
                 item.MarkDownloading();
                 item.MarkFailed(_failedReason);
-                break;
-
-            case ItemState.FailedAndDue:
-                item.MarkDownloading();
-                item.MarkFailed(_failedReason);
-                item.BackdateNextRetryAt();
                 break;
 
             case ItemState.Exhausted:

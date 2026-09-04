@@ -8,10 +8,14 @@ using Ruvarr.Downloads.Domain;
 namespace Ruvarr.Jobs;
 
 [DisallowConcurrentExecution]
-internal sealed class DownloadRetryJob(RuvarrDbContext dbContext) : IJob
+internal sealed class DownloadRetryJob(
+    ILogger<DownloadRetryJob> logger,
+    RuvarrDbContext dbContext) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
+        logger.LogDebug("Starting download retry job");
+
         DateTime utcNow = DateTime.UtcNow;
 
         List<DownloadQueueItem> due = await dbContext.Set<DownloadQueueItem>()
@@ -27,6 +31,7 @@ internal sealed class DownloadRetryJob(RuvarrDbContext dbContext) : IJob
         if (due.Count > 0)
         {
             await dbContext.SaveChangesAsync(context.CancellationToken);
+            logger.LogInformation("Requeued {Count} download queue items for retry", due.Count);
         }
     }
 }
