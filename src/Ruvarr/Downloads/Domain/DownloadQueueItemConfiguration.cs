@@ -18,5 +18,8 @@ internal sealed class DownloadQueueItemConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.Status)
             .HasConversion<string>()
             .IsRequired();
+
+        builder.Property(x => x.FileName)
+            .HasColumnName("file_name");
     }
 }
