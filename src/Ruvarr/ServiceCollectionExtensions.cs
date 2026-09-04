@@ -106,6 +106,14 @@ public static class ServiceCollectionExtensions
                     .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
                     .RepeatForever()));
 
+            JobKey downloadRetry = new(nameof(DownloadRetryJob));
+            options.AddJob<DownloadRetryJob>(x => x.WithIdentity(downloadRetry))
+                .AddTrigger(trigger => trigger
+                    .ForJob(downloadRetry)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithIntervalInMinutes(10)
+                    .RepeatForever()));
+
             JobKey tvdbIslTranslationBackfill = new(nameof(TvdbIslTranslationBackfillJob));
             options.AddJob<TvdbIslTranslationBackfillJob>(x => x.WithIdentity(tvdbIslTranslationBackfill))
                 .AddTrigger(trigger => trigger
