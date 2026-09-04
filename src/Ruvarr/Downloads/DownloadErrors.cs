@@ -6,6 +6,7 @@ public static class DownloadErrors
 {
     public const string ItemNotFoundCode = "Downloads.ItemNotFound";
     public const string ItemNotDeletableCode = "Downloads.ItemNotDeletable";
+    public const string ItemNotRetryableCode = "Downloads.ItemNotRetryable";
 
     public static RuvarrError ItemNotFound => new(
         ItemNotFoundCode,
@@ -14,4 +15,8 @@ public static class DownloadErrors
     public static RuvarrError ItemNotDeletable => new(
         ItemNotDeletableCode,
         "Downloading items cannot be deleted.");
+
+    public static RuvarrError ItemNotRetryable => new(
+        ItemNotRetryableCode,
+        "Only Failed or Exhausted items can be retried.");
 }

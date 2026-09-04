@@ -1,5 +1,6 @@
 using Ruvarr.Abstractions;
 using Ruvarr.Downloads.Commands.DeleteDownloadQueueItem;
+using Ruvarr.Downloads.Commands.RetryDownloadQueueItem;
 using Ruvarr.Downloads.Events;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Downloads.Queries.GetDownloadQueue;
@@ -17,6 +18,7 @@ internal static class ServiceCollectionExtensions
             sp.GetRequiredService<IDomainEventBroadcaster>(),
             sp.GetService<TimeProvider>() ?? TimeProvider.System));
         services.AddTransient<IRequestHandler<DeleteDownloadQueueItemCommand>, DeleteDownloadQueueItemHandler>();
+        services.AddTransient<IRequestHandler<RetryDownloadQueueItemCommand>, RetryDownloadQueueItemHandler>();
         services.AddTransient<IRequestHandler<GetDownloadQueueQuery, IReadOnlyList<DownloadQueueItemSummary>>, GetDownloadQueueHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeMissingEvent>, EpisodeMissingEventHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeDownloadRequestedEvent>, EpisodeDownloadRequestedEventHandler>();
