@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 using Quartz;
 
 using Ruvarr.Contracts;
+using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Infrastructure.FFmpeg;
@@ -21,7 +22,8 @@ internal class DownloadQueueProcessor(
     IFfmpegService ffmpeg,
     IRuvStreamInspector streamInspector,
     ISettingsStore settingsStore,
-    DownloadProgressNotifier progressNotifier) : IJob
+    DownloadProgressNotifier progressNotifier,
+    DownloadFileStore fileStore) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
@@ -57,40 +59,12 @@ internal class DownloadQueueProcessor(
         item.MarkDownloading();
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        string episodeSubdirectory = settingsStore.Current.EpisodeDownloadDirectory;
+        RuvarrSettings settings = settingsStore.Current;
+        string fileName = item.FileName!;
+        string incompletePath = DownloadFileStore.IncompletePath(settings, fileName);
+        DownloadFileStore.EnsureIncompleteDirectory(settings);
 
         logger.LogInformation("Downloading {Episode}", item.Episode.ToString());
-
-        string filepath;
-        try
-        {
-            string downloadsRoot = settingsStore.Current.DownloadsRoot;
-
-            string tentativePath = item.Episode.ToFilePath(
-                downloadsRoot,
-                episodeSubdirectory,
-                fileAlreadyExists: false);
-
-            filepath = item.Episode.ToFilePath(
-                downloadsRoot,
-                episodeSubdirectory,
-                fileAlreadyExists: File.Exists(tentativePath));
-
-            string? directory = Path.GetDirectoryName(filepath);
-            if (directory is not null && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
-        {
-            logger.LogError(ex, "Failed to resolve download path for {Episode}", item.Episode.ToString());
-            item.MarkFailed();
-            await dbContext.SaveChangesAsync(outcomeWrite);
-            return;
-        }
-
-        string filename = Path.GetFileName(filepath);
 
         StreamSizeEstimate? estimate = await streamInspector.EstimateStreamSizeAsync(
             item.Episode.Uri,
@@ -107,13 +81,14 @@ internal class DownloadQueueProcessor(
 
         try
         {
-            await ffmpeg.DownloadAsync(item.Episode.Uri, filepath, item.Episode.Title, progress, cancellationToken);
+            await ffmpeg.DownloadAsync(item.Episode.Uri, incompletePath, item.Episode.Title, progress, cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "FFmpeg download failed for {Episode}", item.Episode.ToString());
+            fileStore.DeleteIncomplete(settings, fileName);
             item.MarkFailed();
             progressNotifier.FailDownload();
             await dbContext.SaveChangesAsync(outcomeWrite);
@@ -122,18 +97,33 @@ internal class DownloadQueueProcessor(
 
         try
         {
-            TimeSpan? trimPoint = await ffmpeg.DetectTrimPointAsync(filepath, cancellationToken);
+            TimeSpan? trimPoint = await ffmpeg.DetectTrimPointAsync(incompletePath, cancellationToken);
             if (trimPoint is not null)
             {
                 logger.LogInformation("Trimming {TrimPoint:g} from start of {Episode}", trimPoint, item.Episode.ToString());
-                await ffmpeg.TrimStartAsync(filepath, trimPoint.Value, cancellationToken);
+                await ffmpeg.TrimStartAsync(incompletePath, trimPoint.Value, cancellationToken);
             }
         }
 #pragma warning disable CA1031 // Trim failures should not fail the download
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogWarning(ex, "Trim detection/execution failed for {Episode}. Continuing with untrimmed file", item.Episode.ToString());
+        }
+
+        string completedPath;
+        try
+        {
+            completedPath = DownloadFileStore.MoveToCompleted(settings, fileName);
+        }
+#pragma warning disable CA1031 // Move failure must not leave item stuck in Downloading state
+        catch (Exception ex) when (ex is not OperationCanceledException)
+#pragma warning restore CA1031
+        {
+            logger.LogError(ex, "Failed to move {FileName} to completed directory for {Episode}", fileName, item.Episode.ToString());
+            item.MarkFailed();
+            await dbContext.SaveChangesAsync(outcomeWrite);
+            return;
         }
 
         item.MarkDownloaded();
@@ -155,17 +145,17 @@ internal class DownloadQueueProcessor(
                 ?.Id;
 
             IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(
-                settingsStore.Current.ResolvedEpisodeDownloadDirectory,
+                settings.ResolvedEpisodeDownloadDirectory,
                 seriesId: null,
                 cancellationToken);
 
             ManualImportFile? file = manualImportFiles
-                .FirstOrDefault(x => x.Path.EndsWith(filename, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(x => x.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase));
             if (file is null)
             {
                 logger.LogWarning(
                     "Sonarr scan of {Folder} did not include {Filename}. Marking {Episode} failed",
-                    settingsStore.Current.ResolvedEpisodeDownloadDirectory, filename, item.Episode.ToString());
+                    settings.ResolvedEpisodeDownloadDirectory, fileName, item.Episode.ToString());
                 item.MarkFailed();
                 await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
@@ -208,7 +198,7 @@ internal class DownloadQueueProcessor(
             }
 
             ManualImportRequest request = new(
-                Path: file.Path,
+                Path: completedPath,
                 SeriesId: resolvedSeriesId.Value,
                 EpisodeIds: episodeIds,
                 Quality: file.Quality,
@@ -219,7 +209,7 @@ internal class DownloadQueueProcessor(
             await sonarr.ManualImportFilesAsync([request], cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all exceptions to prevent download items from getting stuck in Downloading state
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Sonarr import failed for {Episode}", item.Episode.ToString());
