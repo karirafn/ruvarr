@@ -21,5 +21,16 @@ internal sealed class DownloadQueueItemConfiguration : IEntityTypeConfiguration<
 
         builder.Property(x => x.FileName)
             .HasColumnName("file_name");
+
+        builder.Property(x => x.RetryCount)
+            .HasColumnName("retry_count")
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        builder.Property(x => x.NextRetryAt)
+            .HasColumnName("next_retry_at");
+
+        builder.Property(x => x.FailureReason)
+            .HasColumnName("failure_reason");
     }
 }
