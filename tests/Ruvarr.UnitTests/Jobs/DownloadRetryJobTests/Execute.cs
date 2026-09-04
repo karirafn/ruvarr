@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
@@ -30,7 +31,8 @@ public sealed class Execute
             .Options,
         _serviceProvider);
 
-    private static DownloadRetryJob CreateJob(RuvarrDbContext dbContext) => new(dbContext);
+    private static DownloadRetryJob CreateJob(RuvarrDbContext dbContext) =>
+        new(NullLogger<DownloadRetryJob>.Instance, dbContext);
 
     [Fact]
     public async Task WhenFailedItemIsDue_TransitionsToPending()
@@ -39,10 +41,14 @@ public sealed class Execute
         using RuvarrDbContext dbContext = CreateDbContext();
 
         DownloadQueueItem item = new DownloadQueueItemBuilder()
-            .FailedAndDue("ffmpeg download failed")
+            .Failed("ffmpeg download failed")
             .Build();
 
         dbContext.Set<DownloadQueueItem>().Add(item);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Simulate time passing: backdate next_retry_at so the item is now due
+        dbContext.Entry(item).Property(x => x.NextRetryAt).CurrentValue = DateTime.UtcNow.AddHours(-1);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         DownloadRetryJob sut = CreateJob(dbContext);

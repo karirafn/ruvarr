@@ -1,3 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+
+using NSubstitute;
+
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Events;
@@ -9,6 +13,34 @@ namespace Ruvarr.UnitTests.Downloads.Domain.DownloadQueueItemTests;
 
 public sealed class Retry
 {
+    private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
+
+    public Retry()
+    {
+        _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
+    }
+
+    private RuvarrDbContext CreateDbContext() => new(
+        new DbContextOptionsBuilder<RuvarrDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options,
+        _serviceProvider);
+
+    private static async Task<DownloadQueueItem> SaveAndBackdateAsync(
+        RuvarrDbContext dbContext,
+        DownloadQueueItem item,
+        CancellationToken cancellationToken)
+    {
+        dbContext.Set<DownloadQueueItem>().Add(item);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Simulate time passing: backdate next_retry_at so the item is now due
+        dbContext.Entry(item).Property(x => x.NextRetryAt).CurrentValue = DateTime.UtcNow.AddHours(-1);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await dbContext.Set<DownloadQueueItem>().FirstAsync(cancellationToken);
+    }
+
     // RequeueForRetry — guard tests
 
     [Fact]
@@ -42,10 +74,14 @@ public sealed class Retry
     }
 
     [Fact]
-    public void RequeueForRetry_SetsPendingStatus_WhenItemIsDue()
+    public async Task RequeueForRetry_SetsPendingStatus_WhenItemIsDue()
     {
         // Arrange
-        DownloadQueueItem sut = new DownloadQueueItemBuilder().FailedAndDue("reason").Build();
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem sut = await SaveAndBackdateAsync(
+            dbContext,
+            new DownloadQueueItemBuilder().Failed("reason").Build(),
+            TestContext.Current.CancellationToken);
 
         // Act
         sut.RequeueForRetry();
@@ -55,10 +91,14 @@ public sealed class Retry
     }
 
     [Fact]
-    public void RequeueForRetry_PreservesRetryCount()
+    public async Task RequeueForRetry_PreservesRetryCount()
     {
         // Arrange
-        DownloadQueueItem sut = new DownloadQueueItemBuilder().FailedAndDue("reason").Build();
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem sut = await SaveAndBackdateAsync(
+            dbContext,
+            new DownloadQueueItemBuilder().Failed("reason").Build(),
+            TestContext.Current.CancellationToken);
         int expectedRetryCount = sut.RetryCount;
 
         // Act
@@ -69,10 +109,14 @@ public sealed class Retry
     }
 
     [Fact]
-    public void RequeueForRetry_ClearsNextRetryAt()
+    public async Task RequeueForRetry_ClearsNextRetryAt()
     {
         // Arrange
-        DownloadQueueItem sut = new DownloadQueueItemBuilder().FailedAndDue("reason").Build();
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem sut = await SaveAndBackdateAsync(
+            dbContext,
+            new DownloadQueueItemBuilder().Failed("reason").Build(),
+            TestContext.Current.CancellationToken);
 
         // Act
         sut.RequeueForRetry();
@@ -82,10 +126,14 @@ public sealed class Retry
     }
 
     [Fact]
-    public void RequeueForRetry_RaisesDownloadRetryScheduledEvent()
+    public async Task RequeueForRetry_RaisesDownloadRetryScheduledEvent()
     {
         // Arrange
-        DownloadQueueItem sut = new DownloadQueueItemBuilder().FailedAndDue("reason").Build();
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem sut = await SaveAndBackdateAsync(
+            dbContext,
+            new DownloadQueueItemBuilder().Failed("reason").Build(),
+            TestContext.Current.CancellationToken);
         sut.ClearDomainEvents();
 
         // Act

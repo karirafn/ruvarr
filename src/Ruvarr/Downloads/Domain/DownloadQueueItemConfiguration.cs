@@ -31,6 +31,7 @@ internal sealed class DownloadQueueItemConfiguration : IEntityTypeConfiguration<
             .HasColumnName("next_retry_at");
 
         builder.Property(x => x.FailureReason)
-            .HasColumnName("failure_reason");
+            .HasColumnName("failure_reason")
+            .HasMaxLength(512);
     }
 }

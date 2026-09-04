@@ -33,6 +33,7 @@ namespace Ruvarr.Migrations
                         .HasColumnName("downloaded");
 
                     b.Property<string>("FailureReason")
+                        .HasMaxLength(512)
                         .HasColumnType("TEXT")
                         .HasColumnName("failure_reason");
 
