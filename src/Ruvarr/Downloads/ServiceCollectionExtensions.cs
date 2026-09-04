@@ -10,6 +10,7 @@ internal static class ServiceCollectionExtensions
 {
     internal static IServiceCollection AddDownloads(this IServiceCollection services)
     {
+        services.AddHostedService<IncompleteDownloadCleanupService>();
         services.AddSingleton<DownloadFileStore>();
         services.AddSingleton(sp => new DownloadProgressNotifier(
             sp.GetRequiredService<IDomainEventBroadcaster>(),
