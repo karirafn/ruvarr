@@ -21,29 +21,31 @@ internal sealed class IncompleteDownloadCleanupService(
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
         List<DownloadQueueItem> orphans = await dbContext.Set<DownloadQueueItem>()
-            .AsNoTracking()
             .Where(x => x.Status == DownloadQueueStatus.Downloading)
             .ToListAsync(cancellationToken);
 
         RuvarrSettings settings = settingsStore.Current;
 
-        List<string> fileNames = orphans
-            .Select(x => x.FileName)
-            .OfType<string>()
-            .ToList();
-
-        if (fileNames.Count < orphans.Count)
+        int nullFileNameCount = orphans.Count(x => x.FileName is null);
+        if (nullFileNameCount > 0)
         {
             logger.LogDebug(
-                "Skipping {Count} orphan(s) with null FileName (pre-migration rows)",
-                orphans.Count - fileNames.Count);
+                "Skipping file deletion for {Count} orphan(s) with null FileName (pre-migration rows)",
+                nullFileNameCount);
         }
 
-        foreach (string fileName in fileNames)
+        foreach (DownloadQueueItem orphan in orphans)
         {
-            logger.LogInformation("Deleting incomplete file {FileName} left by crashed process", fileName);
-            fileStore.DeleteIncomplete(settings, fileName);
+            if (orphan.FileName is not null)
+            {
+                logger.LogInformation("Deleting incomplete file {FileName} left by crashed process", orphan.FileName);
+                fileStore.DeleteIncomplete(settings, orphan.FileName);
+            }
+
+            orphan.MarkInterrupted();
         }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
