@@ -85,7 +85,7 @@ public sealed class ExceptionHandling : IDisposable
         dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore);
 
     [Fact]
-    public async Task WhenFfmpegThrowsOperationCanceledException_PropagatesAndDoesNotMarkFailed()
+    public async Task WhenFfmpegThrowsOperationCanceledException_PropagatesAndStaysDownloading()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -110,11 +110,12 @@ public sealed class ExceptionHandling : IDisposable
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
-        // Act / Assert — OCE must propagate out of Execute(); it must not be swallowed into MarkFailed
-        await Should.ThrowAsync<OperationCanceledException>(() => sut.Execute(_context));
+        // Act
+        OperationCanceledException ex = await Should.ThrowAsync<OperationCanceledException>(() => sut.Execute(_context));
 
-        // Assert — item stays Downloading (not Failed); IncompleteDownloadCleanupService reclaims it at startup
-        item.Status.ShouldNotBe(DownloadQueueStatus.Failed);
+        // Assert — OCE propagates; item stays Downloading in-job (IncompleteDownloadCleanupService reclaims it to Pending at startup)
+        ex.ShouldNotBeNull();
+        item.Status.ShouldBe(DownloadQueueStatus.Downloading);
     }
 
     [Fact]
