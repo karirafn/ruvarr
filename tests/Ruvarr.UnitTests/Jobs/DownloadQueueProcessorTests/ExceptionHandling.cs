@@ -85,6 +85,39 @@ public sealed class ExceptionHandling : IDisposable
         dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore);
 
     [Fact]
+    public async Task WhenFfmpegThrowsOperationCanceledException_PropagatesAndDoesNotMarkFailed()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(2).Build();
+        program.TryAddEpisode("ep0002", new Uri("http://test.com/stream"), "Episode 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        DownloadQueueItem item = DownloadQueueItem.Create(program.Episodes[0]);
+        dbContext.Set<DownloadQueueItem>().Add(item);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _ffmpeg
+            .DownloadAsync(
+                Arg.Any<Uri>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<IProgress<FfmpegProgressData>>(),
+                Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException("Scheduler shutting down"));
+
+        DownloadQueueProcessor sut = CreateJob(dbContext);
+
+        // Act / Assert — OCE must propagate out of Execute(); it must not be swallowed into MarkFailed
+        await Should.ThrowAsync<OperationCanceledException>(() => sut.Execute(_context));
+
+        // Assert — item stays Downloading (not Failed); IncompleteDownloadCleanupService reclaims it at startup
+        item.Status.ShouldNotBe(DownloadQueueStatus.Failed);
+    }
+
+    [Fact]
     public async Task MarksItemFailed_WhenSonarrThrowsDuringPostDownload()
     {
         // Arrange

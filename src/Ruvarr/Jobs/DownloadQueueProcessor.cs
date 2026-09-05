@@ -37,8 +37,12 @@ internal sealed class DownloadQueueProcessor(
 
         CancellationToken cancellationToken = context.CancellationToken;
 
-        // Outcome writes must land even when the scheduler is shutting down — a cancelled save
-        // leaves the item stuck in Downloading with no record of what happened to it.
+        // The outcomeWrite token is CancellationToken.None so that genuine ffmpeg/move failure
+        // writes succeed even when the scheduler is concurrently shutting down — a cancelled save
+        // would leave the failure unrecorded. Interruption (cancellation with no failure) takes a
+        // different path: the OCE propagates out of Execute() unhandled, the catch-alls carry
+        // when (ex is not OperationCanceledException) and do not match, and the item is left
+        // Downloading. IncompleteDownloadCleanupService reclaims it as Pending on next startup.
         CancellationToken outcomeWrite = CancellationToken.None;
 
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
