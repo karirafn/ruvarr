@@ -14,6 +14,7 @@ internal static class ServiceCollectionExtensions
     {
         services.AddHostedService<IncompleteDownloadCleanupService>();
         services.AddSingleton<DownloadFileStore>();
+        services.AddTransient<SonarrImporter>();
         services.AddSingleton(sp => new DownloadProgressNotifier(
             sp.GetRequiredService<IDomainEventBroadcaster>(),
             sp.GetService<TimeProvider>() ?? TimeProvider.System));
