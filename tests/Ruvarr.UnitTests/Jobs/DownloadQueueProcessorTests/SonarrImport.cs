@@ -370,6 +370,44 @@ public sealed class SonarrImport : IDisposable
         item.FailureReason.ShouldBe("Sonarr scan did not include the file");
     }
 
+    private static async Task<DownloadQueueItem> SeedUnmatchedEpisodeAsync(RuvarrDbContext dbContext)
+    {
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com/stream"), "Episode 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        RuvEpisode episode = program.Episodes[0];
+        // Deliberately no episode.Match(...) — TvdbEpisodes remains empty
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        DownloadQueueItem item = DownloadQueueItem.Create(episode);
+        dbContext.Set<DownloadQueueItem>().Add(item);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return item;
+    }
+
+    [Fact]
+    public async Task WhenEpisodeHasNoTvdbMatch_SkipsImport_AndDoesNotMarkFailed()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedUnmatchedEpisodeAsync(dbContext);
+        (string fileName, string completedPath) = await ArrangePostDownloadStateAsync(item, dbContext);
+
+        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+
+        // Act
+        await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
+
+        // Assert
+        await _sonarr.DidNotReceive().GetSeriesAsync(Arg.Any<CancellationToken>());
+        await _sonarr.DidNotReceive().ManualImportFilesAsync(
+            Arg.Any<IEnumerable<ManualImportRequest>>(),
+            Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Complete);
+    }
+
     private static Series CreateSonarrSeries(int id, int tvdbId) => new(
         Title: "Test Series",
         SortTitle: "test series",
