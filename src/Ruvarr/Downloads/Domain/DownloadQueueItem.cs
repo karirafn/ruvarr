@@ -108,4 +108,18 @@ internal sealed class DownloadQueueItem
         FailureReason = null;
         _domainEvents.Add(new DownloadRetryScheduledEvent(this));
     }
+
+    public void MarkInterrupted()
+    {
+        if (Status is not DownloadQueueStatus.Downloading)
+        {
+            throw new InvalidOperationException("Only Downloading items can be marked as interrupted.");
+        }
+
+        // A shutdown is not a download failure — the retry budget (RetryCount, NextRetryAt,
+        // FailureReason) is intentionally left unchanged. The item resumes as Pending,
+        // which the processor's existing query re-selects on next startup.
+        Status = DownloadQueueStatus.Pending;
+        _domainEvents.Add(new DownloadInterruptedEvent(this));
+    }
 }

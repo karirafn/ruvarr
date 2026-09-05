@@ -15,6 +15,7 @@ internal sealed class DownloadQueueItemBuilder
         Failed,
         Exhausted,
         Downloaded,
+        Interrupted,
     }
 
     public DownloadQueueItemBuilder WithEpisode(RuvEpisode episode)
@@ -59,6 +60,17 @@ internal sealed class DownloadQueueItemBuilder
         return this;
     }
 
+    /// <summary>
+    /// Configures the builder to produce a Pending item that has been through
+    /// <see cref="DownloadQueueItem.MarkDownloading"/> then <see cref="DownloadQueueItem.MarkInterrupted"/>.
+    /// The retry budget (RetryCount, NextRetryAt, FailureReason) is untouched — a shutdown is not a failure.
+    /// </summary>
+    public DownloadQueueItemBuilder Interrupted()
+    {
+        _state = ItemState.Interrupted;
+        return this;
+    }
+
     public DownloadQueueItem Build()
     {
         DownloadQueueItem item = DownloadQueueItem.Create(_episode);
@@ -81,6 +93,11 @@ internal sealed class DownloadQueueItemBuilder
             case ItemState.Downloaded:
                 item.MarkDownloading();
                 item.MarkDownloaded();
+                break;
+
+            case ItemState.Interrupted:
+                item.MarkDownloading();
+                item.MarkInterrupted();
                 break;
         }
 
