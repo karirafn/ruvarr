@@ -75,6 +75,14 @@ public sealed class StartAsync : IDisposable
         return item;
     }
 
+    private async Task<DownloadQueueItem> ReloadSingleItemAsync()
+    {
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        return await dbContext.Set<DownloadQueueItem>()
+            .SingleAsync(TestContext.Current.CancellationToken);
+    }
+
     private IncompleteDownloadCleanupService CreateSut()
     {
         ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
@@ -157,13 +165,13 @@ public sealed class StartAsync : IDisposable
     }
 
     [Fact]
-    public async Task WhenDownloadingItemExists_StatusIsUnchangedAfterSweep()
+    public async Task WhenDownloadingItemExists_IsResetToPendingAfterSweep()
     {
-        // Arrange — cleanup only deletes files; it must never mutate queue item status
-        DownloadQueueItem item = await SeedDownloadingItemAsync();
-        item.FileName.ShouldNotBeNull();
+        // Arrange
+        DownloadQueueItem seeded = await SeedDownloadingItemAsync();
+        seeded.FileName.ShouldNotBeNull();
 
-        string incompleteFilePath = DownloadFileStore.IncompletePath(_settings, item.FileName);
+        string incompleteFilePath = DownloadFileStore.IncompletePath(_settings, seeded.FileName);
         await File.WriteAllTextAsync(incompleteFilePath, "partial", TestContext.Current.CancellationToken);
 
         IncompleteDownloadCleanupService sut = CreateSut();
@@ -171,9 +179,57 @@ public sealed class StartAsync : IDisposable
         // Act
         await sut.StartAsync(TestContext.Current.CancellationToken);
 
-        // Assert — status stays Downloading; the sweep deletes files only and never mutates item status.
-        // Failed-item visibility and retry are deferred to #384.
-        item.Status.ShouldBe(DownloadQueueStatus.Downloading);
+        // Assert — reload from DB to confirm the persisted status; the seeded instance is detached
+        DownloadQueueItem item = await ReloadSingleItemAsync();
+        item.Status.ShouldBe(DownloadQueueStatus.Pending);
+    }
+
+    [Fact]
+    public async Task WhenDownloadingItemExists_RetryBudgetIsUntouched()
+    {
+        // Arrange
+        await SeedDownloadingItemAsync();
+
+        IncompleteDownloadCleanupService sut = CreateSut();
+
+        // Act
+        await sut.StartAsync(TestContext.Current.CancellationToken);
+
+        // Assert — a shutdown is not a download failure; the retry budget must not be consumed
+        DownloadQueueItem item = await ReloadSingleItemAsync();
+        item.ShouldSatisfyAllConditions(
+            () => item.RetryCount.ShouldBe(0),
+            () => item.NextRetryAt.ShouldBeNull(),
+            () => item.FailureReason.ShouldBeNull());
+    }
+
+    [Fact]
+    public async Task WhenDownloadingItemHasNullFileName_IsResetToPendingWithoutThrowing()
+    {
+        // Arrange — emulate a pre-migration row: FileName was never set. Bypass domain transition.
+        await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = new RuvProgramBuilder().Build();
+        program.TryAddEpisode("ep0002", new Uri("http://test.com/stream"), "Episode 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        DownloadQueueItem seeded = DownloadQueueItem.Create(program.Episodes[0]);
+        dbContext.Set<DownloadQueueItem>().Add(seeded);
+        dbContext.Entry(seeded).Property("Status").CurrentValue = DownloadQueueStatus.Downloading;
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        seeded.FileName.ShouldBeNull();
+
+        IncompleteDownloadCleanupService sut = CreateSut();
+
+        // Act
+        await Should.NotThrowAsync(() => sut.StartAsync(TestContext.Current.CancellationToken));
+
+        // Assert — null-FileName row is still reset to Pending (file deletion is skipped, status reset is not)
+        DownloadQueueItem item = await ReloadSingleItemAsync();
+        item.Status.ShouldBe(DownloadQueueStatus.Pending);
     }
 
     [Fact]
