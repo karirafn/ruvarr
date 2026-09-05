@@ -82,7 +82,8 @@ public sealed class SonarrImport : IDisposable
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore);
+        dbContext, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore,
+        new SonarrImporter(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance));
 
     private static async Task<DownloadQueueItem> SeedMatchedEpisodeAsync(RuvarrDbContext dbContext)
     {
@@ -371,6 +372,84 @@ public sealed class SonarrImport : IDisposable
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         return item;
+    }
+
+    [Fact]
+    public async Task Importer_ImportsEpisode_WhenSeriesExistsInSonarr()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
+        item.MarkDownloading();
+        item.MarkDownloaded();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        RuvarrSettings settings = _settingsStore.Current;
+        string fileName = item.FileName!;
+        string completedPath = DownloadFileStore.CompletedPath(settings, fileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(completedPath)!);
+        await File.WriteAllTextAsync(completedPath, "fake", CancellationToken.None);
+
+        ManualImportFile file = CreateManualImportFile(seriesId: 42, episodeIds: [101, 102, 103, 104]);
+
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Series>());
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns([file]);
+        _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1) });
+
+        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+
+        // Act
+        await sut.ImportAsync(item, settings, fileName, completedPath, TestContext.Current.CancellationToken);
+
+        // Assert
+        int[] expectedEpisodeIds = [201];
+        await _sonarr.Received(1).ManualImportFilesAsync(
+            Arg.Is<IEnumerable<ManualImportRequest>>(reqs =>
+                reqs.First().SeriesId == 42 &&
+                reqs.First().EpisodeIds.SequenceEqual(expectedEpisodeIds) &&
+                reqs.First().Path == completedPath),
+            Arg.Any<CancellationToken>());
+
+        item.Status.ShouldBe(DownloadQueueStatus.Complete);
+    }
+
+    [Fact]
+    public async Task Importer_MarksItemFailed_WhenSonarrScanDoesNotIncludeFile()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
+        item.MarkDownloading();
+        item.MarkDownloaded();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        RuvarrSettings settings = _settingsStore.Current;
+        string fileName = item.FileName!;
+        string completedPath = DownloadFileStore.CompletedPath(settings, fileName);
+
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Series>());
+        ManualImportFile unrelatedFile = CreateManualImportFile(
+            seriesId: 42,
+            episodeIds: [],
+            filename: "Some.Other.Show.S01E01-RUV.mp4");
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns([unrelatedFile]);
+
+        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+
+        // Act
+        await sut.ImportAsync(item, settings, fileName, completedPath, TestContext.Current.CancellationToken);
+
+        // Assert
+        await _sonarr.DidNotReceive().ManualImportFilesAsync(
+            Arg.Any<IEnumerable<ManualImportRequest>>(),
+            Arg.Any<CancellationToken>());
+        item.Status.ShouldBe(DownloadQueueStatus.Failed);
+        item.FailureReason.ShouldBe("Sonarr scan did not include the file");
     }
 
     private static Series CreateSonarrSeries(int id, int tvdbId) => new(

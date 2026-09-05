@@ -49,7 +49,8 @@ public sealed class SettingsGate
 
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
-        dbContext, _sonarr, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore);
+        dbContext, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore,
+        new SonarrImporter(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance));
 
     private static async Task<DownloadQueueItem> SeedPendingItemAsync(RuvarrDbContext dbContext)
     {
