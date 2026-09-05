@@ -45,7 +45,10 @@ internal sealed class IncompleteDownloadCleanupService(
             orphan.MarkInterrupted();
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        // Use CancellationToken.None so the reclamation write lands even if the host's startup
+        // token is cancelled mid-save on a fast shutdown — mirrors DownloadQueueProcessor's
+        // outcomeWrite = CancellationToken.None pattern.
+        await dbContext.SaveChangesAsync(CancellationToken.None);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

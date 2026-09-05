@@ -204,7 +204,7 @@ public sealed class StartAsync : IDisposable
     }
 
     [Fact]
-    public async Task WhenDownloadingItemHasNullFileName_IsResetToPendingWithoutThrowing()
+    public async Task WhenDownloadingItemHasNullFileName_IsResetToPending()
     {
         // Arrange — emulate a pre-migration row: FileName was never set. Bypass domain transition.
         await using AsyncServiceScope scope = _serviceProvider.CreateAsyncScope();
@@ -225,9 +225,9 @@ public sealed class StartAsync : IDisposable
         IncompleteDownloadCleanupService sut = CreateSut();
 
         // Act
-        await Should.NotThrowAsync(() => sut.StartAsync(TestContext.Current.CancellationToken));
+        await sut.StartAsync(TestContext.Current.CancellationToken);
 
-        // Assert — null-FileName row is still reset to Pending (file deletion is skipped, status reset is not)
+        // Assert — null-FileName row is reset to Pending (file deletion is skipped, status reset is not)
         DownloadQueueItem item = await ReloadSingleItemAsync();
         item.Status.ShouldBe(DownloadQueueStatus.Pending);
     }
