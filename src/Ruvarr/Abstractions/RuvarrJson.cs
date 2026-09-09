@@ -8,4 +8,6 @@ internal static class RuvarrJson
     {
         Converters = { new NfcStringConverter() }
     };
+
+    static RuvarrJson() => Default.MakeReadOnly(populateMissingResolver: true);
 }

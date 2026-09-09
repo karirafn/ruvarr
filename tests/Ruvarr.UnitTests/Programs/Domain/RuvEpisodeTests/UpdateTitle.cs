@@ -40,11 +40,19 @@ public sealed class UpdateTitle
     [Fact]
     public void WhenEpisodeIsLinked_PreservesLookupStateAndLinks()
     {
-        // Arrange
-        RuvEpisode sut = new RuvEpisodeBuilder().BuildMatched(tvdbId: 42, season: 1, episodeNumber: 3);
+        // Arrange -- schedule a lookup first (LookupCount becomes 1) then match so the
+        // episode is linked. ScheduleLookup no-ops once links exist, so the order matters.
+        // Match sets NextLookup = null but does not reset LookupCount, giving us a non-zero
+        // count to assert against -- the assertion would be vacuous if LookupCount were 0.
+        RuvEpisodeBuilder builder = new RuvEpisodeBuilder();
+        RuvEpisode sut = builder.BuildWithScheduledLookup();
+        sut.Match(tvdbId: 42, season: 1, episode: 3, isMissing: false);
+
         int originalLookupCount = sut.LookupCount;
         DateTime? originalMatched = sut.Matched;
         int originalTvdbCount = sut.TvdbEpisodes.Count;
+
+        originalLookupCount.ShouldBe(1);
 
         // Act
         sut.UpdateTitle("New Title");
