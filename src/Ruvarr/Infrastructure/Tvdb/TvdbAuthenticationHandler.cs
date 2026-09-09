@@ -10,7 +10,7 @@ namespace Ruvarr.Infrastructure.Tvdb;
 
 internal sealed class TvdbAuthenticationHandler(IMemoryCache memoryCache, ISettingsStore settingsStore) : DelegatingHandler
 {
-    internal const string AccessTokenCacheKey = "TvdbAccessToken";
+    private const string AccessTokenCacheKey = "TvdbAccessToken";
     private const string CachedApiKeyCacheKey = "TvdbCachedApiKey";
 
     // Static so single-flight mutual exclusion survives the handler's transient lifetime.
@@ -66,7 +66,7 @@ internal sealed class TvdbAuthenticationHandler(IMemoryCache memoryCache, ISetti
             accessToken = response.Data.Token;
 
             // The TVDB access token is valid for 1 month
-            MemoryCacheEntryOptions cacheOptions = new MemoryCacheEntryOptions
+            MemoryCacheEntryOptions cacheOptions = new()
             {
                 AbsoluteExpiration = DateTimeOffset.Now.AddDays(28),
                 Size = 1

@@ -12,7 +12,14 @@ internal static class ServiceCollectionExtensions
                 .GetRequiredSection("Tvdb")["BaseAddress"]
                 ?? throw new InvalidOperationException("Tvdb:BaseAddress is not configured.");
 
-            client.BaseAddress = new Uri(baseAddress);
+            Uri uri = new(baseAddress);
+
+            if (uri.Scheme != Uri.UriSchemeHttps)
+            {
+                throw new InvalidOperationException("Tvdb:BaseAddress must use HTTPS.");
+            }
+
+            client.BaseAddress = uri;
         })
         .AddHttpMessageHandler<TvdbAuthenticationHandler>();
 
