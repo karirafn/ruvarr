@@ -159,10 +159,12 @@ public sealed class ChangedTitleSync
             await seedContext.SaveChangesAsync(cancellationToken);
 
             // The "stored title differs from served title" state cannot be reached through the
-            // production add path (see linkless test for explanation). Stamp the legacy title
-            // directly to represent an episode that was matched before the NFD correction arrived.
+            // production add path (see linkless test for explanation). Stamp the legacy title and
+            // a non-zero backoff directly to represent an episode that was matched before the NFD
+            // correction arrived and had accumulated lookup attempts. The backoff must be non-zero
+            // so the "preserved" assertions below are non-vacuous.
             await seedContext.Database.ExecuteSqlAsync(
-                $"UPDATE episodes SET title = {LegacyStoredTitle} WHERE ruv_id = {LinkedEpisodeId}",
+                $"UPDATE episodes SET title = {LegacyStoredTitle}, lookup_count = 2, next_lookup = datetime('now', '+3 days') WHERE ruv_id = {LinkedEpisodeId}",
                 cancellationToken);
         }
 
@@ -191,8 +193,8 @@ public sealed class ChangedTitleSync
             () => episode.TvdbEpisodes.Count.ShouldBe(1),
             () => episode.TvdbEpisodes[0].TvdbId.ShouldBe(7001),
             () => episode.Matched.ShouldNotBeNull(),
-            () => episode.LookupCount.ShouldBe(0),
-            () => episode.NextLookup.ShouldBeNull());
+            () => episode.LookupCount.ShouldBe(2),
+            () => episode.NextLookup.ShouldNotBeNull());
     }
 
     private static RuvTvEpisode CreateRuvTvEpisode(int seriesId, string id, string? title) => new(
