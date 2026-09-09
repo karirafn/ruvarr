@@ -1,27 +1,17 @@
 using System.Net;
 using System.Text;
 
-using Microsoft.Extensions.Caching.Memory;
-
-using NSubstitute;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
-using Ruvarr.Settings;
 
 using Shouldly;
 
 namespace Ruvarr.UnitTests.Infrastructure.Tvdb.TvdbClientTests;
 
-public sealed class GetEpisodeAsync : IDisposable
+public sealed class GetEpisodeAsync
 {
-    private const string ApiKey = "test-api-key";
-    private const string AccessToken = "fake-access-token";
-
-    private readonly MemoryCache _cache = new(new MemoryCacheOptions { SizeLimit = 64 });
-
-    public void Dispose() => _cache.Dispose();
-
     [Fact]
     public async Task WhenResponseIs200_ReturnsUnwrappedEpisode()
     {
@@ -54,9 +44,8 @@ public sealed class GetEpisodeAsync : IDisposable
             }
             """;
 
-        ISettingsStore settingsStore = CreateSettingsStore();
         using HttpClient httpClient = CreateHttpClient(HttpStatusCode.OK, responseBody);
-        using TvdbClient sut = new(httpClient, _cache, settingsStore);
+        TvdbClient sut = new(NullLogger<TvdbClient>.Instance, httpClient);
 
         // Act
         Episode? result = await sut.GetEpisodeAsync(7, TestContext.Current.CancellationToken);
@@ -68,56 +57,35 @@ public sealed class GetEpisodeAsync : IDisposable
     }
 
     [Fact]
-    public async Task WhenResponseIsNonSuccess_ThrowsHttpRequestException()
+    public async Task WhenResponseIsNonSuccess_ReturnsNull()
     {
         // Arrange
-        ISettingsStore settingsStore = CreateSettingsStore();
         using HttpClient httpClient = CreateHttpClient(HttpStatusCode.NotFound, "Not Found");
-        using TvdbClient sut = new(httpClient, _cache, settingsStore);
+        TvdbClient sut = new(NullLogger<TvdbClient>.Instance, httpClient);
 
-        // Act / Assert
-        await Should.ThrowAsync<HttpRequestException>(
-            () => sut.GetEpisodeAsync(99, TestContext.Current.CancellationToken));
+        // Act
+        Episode? result = await sut.GetEpisodeAsync(99, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.ShouldBeNull();
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "Handler is disposed by HttpClient via disposeHandler: true")]
-    private static HttpClient CreateHttpClient(HttpStatusCode getStatusCode, string getResponseBody)
+    private static HttpClient CreateHttpClient(HttpStatusCode statusCode, string responseBody)
     {
-        string loginResponseBody = "{\"data\":{\"token\":\"" + AccessToken + "\"},\"status\":\"success\"}";
-        RoutingHandler handler = new(loginResponseBody, getStatusCode, getResponseBody);
+        StaticHandler handler = new(statusCode, responseBody);
         return new HttpClient(handler, disposeHandler: true)
         {
             BaseAddress = new Uri("http://tvdb.localhost")
         };
     }
 
-    private static ISettingsStore CreateSettingsStore()
+    private sealed class StaticHandler(HttpStatusCode statusCode, string responseBody) : HttpMessageHandler
     {
-        ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
-        settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ApiKey));
-        return settingsStore;
-    }
-
-    private sealed class RoutingHandler(string loginResponseBody, HttpStatusCode getStatusCode, string getResponseBody)
-        : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            bool isLogin = request.Method == HttpMethod.Post
-                && (request.RequestUri?.AbsolutePath.Contains("login", StringComparison.Ordinal) ?? false);
-
-            if (isLogin)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(statusCode)
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(loginResponseBody, Encoding.UTF8, "application/json")
-                });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(getStatusCode)
-            {
-                Content = new StringContent(getResponseBody, Encoding.UTF8, "application/json")
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
             });
-        }
     }
 }
