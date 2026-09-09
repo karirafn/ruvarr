@@ -94,4 +94,27 @@ public sealed class ToFilename
         // Assert
         result.ShouldBe("Awesome.Show.S01E01E02-RUV.mp4");
     }
+
+    [Fact]
+    public void WhenEpisodeTitleIsNfd_AndEpisodeIsUnmatched_ToFilenameYieldsNfcTitle()
+    {
+        // Arrange
+        // NFD title uses \uXXXX C# escape sequences — the source file stores
+        // literal backslash-u so git/editor normalization cannot collapse the
+        // combining diacritics to NFC at save time.
+        // ö (NFD) = o + U+0308 (combining diaeresis); á (NFD) = a + U+0301 (combining acute)
+        RuvProgram program = new RuvProgramBuilder()
+            .WithName("Blja")
+            .Build();
+        RuvEpisode sut = new RuvEpisodeBuilder()
+            .WithProgram(program)
+            .WithTitle("Skjaldbo\u0308kustra\u0301kur")
+            .Build();
+
+        // Act
+        string result = sut.ToFilename();
+
+        // Assert
+        result.ShouldBe("Blja.Skjaldbökustrákur-RUV.mp4");
+    }
 }
