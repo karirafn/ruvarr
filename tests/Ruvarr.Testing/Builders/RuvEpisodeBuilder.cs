@@ -62,4 +62,18 @@ internal sealed class RuvEpisodeBuilder
         description: _description,
         firstRun: _firstRun,
         duration: _duration);
+
+    public RuvEpisode BuildWithScheduledLookup()
+    {
+        RuvEpisode episode = Build();
+        episode.ScheduleLookup();
+        return episode;
+    }
+
+    public RuvEpisode BuildMatched(int tvdbId = 1, int season = 1, int episodeNumber = 1)
+    {
+        RuvEpisode episode = Build();
+        episode.Match(tvdbId: tvdbId, season: season, episode: episodeNumber, isMissing: false);
+        return episode;
+    }
 }

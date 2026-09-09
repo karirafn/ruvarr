@@ -189,6 +189,10 @@ internal sealed partial class RuvProgram
         NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
     }
 
+    /// <summary>
+    /// Adds a new episode or, when an episode with the same RuvId already exists, updates its title
+    /// if it differs. Returns true only when a new episode is added.
+    /// </summary>
     public bool TryAddEpisode(string id, Uri uri, string? title, string description, DateTime firstRun, TimeSpan duration)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -199,6 +203,11 @@ internal sealed partial class RuvProgram
         RuvEpisode? existing = _episodes.FirstOrDefault(x => x.RuvId == id);
         if (existing is not null)
         {
+            if (!existing.Title.Equals(title, StringComparison.Ordinal))
+            {
+                existing.UpdateTitle(title);
+            }
+
             return false;
         }
 
