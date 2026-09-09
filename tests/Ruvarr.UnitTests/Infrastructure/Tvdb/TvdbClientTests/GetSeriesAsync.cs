@@ -14,8 +14,8 @@ public sealed class GetSeriesAsync
 {
     // NFD: o + U+0308 (COMBINING DIAERESIS), a + U+0301 (COMBINING ACUTE ACCENT)
     // Written with explicit \u escapes so git/editor normalization cannot collapse them.
-    private const string NfdSeriesName = "Skjaldbökustrákur";
-    private const string NfcSeriesName = "Skjaldbökustrákur";
+    private const string NfdSeriesName = "Skjaldb\u006F\u0308kustr\u0061\u0301kur";
+    private const string NfcSeriesName = "Skjaldb\u00F6kustr\u00E1kur";
 
     [Fact]
     public async Task WhenResponseIs200_ReturnsUnwrappedSeriesData()

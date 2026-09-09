@@ -21,7 +21,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
         }
         catch (HttpRequestException ex)
         {
-            logger.LogError(ex, "GET {Path} failed: Readon: {Message}", path, ex.Message);
+            logger.LogError(ex, "GET {Path} failed: Reason: {Message}", path, ex.Message);
             return default;
         }
     }
