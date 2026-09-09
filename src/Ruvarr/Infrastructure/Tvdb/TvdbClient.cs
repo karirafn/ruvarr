@@ -2,6 +2,7 @@
 
 using Microsoft.Extensions.Caching.Memory;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Settings;
 
@@ -51,7 +52,7 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IS
         HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<SearchResponse>(cancellationToken)
+        return await response.Content.ReadFromJsonAsync<SearchResponse>(RuvarrJson.Default, cancellationToken)
             ?? throw new InvalidOperationException("Failed to search the TVDB");
     }
 
@@ -65,7 +66,7 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IS
         HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        SeriesResponse? seriesResponse = await response.Content.ReadFromJsonAsync<SeriesResponse>(cancellationToken);
+        SeriesResponse? seriesResponse = await response.Content.ReadFromJsonAsync<SeriesResponse>(RuvarrJson.Default, cancellationToken);
 
         return seriesResponse?.Data;
     }
@@ -80,7 +81,7 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IS
         HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        TvdbResponse<Episode?>? episodeResponse = await response.Content.ReadFromJsonAsync<TvdbResponse<Episode?>>(cancellationToken);
+        TvdbResponse<Episode?>? episodeResponse = await response.Content.ReadFromJsonAsync<TvdbResponse<Episode?>>(RuvarrJson.Default, cancellationToken);
 
         return episodeResponse?.Data;
     }
@@ -99,7 +100,7 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IS
             return null;
         }
 
-        TvdbResponse<EpisodeTranslation?>? translationResponse = await response.Content.ReadFromJsonAsync<TvdbResponse<EpisodeTranslation?>>(cancellationToken);
+        TvdbResponse<EpisodeTranslation?>? translationResponse = await response.Content.ReadFromJsonAsync<TvdbResponse<EpisodeTranslation?>>(RuvarrJson.Default, cancellationToken);
 
         return translationResponse?.Data;
     }
@@ -166,7 +167,7 @@ internal sealed class TvdbClient(HttpClient client, IMemoryCache memoryCache, IS
             return null;
         }
 
-        AuthenticationResponse? content = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(cancellationToken);
+        AuthenticationResponse? content = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(RuvarrJson.Default, cancellationToken);
 
         return content;
     }

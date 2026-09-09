@@ -15,7 +15,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
                 return default;
             }
 
-            TResponse? response = await message.Content.ReadFromJsonAsync<TResponse>(cancellationToken);
+            TResponse? response = await message.Content.ReadFromJsonAsync<TResponse>(RuvarrJson.Default, cancellationToken);
 
             return response;
         }
@@ -60,7 +60,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
                 return default;
             }
 
-            TResponse? response = await message.Content.ReadFromJsonAsync<TResponse>(cancellationToken);
+            TResponse? response = await message.Content.ReadFromJsonAsync<TResponse>(RuvarrJson.Default, cancellationToken);
 
             return response;
         }
