@@ -1,4 +1,4 @@
-﻿using Ruvarr.Programs.Domain;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -22,6 +22,7 @@ public sealed class IsMatch
     [InlineData("1.Test Episode, Part 1")]
     public void ReturnsTrueWhenTitleMatchesValue(string title)
     {
+        // Arrange
         string value = "Test Episode, Part 1";
         RuvEpisode sut = new RuvEpisodeBuilder()
             .WithTitle(title)
@@ -29,6 +30,27 @@ public sealed class IsMatch
 
         // Act
         bool result = sut.IsMatch(value);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void WhenStoredTitleIsNfd_AndComparedValueIsNfc_ReturnsTrue()
+    {
+        // Arrange
+        // NFD title uses \uXXXX C# escape sequences — the source file stores
+        // literal backslash-u so git/editor normalization cannot collapse the
+        // combining diacritics to NFC at save time.
+        // ö (NFD) = o + U+0308 (combining diaeresis); á (NFD) = a + U+0301 (combining acute)
+        const string NfdTitle = "Skjaldbo\u0308kustra\u0301kur";
+        const string NfcValue = "Skjaldbökustrákur";
+        RuvEpisode sut = new RuvEpisodeBuilder()
+            .WithTitle(NfdTitle)
+            .Build();
+
+        // Act
+        bool result = sut.IsMatch(NfcValue);
 
         // Assert
         result.ShouldBeTrue();
