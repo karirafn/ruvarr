@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 
 using Ruvarr.RomanNumerals;
 
@@ -34,6 +35,7 @@ internal static partial class StringExtensions
         .Equals(b.Sanitized(), StringComparison.OrdinalIgnoreCase);
 
     internal static string Sanitized(this string input) => input
+        .Normalize(NormalizationForm.FormC)
         .Replace(".", string.Empty, StringComparison.OrdinalIgnoreCase)
         .RemoveSoftHyphens()
         .RemoveNonUnicodeCharacters()

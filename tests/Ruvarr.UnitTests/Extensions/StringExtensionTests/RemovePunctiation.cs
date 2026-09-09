@@ -1,4 +1,4 @@
-﻿using Ruvarr.Extensions;
+using Ruvarr.Extensions;
 
 using Shouldly;
 
@@ -19,5 +19,21 @@ public sealed class RemovePunctiation
 
         // Assert
         result.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void WhenInputIsNfd_NormalizesToNfc()
+    {
+        // Arrange
+        // NFD: o + \u0308 (combining diaeresis) gives ö; a + \u0301 (combining acute) gives á
+        // C# \uXXXX escapes are used so no raw combining bytes appear in source.
+        string nfdInput = "Skjaldbo\u0308kustra\u0301kur";
+        string expectedNfc = "Skjaldbökustrákur";
+
+        // Act
+        string result = nfdInput.Sanitized();
+
+        // Assert
+        result.ShouldBe(expectedNfc);
     }
 }
