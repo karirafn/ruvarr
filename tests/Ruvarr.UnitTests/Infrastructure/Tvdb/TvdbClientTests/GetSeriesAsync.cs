@@ -1,31 +1,21 @@
 using System.Net;
 using System.Text;
 
-using Microsoft.Extensions.Caching.Memory;
-
-using NSubstitute;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
-using Ruvarr.Settings;
 
 using Shouldly;
 
 namespace Ruvarr.UnitTests.Infrastructure.Tvdb.TvdbClientTests;
 
-public sealed class GetSeriesAsync : IDisposable
+public sealed class GetSeriesAsync
 {
-    private const string ApiKey = "test-api-key";
-    private const string AccessToken = "fake-access-token";
-
     // NFD: o + U+0308 (COMBINING DIAERESIS), a + U+0301 (COMBINING ACUTE ACCENT)
     // Written with explicit \u escapes so git/editor normalization cannot collapse them.
-    private const string NfdSeriesName = "Skjaldb\u006f\u0308kustr\u0061\u0301kur";
-    private const string NfcSeriesName = "Skjaldb\u00f6kustr\u00e1kur";
-
-    private readonly MemoryCache _cache = new(new MemoryCacheOptions { SizeLimit = 64 });
-
-    public void Dispose() => _cache.Dispose();
+    private const string NfdSeriesName = "Skjaldbökustrákur";
+    private const string NfcSeriesName = "Skjaldbökustrákur";
 
     [Fact]
     public async Task WhenResponseIs200_ReturnsUnwrappedSeriesData()
@@ -63,9 +53,8 @@ public sealed class GetSeriesAsync : IDisposable
             }
             """;
 
-        ISettingsStore settingsStore = CreateSettingsStore();
         using HttpClient httpClient = CreateHttpClient(HttpStatusCode.OK, responseBody);
-        using TvdbClient sut = new(httpClient, _cache, settingsStore);
+        TvdbClient sut = new(NullLogger<TvdbClient>.Instance, httpClient);
 
         // Act
         SeriesData? result = await sut.GetSeriesAsync(42, TestContext.Current.CancellationToken);
@@ -77,16 +66,17 @@ public sealed class GetSeriesAsync : IDisposable
     }
 
     [Fact]
-    public async Task WhenResponseIsNonSuccess_ThrowsHttpRequestException()
+    public async Task WhenResponseIsNonSuccess_ReturnsNull()
     {
         // Arrange
-        ISettingsStore settingsStore = CreateSettingsStore();
         using HttpClient httpClient = CreateHttpClient(HttpStatusCode.NotFound, "Not Found");
-        using TvdbClient sut = new(httpClient, _cache, settingsStore);
+        TvdbClient sut = new(NullLogger<TvdbClient>.Instance, httpClient);
 
-        // Act / Assert
-        await Should.ThrowAsync<HttpRequestException>(
-            () => sut.GetSeriesAsync(99, TestContext.Current.CancellationToken));
+        // Act
+        SeriesData? result = await sut.GetSeriesAsync(99, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -107,9 +97,8 @@ public sealed class GetSeriesAsync : IDisposable
             "\"episodes\":[]}," +
             "\"links\":{\"self\":\"http://example.com\",\"total_items\":1,\"page_size\":10}}";
 
-        ISettingsStore settingsStore = CreateSettingsStore();
         using HttpClient httpClient = CreateHttpClient(HttpStatusCode.OK, responseBody);
-        using TvdbClient sut = new(httpClient, _cache, settingsStore);
+        TvdbClient sut = new(NullLogger<TvdbClient>.Instance, httpClient);
 
         // Act
         SeriesData? result = await sut.GetSeriesAsync(1, TestContext.Current.CancellationToken);
@@ -120,43 +109,21 @@ public sealed class GetSeriesAsync : IDisposable
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "Handler is disposed by HttpClient via disposeHandler: true")]
-    private static HttpClient CreateHttpClient(HttpStatusCode getStatusCode, string getResponseBody)
+    private static HttpClient CreateHttpClient(HttpStatusCode statusCode, string responseBody)
     {
-        string loginResponseBody = "{\"data\":{\"token\":\"" + AccessToken + "\"},\"status\":\"success\"}";
-        RoutingHandler handler = new(loginResponseBody, getStatusCode, getResponseBody);
+        StaticHandler handler = new(statusCode, responseBody);
         return new HttpClient(handler, disposeHandler: true)
         {
             BaseAddress = new Uri("http://tvdb.localhost")
         };
     }
 
-    private static ISettingsStore CreateSettingsStore()
+    private sealed class StaticHandler(HttpStatusCode statusCode, string responseBody) : HttpMessageHandler
     {
-        ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
-        settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ApiKey));
-        return settingsStore;
-    }
-
-    private sealed class RoutingHandler(string loginResponseBody, HttpStatusCode getStatusCode, string getResponseBody)
-        : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            bool isLogin = request.Method == HttpMethod.Post
-                && (request.RequestUri?.AbsolutePath.Contains("login", StringComparison.Ordinal) ?? false);
-
-            if (isLogin)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(statusCode)
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(loginResponseBody, Encoding.UTF8, "application/json")
-                });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(getStatusCode)
-            {
-                Content = new StringContent(getResponseBody, Encoding.UTF8, "application/json")
+                Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
             });
-        }
     }
 }
