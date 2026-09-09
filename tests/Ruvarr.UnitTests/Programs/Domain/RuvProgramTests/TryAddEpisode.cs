@@ -166,4 +166,51 @@ public sealed class TryAddEpisode
         // Assert
         sut.DomainEvents.ShouldNotContain(e => e is EpisodeAddedToMatchedProgramEvent);
     }
+
+    [Fact]
+    public void WhenIdExistsAndTitleDiffers_UpdatesStoredTitle()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Original Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Updated Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        sut.Episodes[0].Title.ShouldBe("Updated Title");
+    }
+
+    [Fact]
+    public void WhenIdExistsAndTitleDiffers_ReturnsFalse()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Original Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Act
+        bool result = sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Updated Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void WhenIdExistsAndTitleSame_LeavesEpisodeUntouched()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Same Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        sut.Episodes[0].ScheduleLookup();
+        int originalLookupCount = sut.Episodes[0].LookupCount;
+        DateTime? originalNextLookup = sut.Episodes[0].NextLookup;
+
+        // Act
+        sut.TryAddEpisode("ep1", new Uri("http://test.com"), "Same Title", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+
+        // Assert
+        sut.Episodes[0].ShouldSatisfyAllConditions(
+            () => sut.Episodes[0].LookupCount.ShouldBe(originalLookupCount),
+            () => sut.Episodes[0].NextLookup.ShouldBe(originalNextLookup));
+    }
 }

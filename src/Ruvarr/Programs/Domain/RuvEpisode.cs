@@ -28,7 +28,7 @@ internal sealed partial class RuvEpisode
 
     public required Uri Uri { get; init; }
 
-    public required string Title { get; init; }
+    public string Title { get; private set; } = string.Empty;
 
     public required string Description { get; init; }
 
@@ -158,6 +158,17 @@ internal sealed partial class RuvEpisode
         _domainEvents.Add(new EpisodeLookupScheduledEvent(this));
         LookupCount++;
         NextLookup = LookupSchedule.ComputeNextLookup(LookupCount);
+    }
+
+    public void UpdateTitle(string title)
+    {
+        Title = title;
+
+        if (_tvdbEpisodes.Count == 0)
+        {
+            LookupCount = 0;
+            NextLookup = null;
+        }
     }
 
     public bool TryResolveSonarrEpisodeIds(
