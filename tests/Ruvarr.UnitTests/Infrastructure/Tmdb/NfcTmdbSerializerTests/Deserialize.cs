@@ -4,8 +4,6 @@ using Ruvarr.Infrastructure.Tmdb;
 
 using Shouldly;
 
-using TMDbLib.Utilities.Serializer;
-
 namespace Ruvarr.UnitTests.Infrastructure.Tmdb.NfcTmdbSerializerTests;
 
 public sealed class Deserialize
@@ -15,7 +13,7 @@ public sealed class Deserialize
     private const string NfdTitle = "Skjaldbo\u006f\u0308kustra\u0061\u0301kur";
     private const string NfcTitle = "Skjaldbo\u00f6kustra\u00e1kur";
 
-    private readonly ITMDbSerializer _sut = new NfcTmdbSerializer();
+    private readonly NfcTmdbSerializer _sut = new();
 
     [Fact]
     public void WhenJsonContainsNfdStrings_DeserializesToNfc()

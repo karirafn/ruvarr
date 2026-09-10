@@ -4,13 +4,11 @@ using Ruvarr.Infrastructure.Tmdb;
 
 using Shouldly;
 
-using TMDbLib.Utilities.Serializer;
-
 namespace Ruvarr.UnitTests.Infrastructure.Tmdb.NfcTmdbSerializerTests;
 
 public sealed class Serialize
 {
-    private readonly ITMDbSerializer _sut = new NfcTmdbSerializer();
+    private readonly NfcTmdbSerializer _sut = new();
 
     [Fact]
     public void WhenSerializing_WritesValueUnchangedWithoutNormalizing()

@@ -12,17 +12,14 @@ dotnet_diagnostic.CA1707.severity = none
 # CA1816: Dispose methods should call SuppressFinalize
 dotnet_diagnostic.CA1816.severity = none
 
-# CA1859: _sut typed as interface (intentional — tests should rely on the public contract)
-dotnet_diagnostic.CA1859.severity = none
-
-# S1144: Unused private setter — JSON deserializers set properties without calling the setter directly
-dotnet_diagnostic.S1144.severity = none
-
-# S3459: Unassigned auto-property — JSON-deserialized inner test classes are populated externally
-dotnet_diagnostic.S3459.severity = none
-
 # CA2234: Pass system uri objects instead of strings
 dotnet_diagnostic.CA2234.severity = none
 
 # S1075: Refactor your code not to use hardcoded absolute paths or URIs
 dotnet_diagnostic.S1075.severity = none
+
+# JSON-deserialized inner test DTOs (TestMovie) have setters/auto-properties populated
+# by Newtonsoft via reflection, not by test code — these analyzers false-positive on them.
+[**/NfcTmdbSerializerTests/*.cs]
+dotnet_diagnostic.S1144.severity = none
+dotnet_diagnostic.S3459.severity = none
