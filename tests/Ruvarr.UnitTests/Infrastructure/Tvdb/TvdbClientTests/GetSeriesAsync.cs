@@ -1,5 +1,7 @@
+using System.Collections.Specialized;
 using System.Net;
 using System.Text;
+using System.Web;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -185,6 +187,8 @@ public sealed class GetSeriesAsync
 
         // Assert
         SeriesData data = result.ShouldNotBeNull();
+        data.Series.Id.ShouldBe(10);
+        data.Series.Name.ShouldBe("Long Series");
         data.Episodes.Count.ShouldBe(2);
         data.Episodes[0].Id.ShouldBe(1);
         data.Episodes[1].Id.ShouldBe(2);
@@ -283,7 +287,7 @@ public sealed class GetSeriesAsync
 
         // Assert
         result.ShouldNotBeNull();
-        countingHandler.RequestCount.ShouldBeLessThanOrEqualTo(TvdbClient.MaxPageCount);
+        countingHandler.RequestCount.ShouldBe(TvdbClient.MaxPageCount);
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "Handler is disposed by HttpClient via disposeHandler: true")]
@@ -330,7 +334,7 @@ public sealed class GetSeriesAsync
             string? query = request.RequestUri?.Query;
             if (query is not null)
             {
-                System.Collections.Specialized.NameValueCollection parsed = System.Web.HttpUtility.ParseQueryString(query);
+                NameValueCollection parsed = HttpUtility.ParseQueryString(query);
                 if (int.TryParse(parsed["page"], out int parsedPage))
                 {
                     page = parsedPage;
@@ -360,6 +364,5 @@ public sealed class GetSeriesAsync
                 Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
             });
         }
-
     }
 }
