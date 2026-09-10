@@ -458,7 +458,7 @@ else
     }
 
     internal static bool MatchesSearch(string programName, string searchText) =>
-        programName.Contains(searchText.ToNfc(), StringComparison.OrdinalIgnoreCase);
+        programName.ToNfc().Contains(searchText.ToNfc(), StringComparison.OrdinalIgnoreCase);
 
     internal static string GetMatchButtonLabel(int? tvdbSeriesId, bool isMovieMatch)
     {
