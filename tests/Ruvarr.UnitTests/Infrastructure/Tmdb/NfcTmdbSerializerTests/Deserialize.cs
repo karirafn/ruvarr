@@ -4,6 +4,8 @@ using Ruvarr.Infrastructure.Tmdb;
 
 using Shouldly;
 
+using TMDbLib.Utilities.Serializer;
+
 namespace Ruvarr.UnitTests.Infrastructure.Tmdb.NfcTmdbSerializerTests;
 
 public sealed class Deserialize
@@ -13,7 +15,7 @@ public sealed class Deserialize
     private const string NfdTitle = "Skjaldbo\u006f\u0308kustra\u0061\u0301kur";
     private const string NfcTitle = "Skjaldbo\u00f6kustra\u00e1kur";
 
-    private readonly NfcTmdbSerializer _sut = new();
+    private readonly ITMDbSerializer _sut = new NfcTmdbSerializer();
 
     [Fact]
     public void WhenJsonContainsNfdStrings_DeserializesToNfc()
@@ -27,6 +29,7 @@ public sealed class Deserialize
 
         // Assert
         TestMovie movie = result.ShouldBeOfType<TestMovie>();
+        movie.Id.ShouldBe(42);
         movie.Title.ShouldBe(NfcTitle);
         movie.Title.IsNormalized(NormalizationForm.FormC).ShouldBeTrue();
     }
@@ -44,7 +47,6 @@ public sealed class Deserialize
         // Assert
         TestMovie movie = result.ShouldBeOfType<TestMovie>();
         movie.Title.ShouldBe(NfcTitle);
-        movie.Title.IsNormalized(NormalizationForm.FormC).ShouldBeTrue();
     }
 
     [Fact]
@@ -62,8 +64,27 @@ public sealed class Deserialize
         movie.Title.ShouldBe("Inception");
     }
 
+    [Fact]
+    public void WhenResponseBodyExceedsSizeLimit_Throws()
+    {
+        // Arrange -- build a payload just over 4 MB by padding with ASCII chars
+        // (each char is 1 byte in UTF-8, so byte count equals char count here)
+        int overLimit = 4 * 1024 * 1024 + 1;
+        // Wrap the padding in a valid JSON string value so the stream body totals > 4 MB.
+        byte[] header = Encoding.UTF8.GetBytes("{\"Title\":\"");
+        byte[] padding = new byte[overLimit];
+        Array.Fill(padding, (byte)'a');
+        byte[] footer = Encoding.UTF8.GetBytes("\",\"Id\":1}");
+        byte[] payload = [..header, ..padding, ..footer];
+        using MemoryStream stream = new(payload);
+
+        // Act & Assert
+        Should.Throw<InvalidOperationException>(() => _sut.Deserialize(stream, typeof(TestMovie)));
+    }
+
     private sealed class TestMovie
     {
         public string Title { get; set; } = string.Empty;
+        public int Id { get; set; }
     }
 }
