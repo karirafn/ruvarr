@@ -10,6 +10,12 @@ internal sealed class NfcTmdbSerializer : ITMDbSerializer
     // response from exhausting memory via an unbounded ReadToEnd call.
     private const int MaxResponseBytes = 4 * 1024 * 1024;
 
+    // NFC normalization can theoretically expand adversarial NFD input in memory beyond
+    // the network-read cap (e.g. if future Unicode additions produce an NFC form whose
+    // UTF-8 encoding is longer than the NFD input). This cap bounds that expansion
+    // independently of the pre-normalization read cap.
+    private const int MaxNormalizedBytes = 2 * MaxResponseBytes;
+
     public object? Deserialize(Stream source, Type type)
     {
         // The source stream is intentionally left open: TMDbLib owns its lifetime
@@ -38,6 +44,16 @@ internal sealed class NfcTmdbSerializer : ITMDbSerializer
         // GetBytes never prepends a BOM (preamble is a StreamWriter concern), so the
         // re-wrapped bytes are always BOM-free, as TMDbJsonSerializer.Instance expects.
         byte[] normalizedBytes = Encoding.UTF8.GetBytes(normalizedJson);
+
+        // NFC normalization can expand adversarial NFD payloads in memory even when the
+        // original network read passed the pre-normalization cap. Bound the post-normalization
+        // byte length independently to prevent unbounded allocation after the stream is read.
+        if (normalizedBytes.Length > MaxNormalizedBytes)
+        {
+            throw new InvalidOperationException(
+                $"Normalized TMDb response body exceeded {MaxNormalizedBytes} bytes.");
+        }
+
         using MemoryStream normalizedStream = new(normalizedBytes);
 
         return TMDbJsonSerializer.Instance.Deserialize(normalizedStream, type);
