@@ -10,6 +10,7 @@
 @using Ruvarr.Programs.Components
 @using Ruvarr.Programs.Events
 @using Ruvarr.Programs.Filters
+@using Ruvarr.Extensions
 @using Ruvarr.Programs.Queries.GetPrograms
 @inject IServiceScopeFactory ScopeFactory
 @inject ProgramRefreshNotifier RefreshNotifier
@@ -116,7 +117,7 @@
 else
 {
     List<ProgramSummary> visibleList = [.. _programs
-        .Where(p => string.IsNullOrWhiteSpace(FilterState.SearchText) || p.ProgramName.Contains(FilterState.SearchText, StringComparison.OrdinalIgnoreCase))
+        .Where(p => string.IsNullOrWhiteSpace(FilterState.SearchText) || MatchesSearch(p.ProgramName, FilterState.SearchText))
         .Where(p => string.IsNullOrEmpty(FilterState.FilterChannel) || p.Channel == FilterState.FilterChannel)];
 
     if (visibleList.Count == 0)
@@ -455,6 +456,9 @@ else
         };
         await LoadProgramsAsync();
     }
+
+    internal static bool MatchesSearch(string programName, string searchText) =>
+        programName.Contains(searchText.ToNfc(), StringComparison.OrdinalIgnoreCase);
 
     internal static string GetMatchButtonLabel(int? tvdbSeriesId, bool isMovieMatch)
     {
