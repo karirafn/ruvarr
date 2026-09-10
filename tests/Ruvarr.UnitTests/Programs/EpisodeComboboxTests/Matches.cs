@@ -116,11 +116,12 @@ public sealed class Matches
         // NFC query: \u00f6 (o-umlaut, composed)
         string nfcQuery = "\u00f6sterreich";
 
+        episode.Name.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
+
         // Act
         bool result = EpisodeCombobox.Matches(episode, nfcQuery);
 
         // Assert
-        episode.Name.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
         result.ShouldBeTrue();
     }
 }
