@@ -31,6 +31,9 @@ internal static partial class StringExtensions
         return output;
     }
 
+    internal static string ToNfc(this string input) =>
+        input.IsNormalized(NormalizationForm.FormC) ? input : input.Normalize(NormalizationForm.FormC);
+
     internal static bool EqualsSanitized(this string a, string b) => a.Sanitized()
         .Equals(b.Sanitized(), StringComparison.OrdinalIgnoreCase);
 
