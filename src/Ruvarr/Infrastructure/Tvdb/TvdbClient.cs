@@ -5,7 +5,7 @@ namespace Ruvarr.Infrastructure.Tvdb;
 
 internal sealed class TvdbClient(ILogger<TvdbClient> logger, HttpClient client) : ApiClient(logger, client), ITvdbClient
 {
-    public const int MaxPageCount = 20;
+    internal const int MaxPageCount = 20;
 
     public async Task<SearchResponse> SearchAsync(
         string? query = null,
