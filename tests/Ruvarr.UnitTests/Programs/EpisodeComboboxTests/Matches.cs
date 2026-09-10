@@ -91,7 +91,7 @@ public sealed class Matches
     public void WhenQueryIsNfdAndEpisodeNameIsNfc_ReturnsTrue()
     {
         // Arrange
-        // NFD: o + U+0308 (COMBINING DIAERESIS) — decomposed form of o-umlaut.
+        // NFD: o + \u0308 (COMBINING DIAERESIS) — decomposed form of o-umlaut.
         // Written as \uXXXX escapes so editor/git normalization cannot collapse them.
         string nfdQuery = "\u006f\u0308sterreich";
         nfdQuery.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
@@ -103,6 +103,24 @@ public sealed class Matches
         bool result = EpisodeCombobox.Matches(episode, nfdQuery);
 
         // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void WhenEpisodeNameIsNfdAndQueryIsNfc_ReturnsTrue()
+    {
+        // Arrange
+        // NFD episode Name: o + \u0308 (COMBINING DIAERESIS) — decomposed form of o-umlaut.
+        // Written as \uXXXX escapes so editor/git normalization cannot collapse them.
+        TvdbSeriesEpisode episode = new(TvdbId: 1, Name: "\u006f\u0308sterreich", SeasonNumber: 1, EpisodeNumber: 1);
+        // NFC query: \u00f6 (o-umlaut, composed)
+        string nfcQuery = "\u00f6sterreich";
+
+        // Act
+        bool result = EpisodeCombobox.Matches(episode, nfcQuery);
+
+        // Assert
+        episode.Name.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
         result.ShouldBeTrue();
     }
 }

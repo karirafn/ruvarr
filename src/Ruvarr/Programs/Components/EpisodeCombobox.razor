@@ -417,7 +417,7 @@
 
     internal static bool Matches(TvdbSeriesEpisode episode, string query)
     {
-        return BuildLabel(episode).Contains(query.ToNfc(), StringComparison.OrdinalIgnoreCase);
+        return BuildLabel(episode).ToNfc().Contains(query.ToNfc(), StringComparison.OrdinalIgnoreCase);
     }
 
     internal static IReadOnlyList<TvdbSeriesEpisode> FilterAndOrder(

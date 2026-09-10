@@ -336,6 +336,7 @@ public sealed class SettingsTests : BunitContext
         IElement error = cut.Find(".field-error");
         error.TextContent.ShouldContain("Already ignored");
     }
+
     [Fact]
     public async Task ShowsConfirmationWhenSavingWithNewlyIgnoredPrograms()
     {
