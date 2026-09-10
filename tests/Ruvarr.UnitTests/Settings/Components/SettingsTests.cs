@@ -1,3 +1,5 @@
+using System.Text;
+
 using AngleSharp.Dom;
 
 using Bunit;
@@ -277,6 +279,63 @@ public sealed class SettingsTests : BunitContext
         cut.FindAll(".field-error").Count.ShouldBe(0);
     }
 
+    [Fact]
+    public async Task DoesNotAddNfdProgramWhenNfcEntryExists()
+    {
+        // Arrange
+        // NFC stored entry: "Fr\u00e9ttir" with composed \u00e9 (U+00E9)
+        // NFD typed input: e(U+0065) + combiningAcute(U+0301)
+        // Constructed at runtime so editor tools cannot collapse decomposed form.
+        string nfdInput = "Fr" + "e" + "\u0301" + "ttir";
+        nfdInput.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
+
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["Fr\u00e9ttir"] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Act
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = nfdInput });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Assert
+        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
+        tags.Count.ShouldBe(1);
+        IElement error = cut.Find(".field-error");
+        error.TextContent.ShouldContain("Already ignored");
+    }
+
+    [Fact]
+    public async Task DoesNotAddNfcProgramWhenNfdEntryExists()
+    {
+        // Arrange
+        // NFD stored entry: e(U+0065) + combiningAcute(U+0301)
+        // NFC typed input: "Fr\u00e9ttir" with composed \u00e9 (U+00E9)
+        // Constructed at runtime so editor tools cannot collapse decomposed form.
+        string nfdStored = "Fr" + "e" + "\u0301" + "ttir";
+        nfdStored.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
+
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [nfdStored] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
+
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Act
+        IElement input = cut.Find("input[aria-label='Program title to ignore']");
+        await input.InputAsync(new ChangeEventArgs { Value = "Fr\u00e9ttir" });
+        await cut.FindAll("button.add-channel-button")[1].ClickAsync(new MouseEventArgs());
+
+        // Assert
+        IReadOnlyList<IElement> tags = cut.FindAll("[role='listitem']");
+        tags.Count.ShouldBe(1);
+        IElement error = cut.Find(".field-error");
+        error.TextContent.ShouldContain("Already ignored");
+    }
     [Fact]
     public async Task ShowsConfirmationWhenSavingWithNewlyIgnoredPrograms()
     {

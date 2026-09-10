@@ -1,6 +1,7 @@
 @page "/settings"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @using Ruvarr.Abstractions
+@using Ruvarr.Extensions
 @using Ruvarr.Settings.Commands.SaveSettings
 @using Ruvarr.Settings.Queries.GetDistinctChannels
 @using Ruvarr.Settings.Queries.GetSettings
@@ -439,7 +440,7 @@ else
             return;
         }
 
-        if (_ignoredProgramsList.Exists(p => string.Equals(p, trimmed, StringComparison.OrdinalIgnoreCase)))
+        if (_ignoredProgramsList.Exists(p => string.Equals(p.ToNfc(), trimmed.ToNfc(), StringComparison.OrdinalIgnoreCase)))
         {
             _addProgramError = "Already ignored";
             return;
