@@ -1,3 +1,5 @@
+using System.Text;
+
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Components;
 
@@ -83,5 +85,24 @@ public sealed class Matches
 
         // Assert
         result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void WhenQueryIsNfdAndEpisodeNameIsNfc_ReturnsTrue()
+    {
+        // Arrange
+        // NFD: o + U+0308 (COMBINING DIAERESIS) — decomposed form of o-umlaut.
+        // Written as \uXXXX escapes so editor/git normalization cannot collapse them.
+        string nfdQuery = "\u006f\u0308sterreich";
+        nfdQuery.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
+
+        // NFC: \u00f6 (o-umlaut, composed) — the form that flows from NfcStringConverter.
+        TvdbSeriesEpisode episode = new(TvdbId: 1, Name: "\u00f6sterreich", SeasonNumber: 1, EpisodeNumber: 1);
+
+        // Act
+        bool result = EpisodeCombobox.Matches(episode, nfdQuery);
+
+        // Assert
+        result.ShouldBeTrue();
     }
 }
