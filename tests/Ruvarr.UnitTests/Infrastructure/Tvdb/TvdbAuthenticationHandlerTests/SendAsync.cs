@@ -141,6 +141,95 @@ public sealed class SendAsync
         secondRequestAuth.Parameter.ShouldBe(NewToken);
     }
 
+    // TDD cycle (e): 401 from downstream triggers re-login and retry with fresh token
+    [Fact]
+    public async Task WhenDownstream401_ReLoginsAndRetriesWithFreshToken()
+    {
+        // Arrange
+        const string FreshToken = "fresh-token-after-relogin";
+        const string FreshLoginJson = """{"data":{"token":"fresh-token-after-relogin"},"status":"success"}""";
+
+        ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
+        settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ApiKey + "-e"));
+
+        using MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 64 });
+
+        // CA2000: handler disposed by test via using
+#pragma warning disable CA2000
+        using TvdbAuthenticationHandler sut = new(cache, settingsStore);
+#pragma warning restore CA2000
+
+        AuthenticationHeaderValue? retryRequestAuth = null;
+        int applicationRequestCount = 0;
+
+        sut.InnerHandler = new CountingLoginHandler(
+            loginResponse: LoginResponseBody,
+            secondLoginResponse: FreshLoginJson,
+            onApplicationRequest: request =>
+            {
+                applicationRequestCount++;
+                retryRequestAuth = request.Headers.Authorization;
+            },
+            firstApplicationResponseStatus: HttpStatusCode.Unauthorized);
+
+        // CA2000: HttpClient does not own the handler (disposeHandler: false)
+#pragma warning disable CA2000
+        using HttpClient httpClient = new(sut, disposeHandler: false)
+        {
+            BaseAddress = new Uri("https://tvdb.test/")
+        };
+#pragma warning restore CA2000
+
+        // Act
+        HttpResponseMessage response = await httpClient.GetAsync("v4/series/1", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        applicationRequestCount.ShouldBe(2, "the request must be retried once");
+        retryRequestAuth.ShouldNotBeNull();
+        retryRequestAuth.Scheme.ShouldBe("Bearer");
+        retryRequestAuth.Parameter.ShouldBe(FreshToken);
+    }
+
+    // TDD cycle (f): persistent 401 (re-login does not help) returns 401 without looping
+    [Fact]
+    public async Task WhenDownstream401PersistsAfterReLogin_ReturnsUnauthorizedWithoutRetryingAgain()
+    {
+        // Arrange
+        ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
+        settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ApiKey + "-f"));
+
+        using MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 64 });
+
+        // CA2000: handler disposed by test via using
+#pragma warning disable CA2000
+        using TvdbAuthenticationHandler sut = new(cache, settingsStore);
+#pragma warning restore CA2000
+
+        int applicationRequestCount = 0;
+
+        sut.InnerHandler = new CountingLoginHandler(
+            loginResponse: LoginResponseBody,
+            onApplicationRequest: _ => { applicationRequestCount++; },
+            firstApplicationResponseStatus: HttpStatusCode.Unauthorized,
+            retryApplicationResponseStatus: HttpStatusCode.Unauthorized);
+
+        // CA2000: HttpClient does not own the handler (disposeHandler: false)
+#pragma warning disable CA2000
+        using HttpClient httpClient = new(sut, disposeHandler: false)
+        {
+            BaseAddress = new Uri("https://tvdb.test/")
+        };
+#pragma warning restore CA2000
+
+        // Act
+        HttpResponseMessage response = await httpClient.GetAsync("v4/series/1", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        applicationRequestCount.ShouldBe(2, "must retry exactly once, no infinite loop");
+    }
+
     // TDD cycle (d): throws when login response token is empty/whitespace
     [Fact]
     public async Task WhenLoginResponseTokenIsEmpty_ThrowsInvalidOperationException()
@@ -180,17 +269,24 @@ public sealed class SendAsync
         private readonly string _loginResponse;
         private readonly string? _secondLoginResponse;
         private readonly Action<HttpRequestMessage>? _onApplicationRequest;
+        private readonly HttpStatusCode _firstApplicationResponseStatus;
+        private readonly HttpStatusCode _retryApplicationResponseStatus;
 
         internal int LoginCount { get; private set; }
+        private int _applicationRequestCount;
 
         internal CountingLoginHandler(
             string loginResponse,
             string? secondLoginResponse = null,
-            Action<HttpRequestMessage>? onApplicationRequest = null)
+            Action<HttpRequestMessage>? onApplicationRequest = null,
+            HttpStatusCode firstApplicationResponseStatus = HttpStatusCode.OK,
+            HttpStatusCode retryApplicationResponseStatus = HttpStatusCode.OK)
         {
             _loginResponse = loginResponse;
             _secondLoginResponse = secondLoginResponse;
             _onApplicationRequest = onApplicationRequest;
+            _firstApplicationResponseStatus = firstApplicationResponseStatus;
+            _retryApplicationResponseStatus = retryApplicationResponseStatus;
         }
 
         protected override Task<HttpResponseMessage> SendAsync(
@@ -212,7 +308,12 @@ public sealed class SendAsync
 
             _onApplicationRequest?.Invoke(request);
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            _applicationRequestCount++;
+            HttpStatusCode status = _applicationRequestCount == 1
+                ? _firstApplicationResponseStatus
+                : _retryApplicationResponseStatus;
+
+            return Task.FromResult(new HttpResponseMessage(status)
             {
                 Content = new StringContent("{}", Encoding.UTF8, "application/json")
             });
