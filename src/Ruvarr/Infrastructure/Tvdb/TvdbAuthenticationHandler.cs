@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Caching.Memory;
@@ -27,7 +28,27 @@ internal sealed class TvdbAuthenticationHandler(IMemoryCache memoryCache, ISetti
         string token = await GetAccessTokenAsync(baseUri, cancellationToken);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        return await base.SendAsync(request, cancellationToken);
+        HttpResponseMessage response = await base.SendAsync(request, cancellationToken);
+
+        bool isLoginRequest = request.Method == HttpMethod.Post
+            && (request.RequestUri?.AbsolutePath.Contains("login", StringComparison.Ordinal) ?? false);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized && !isLoginRequest)
+        {
+            response.Dispose();
+
+            memoryCache.Remove(AccessTokenCacheKey);
+            memoryCache.Remove(CachedApiKeyCacheKey);
+
+            string freshToken = await GetAccessTokenAsync(baseUri, cancellationToken);
+
+            using HttpRequestMessage retryRequest = new(request.Method, request.RequestUri);
+            retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", freshToken);
+
+            return await base.SendAsync(retryRequest, cancellationToken);
+        }
+
+        return response;
     }
 
     private async Task<string> GetAccessTokenAsync(Uri? baseUri, CancellationToken cancellationToken)
