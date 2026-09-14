@@ -141,6 +141,36 @@ public sealed class SendAsync
         secondRequestAuth.Parameter.ShouldBe(NewToken);
     }
 
+    // TDD cycle (d): throws when login response token is empty/whitespace
+    [Fact]
+    public async Task WhenLoginResponseTokenIsEmpty_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
+        settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ApiKey + "-d"));
+
+        using MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 64 });
+
+#pragma warning disable CA2000
+        using TvdbAuthenticationHandler sut = new(cache, settingsStore);
+#pragma warning restore CA2000
+
+        sut.InnerHandler = new CountingLoginHandler(
+            loginResponse: """{"data":{"token":""},"status":"success"}""");
+
+#pragma warning disable CA2000
+        using HttpClient httpClient = new(sut, disposeHandler: false)
+        {
+            BaseAddress = new Uri("https://tvdb.test/")
+        };
+#pragma warning restore CA2000
+
+        // Act / Assert
+        InvalidOperationException ex = await Should.ThrowAsync<InvalidOperationException>(
+            () => httpClient.GetAsync("v4/series/1", TestContext.Current.CancellationToken));
+        ex.Message.ShouldBe("Failed to authenticate with the TVDB");
+    }
+
     // TDD cycle (e): 401 from downstream triggers re-login and retry with fresh token
     [Fact]
     public async Task WhenDownstream401_ReLoginsAndRetriesWithFreshToken()
@@ -162,15 +192,21 @@ public sealed class SendAsync
         AuthenticationHeaderValue? retryRequestAuth = null;
         int applicationRequestCount = 0;
 
-        sut.InnerHandler = new CountingLoginHandler(
+        CountingLoginHandler inner = new(
             loginResponse: LoginResponseBody,
             secondLoginResponse: FreshLoginJson,
             onApplicationRequest: request =>
             {
                 applicationRequestCount++;
-                retryRequestAuth = request.Headers.Authorization;
+                // Capture auth only on the retry (second application request) — the
+                // first request carries the cached token, the retry carries the fresh one.
+                if (applicationRequestCount == 2)
+                {
+                    retryRequestAuth = request.Headers.Authorization;
+                }
             },
             firstApplicationResponseStatus: HttpStatusCode.Unauthorized);
+        sut.InnerHandler = inner;
 
         // CA2000: HttpClient does not own the handler (disposeHandler: false)
 #pragma warning disable CA2000
@@ -186,6 +222,7 @@ public sealed class SendAsync
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         applicationRequestCount.ShouldBe(2, "the request must be retried once");
+        inner.LoginCount.ShouldBe(2, "one initial login plus one re-login after the 401");
         retryRequestAuth.ShouldNotBeNull();
         retryRequestAuth.Scheme.ShouldBe("Bearer");
         retryRequestAuth.Parameter.ShouldBe(FreshToken);
@@ -230,36 +267,6 @@ public sealed class SendAsync
         applicationRequestCount.ShouldBe(2, "must retry exactly once, no infinite loop");
     }
 
-    // TDD cycle (d): throws when login response token is empty/whitespace
-    [Fact]
-    public async Task WhenLoginResponseTokenIsEmpty_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
-        settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ApiKey + "-d"));
-
-        using MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 64 });
-
-#pragma warning disable CA2000
-        using TvdbAuthenticationHandler sut = new(cache, settingsStore);
-#pragma warning restore CA2000
-
-        sut.InnerHandler = new CountingLoginHandler(
-            loginResponse: """{"data":{"token":""},"status":"success"}""");
-
-#pragma warning disable CA2000
-        using HttpClient httpClient = new(sut, disposeHandler: false)
-        {
-            BaseAddress = new Uri("https://tvdb.test/")
-        };
-#pragma warning restore CA2000
-
-        // Act / Assert
-        InvalidOperationException ex = await Should.ThrowAsync<InvalidOperationException>(
-            () => httpClient.GetAsync("v4/series/1", TestContext.Current.CancellationToken));
-        ex.Message.ShouldBe("Failed to authenticate with the TVDB");
-    }
-
     /// <summary>
     /// Counts login requests and routes application requests to a capture callback.
     /// Login detection: POST to a path containing "login".
@@ -271,9 +278,9 @@ public sealed class SendAsync
         private readonly Action<HttpRequestMessage>? _onApplicationRequest;
         private readonly HttpStatusCode _firstApplicationResponseStatus;
         private readonly HttpStatusCode _retryApplicationResponseStatus;
+        private int _applicationRequestCount;
 
         internal int LoginCount { get; private set; }
-        private int _applicationRequestCount;
 
         internal CountingLoginHandler(
             string loginResponse,

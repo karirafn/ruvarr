@@ -30,22 +30,46 @@ internal sealed class TvdbAuthenticationHandler(IMemoryCache memoryCache, ISetti
 
         HttpResponseMessage response = await base.SendAsync(request, cancellationToken);
 
-        bool isLoginRequest = request.Method == HttpMethod.Post
-            && (request.RequestUri?.AbsolutePath.Contains("login", StringComparison.Ordinal) ?? false);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized && !isLoginRequest)
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            response.Dispose();
+            // LoginAsync sends the login POST via base.SendAsync, so a login request never reaches
+            // this override. This guard is defense-in-depth against a future caller routing a login
+            // POST through HttpClient.
+            bool isLoginRequest = request.Method == HttpMethod.Post
+                && (request.RequestUri?.AbsolutePath.EndsWith("/login", StringComparison.Ordinal) ?? false);
 
-            memoryCache.Remove(AccessTokenCacheKey);
-            memoryCache.Remove(CachedApiKeyCacheKey);
+            if (!isLoginRequest)
+            {
+                response.Dispose();
 
-            string freshToken = await GetAccessTokenAsync(baseUri, cancellationToken);
+                memoryCache.Remove(AccessTokenCacheKey);
+                memoryCache.Remove(CachedApiKeyCacheKey);
 
-            using HttpRequestMessage retryRequest = new(request.Method, request.RequestUri);
-            retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", freshToken);
+                string freshToken = await GetAccessTokenAsync(baseUri, cancellationToken);
 
-            return await base.SendAsync(retryRequest, cancellationToken);
+                // Preserve the original request semantics on retry — TVDB calls are GETs today,
+                // but this handler must not corrupt a future POST's headers, content, or options.
+                using HttpRequestMessage retryRequest = new(request.Method, request.RequestUri)
+                {
+                    Content = request.Content,
+                    Version = request.Version,
+                    VersionPolicy = request.VersionPolicy,
+                };
+
+                foreach (KeyValuePair<string, IEnumerable<string>> header in request.Headers)
+                {
+                    retryRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+
+                foreach (KeyValuePair<string, object?> option in request.Options)
+                {
+                    retryRequest.Options.Set(new HttpRequestOptionsKey<object?>(option.Key), option.Value);
+                }
+
+                retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", freshToken);
+
+                return await base.SendAsync(retryRequest, cancellationToken);
+            }
         }
 
         return response;
