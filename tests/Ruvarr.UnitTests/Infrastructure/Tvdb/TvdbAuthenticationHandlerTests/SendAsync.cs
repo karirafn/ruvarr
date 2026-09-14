@@ -177,7 +177,7 @@ public sealed class SendAsync
     {
         // Arrange
         const string FreshToken = "fresh-token-after-relogin";
-        const string FreshLoginJson = """{"data":{"token":"fresh-token-after-relogin"},"status":"success"}""";
+        string FreshLoginJson = $$"""{"data":{"token":"{{FreshToken}}"},"status":"success"}""";
 
         ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
         settingsStore.Current.Returns(new RuvarrSettings(TvdbApiKey: ApiKey + "-e"));

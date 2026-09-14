@@ -49,7 +49,7 @@ internal sealed class TvdbAuthenticationHandler(IMemoryCache memoryCache, ISetti
 
                 // Preserve the original request semantics on retry — TVDB calls are GETs today,
                 // but this handler must not corrupt a future POST's headers, content, or options.
-                using HttpRequestMessage retryRequest = new(request.Method, request.RequestUri)
+                HttpRequestMessage retryRequest = new(request.Method, request.RequestUri)
                 {
                     Content = request.Content,
                     Version = request.Version,
@@ -68,7 +68,17 @@ internal sealed class TvdbAuthenticationHandler(IMemoryCache memoryCache, ISetti
 
                 retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", freshToken);
 
-                return await base.SendAsync(retryRequest, cancellationToken);
+                try
+                {
+                    return await base.SendAsync(retryRequest, cancellationToken);
+                }
+                finally
+                {
+                    // Content belongs to the original request (owned by the caller); detach it before
+                    // disposing the retry message so its Dispose does not dispose the caller's content.
+                    retryRequest.Content = null;
+                    retryRequest.Dispose();
+                }
             }
         }
 
