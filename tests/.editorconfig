@@ -12,6 +12,10 @@ dotnet_diagnostic.CA1707.severity = none
 # CA1816: Dispose methods should call SuppressFinalize
 dotnet_diagnostic.CA1816.severity = none
 
+# CA1711: xunit one-class-per-file convention means test class names follow the file name,
+#         which may end with a reserved suffix (e.g. Queue, Collection) — suppress project-wide.
+dotnet_diagnostic.CA1711.severity = none
+
 # CA2234: Pass system uri objects instead of strings
 dotnet_diagnostic.CA2234.severity = none
 

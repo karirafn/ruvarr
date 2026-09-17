@@ -92,15 +92,13 @@ public sealed class PriorityEnqueue
         // Arrange
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
-        IQueueLease? firstLease = sut.TryLeaseNext();
-        firstLease.ShouldNotBeNull();
+        using IQueueLease firstLease = sut.TryLeaseNext().ShouldNotBeNull();
 
         // Act
         sut.PriorityEnqueue(1, "Program A");
 
         // Assert — item was re-queued at front, read flag cleared
-        IQueueLease? secondLease = sut.TryLeaseNext();
-        secondLease.ShouldNotBeNull();
+        using IQueueLease secondLease = sut.TryLeaseNext().ShouldNotBeNull();
         secondLease.RuvId.ShouldBe(1);
     }
 
