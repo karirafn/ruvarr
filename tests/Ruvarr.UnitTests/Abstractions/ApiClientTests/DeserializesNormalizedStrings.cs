@@ -60,8 +60,12 @@ public sealed class DeserializesNormalizedStrings
     private sealed class TestableApiClient(ILogger logger, HttpClient httpClient)
         : ApiClient(logger, httpClient)
     {
-        public Task<TResponse?> TestGetAsync<TResponse>(string path, CancellationToken cancellationToken) =>
-            GetAsync<TResponse>(path, cancellationToken);
+        public async Task<TResponse?> TestGetAsync<TResponse>(string path, CancellationToken cancellationToken)
+            where TResponse : notnull
+        {
+            Result<TResponse> result = await GetAsync<TResponse>(path, cancellationToken);
+            return result.Match(v => (TResponse?)v, _ => default);
+        }
 
         public Task<TResponse?> TestPostAsync<TRequest, TResponse>(string path, TRequest body, CancellationToken cancellationToken) =>
             PostAsync<TRequest, TResponse>(path, body, cancellationToken);

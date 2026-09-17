@@ -1,3 +1,5 @@
+using Ruvarr.Abstractions;
+
 namespace Ruvarr.Infrastructure.Tvdb;
 
 internal static class ServiceCollectionExtensions
@@ -20,6 +22,7 @@ internal static class ServiceCollectionExtensions
             }
 
             client.BaseAddress = uri;
+            client.Timeout = ApiClientTimeouts.Default;
         })
         .AddHttpMessageHandler<TvdbAuthenticationHandler>();
 

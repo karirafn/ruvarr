@@ -107,6 +107,18 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
 
     protected abstract TItem WithProcessingStatus(TItem item);
 
+    protected IQueueLease? TryLeaseNext(Action<int> markComplete)
+    {
+        ArgumentNullException.ThrowIfNull(markComplete);
+
+        if (!TryReadNext(out int ruvId))
+        {
+            return null;
+        }
+
+        return new QueueLease(ruvId, markComplete);
+    }
+
     protected bool TryReadNext(out int ruvId)
     {
         lock (_lock)
@@ -125,6 +137,24 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
 
             ruvId = default;
             return false;
+        }
+    }
+
+    private sealed class QueueLease(int ruvId, Action<int> markComplete) : IQueueLease
+    {
+        private bool _disposed;
+
+        public int RuvId { get; } = ruvId;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            markComplete(RuvId);
         }
     }
 }

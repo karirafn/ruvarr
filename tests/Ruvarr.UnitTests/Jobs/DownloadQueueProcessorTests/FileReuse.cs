@@ -114,7 +114,7 @@ public sealed class FileReuse : IDisposable
         // Sonarr returns no series or scan results — Sonarr import will early-exit gracefully
         // (no TVDB episodes matched, so import is skipped by the existing early-return guard)
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<Ruvarr.Infrastructure.Sonarr.Models.Series>>([]));
+            .Returns(new Result<IReadOnlyList<Ruvarr.Infrastructure.Sonarr.Models.Series>>([]));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<IReadOnlyList<Ruvarr.Infrastructure.Sonarr.Models.ManualImportFile>>([]));
 

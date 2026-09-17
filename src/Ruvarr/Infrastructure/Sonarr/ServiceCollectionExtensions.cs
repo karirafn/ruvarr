@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 
+using Ruvarr.Abstractions;
+
 namespace Ruvarr.Infrastructure.Sonarr;
 
 internal static class ServiceCollectionExtensions
@@ -14,6 +16,7 @@ internal static class ServiceCollectionExtensions
         services.AddHttpClient<SonarrClient>(client =>
             {
                 client.BaseAddress = PlaceholderBaseAddress;
+                client.Timeout = ApiClientTimeouts.Default;
             })
             .AddHttpMessageHandler<SonarrDelegatingHandler>();
 

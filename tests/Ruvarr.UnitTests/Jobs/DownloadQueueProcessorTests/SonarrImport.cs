@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Downloads;
 using Ruvarr.Downloads.Domain;
@@ -129,7 +130,7 @@ public sealed class SonarrImport : IDisposable
             episodeIds: [101, 102, 103, 104]);
 
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<Series>());
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
@@ -171,7 +172,7 @@ public sealed class SonarrImport : IDisposable
             episodeIds: [101]);
 
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<Series>());
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
 
@@ -206,7 +207,7 @@ public sealed class SonarrImport : IDisposable
             episodeIds: []);
 
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<Series>());
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         // Sonarr episode has a different TvdbId — no match for episode's TvdbId 5001
@@ -242,7 +243,7 @@ public sealed class SonarrImport : IDisposable
 
         Series sonarrSeries = CreateSonarrSeries(id: 42, tvdbId: 5000);
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(new[] { sonarrSeries });
+            .Returns(new Result<IReadOnlyList<Series>>(new[] { sonarrSeries }));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
@@ -277,7 +278,7 @@ public sealed class SonarrImport : IDisposable
 
         Series sonarrSeries = CreateSonarrSeries(id: 42, tvdbId: 5000);
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(new[] { sonarrSeries });
+            .Returns(new Result<IReadOnlyList<Series>>(new[] { sonarrSeries }));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
@@ -313,7 +314,7 @@ public sealed class SonarrImport : IDisposable
 
         Series sonarrSeries = CreateSonarrSeries(id: 42, tvdbId: 5000);
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(new[] { sonarrSeries });
+            .Returns(new Result<IReadOnlyList<Series>>(new[] { sonarrSeries }));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns([file]);
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
@@ -347,7 +348,7 @@ public sealed class SonarrImport : IDisposable
         (string fileName, string completedPath) = await ArrangePostDownloadStateAsync(item, dbContext);
 
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<Series>());
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         // Return a file with a different path — the downloaded filename is not in the scan results
         ManualImportFile unrelatedFile = CreateManualImportFile(
             seriesId: 42,

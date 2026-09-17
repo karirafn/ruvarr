@@ -36,15 +36,23 @@ internal sealed class RuvEpisodesSyncJob(
 
         logger.LogDebug("Starting RÚV episode sync job");
 
-        List<int> ruvIds = [.. syncQueue.DequeueAll()];
+        List<IQueueLease> leases = [];
+#pragma warning disable CA2000 // Loaded-item leases dispose via their using scope in the per-item foreach. Unloaded-id leases and the Sonarr-failure early-return paths dispose via explicit loops.
+        while (syncQueue.TryLeaseNext() is IQueueLease lease)
+        {
+            leases.Add(lease);
+        }
+#pragma warning restore CA2000
 
-        if (ruvIds is [])
+        if (leases is [])
         {
             logger.LogDebug("No programs in refresh queue");
             return;
         }
 
         CancellationToken cancellationToken = context.CancellationToken;
+
+        List<int> ruvIds = [.. leases.Select(l => l.RuvId)];
 
         var programs = await dbContext.Set<RuvProgram>()
             .AsNoTracking()
@@ -54,27 +62,44 @@ internal sealed class RuvEpisodesSyncJob(
             .ToListAsync(cancellationToken);
 
         HashSet<int> missingTvdbIds;
-        IReadOnlyList<Series> sonarrSeries;
 
         try
         {
             missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
-            sonarrSeries = await sonarr.GetSeriesAsync(cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
         catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
-            logger.LogError(ex, "Sonarr calls failed during RÚV episode sync");
+            logger.LogError(ex, "Sonarr GetMissingEpisodesAsync failed during RÚV episode sync");
 
-            foreach (int ruvId in ruvIds)
+            foreach (IQueueLease l in leases)
             {
-                syncQueue.MarkComplete(ruvId);
+                l.Dispose();
             }
 
             broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
             return;
         }
+
+        Result<IReadOnlyList<Series>> seriesResult = await sonarr.GetSeriesAsync(cancellationToken);
+
+        if (seriesResult.IsFailure)
+        {
+            logger.LogError(
+                "Sonarr GetSeriesAsync failed during RÚV episode sync ({ErrorCode}); skipping monitored/missing-episode updates",
+                seriesResult.Error.Code);
+
+            foreach (IQueueLease l in leases)
+            {
+                l.Dispose();
+            }
+
+            broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+            return;
+        }
+
+        IReadOnlyList<Series> sonarrSeries = seriesResult.FromResult();
 
         HashSet<int> monitoredTvdbIds = [.. sonarrSeries
             .Where(x => x.Monitored)
@@ -89,12 +114,16 @@ internal sealed class RuvEpisodesSyncJob(
 
         HashSet<int> loadedIds = [.. programs.Select(p => p.RuvId)];
 
+        Dictionary<int, IQueueLease> leaseByRuvId = leases.ToDictionary(l => l.RuvId);
+
         foreach (var projection in programs)
         {
             int ruvId = projection.RuvId;
             string programName = projection.Name;
 
             syncQueue.MarkProcessing(ruvId);
+
+            using IQueueLease programLease = leaseByRuvId[ruvId];
 
             try
             {
@@ -105,6 +134,19 @@ internal sealed class RuvEpisodesSyncJob(
                     monitoredTvdbIds,
                     missingEpisodesTvdbIds,
                     cancellationToken);
+            }
+            catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Defence-in-depth: GetProgramAsync no longer throws (ApiClient absorbs timeouts
+                // into a Result), but this catch covers any future code path in the item body that
+                // could throw a timeout. The lease guarantees completion regardless.
+                logger.LogError(
+                    ex,
+                    "Transient timeout processing RÚV program '{ProgramName}' (RuvId: {RuvId}); skipping to next",
+                    programName,
+                    ruvId);
+
+                dbContext.ChangeTracker.Clear();
             }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -117,18 +159,14 @@ internal sealed class RuvEpisodesSyncJob(
                     ruvId);
 
                 dbContext.ChangeTracker.Clear();
-                syncQueue.MarkComplete(ruvId);
-                broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
-                continue;
             }
 
-            syncQueue.MarkComplete(ruvId);
             broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
         }
 
-        foreach (int ruvId in ruvIds.Where(id => !loadedIds.Contains(id)))
+        foreach (IQueueLease unloadedLease in leases.Where(l => !loadedIds.Contains(l.RuvId)))
         {
-            syncQueue.MarkComplete(ruvId);
+            unloadedLease.Dispose();
         }
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
@@ -150,15 +188,27 @@ internal sealed class RuvEpisodesSyncJob(
             return;
         }
 
-        RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(ruvId, cancellationToken);
+        Result<RuvTvProgram> programResult = await ruv.GetProgramAsync(ruvId, cancellationToken);
 
-        if (ruvProgram is null)
+        if (programResult.IsFailure && programResult.Error.Code == ApiClientErrors.NotFoundCode)
         {
             logger.LogInformation("Deleting RÚV program {Name} and {Count} episodes", programName, program.Episodes.Count);
             dbContext.Set<RuvProgram>().Remove(program);
             await dbContext.SaveChangesAsync(cancellationToken);
             return;
         }
+
+        if (programResult.IsFailure)
+        {
+            logger.LogWarning(
+                "Skipping RÚV program '{Name}' (RuvId: {RuvId}): API call failed ({ErrorCode})",
+                programName,
+                ruvId,
+                programResult.Error.Code);
+            return;
+        }
+
+        RuvTvProgram ruvProgram = programResult.FromResult();
 
         logger.LogDebug("Adding episodes to RÚV program '{Name}'", programName);
 
