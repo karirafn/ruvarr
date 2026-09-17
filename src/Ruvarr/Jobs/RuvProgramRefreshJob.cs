@@ -92,12 +92,6 @@ internal sealed class RuvProgramRefreshJob(
         logger.LogDebug("Found {Count} RÚV programs in database", existingTvPrograms.Count);
 
         List<int> existingRuvIds = [.. existingTvPrograms.Select(x => x.RuvId)];
-        List<RuvProgram> removedPrograms = [.. existingTvPrograms.Where(x => !ruvIds.Contains(x.RuvId))];
-
-        if (removedPrograms.Count > 0)
-        {
-            logger.LogInformation("Removing {Count} RÚV programs from database", removedPrograms.Count);
-        }
 
         List<RuvProgram> newPrograms = [.. programs
             .Where(x => !existingRuvIds.Contains(x.Id))
@@ -107,9 +101,6 @@ internal sealed class RuvProgramRefreshJob(
         {
             logger.LogInformation("Adding {Count} RÚV new programs to database", newPrograms.Count);
         }
-
-        dbContext.Set<RuvProgram>()
-            .RemoveRange(removedPrograms);
 
         dbContext.Set<RuvProgram>()
             .AddRange(newPrograms);
