@@ -1,4 +1,4 @@
-﻿using Ruvarr.Abstractions;
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Ruv.Models;
 
 namespace Ruvarr.Infrastructure.Ruv;
@@ -6,12 +6,21 @@ namespace Ruvarr.Infrastructure.Ruv;
 internal sealed class RuvClient(ILogger<RuvClient> logger, HttpClient httpClient)
     : ApiClient(logger, httpClient), IRuvClient
 {
-    public Task<RuvFeaturedTv?> GetFeaturedTv(CancellationToken cancellationToken = default) =>
-        GetAsync<RuvFeaturedTv>("/api/programs/featured/tv", cancellationToken);
+    public async Task<RuvFeaturedTv?> GetFeaturedTv(CancellationToken cancellationToken = default)
+    {
+        Result<RuvFeaturedTv> result = await GetAsync<RuvFeaturedTv>("/api/programs/featured/tv", cancellationToken);
+        return result.Match(v => (RuvFeaturedTv?)v, _ => default);
+    }
 
-    public Task<RuvFeaturedTv?> GetKidsTvAsync(CancellationToken cancellationToken = default) =>
-        GetAsync<RuvFeaturedTv>("/api/programs/featured/krakkaruv", cancellationToken);
+    public async Task<RuvFeaturedTv?> GetKidsTvAsync(CancellationToken cancellationToken = default)
+    {
+        Result<RuvFeaturedTv> result = await GetAsync<RuvFeaturedTv>("/api/programs/featured/krakkaruv", cancellationToken);
+        return result.Match(v => (RuvFeaturedTv?)v, _ => default);
+    }
 
-    public Task<RuvTvProgram?> GetProgramAsync(int seriesId, CancellationToken cancellationToken = default) =>
-        GetAsync<RuvTvProgram>($"/api/programs/program/{seriesId}/all", cancellationToken);
+    public async Task<RuvTvProgram?> GetProgramAsync(int seriesId, CancellationToken cancellationToken = default)
+    {
+        Result<RuvTvProgram> result = await GetAsync<RuvTvProgram>($"/api/programs/program/{seriesId}/all", cancellationToken);
+        return result.Match(v => (RuvTvProgram?)v, _ => default);
+    }
 }

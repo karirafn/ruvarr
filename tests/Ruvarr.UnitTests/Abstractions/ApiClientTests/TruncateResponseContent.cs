@@ -73,8 +73,12 @@ public sealed class TruncateResponseContent
     private sealed class TestableApiClient(ILogger logger, HttpClient httpClient)
         : ApiClient(logger, httpClient)
     {
-        public Task<TResponse?> TestGetAsync<TResponse>(string path, CancellationToken cancellationToken) =>
-            GetAsync<TResponse>(path, cancellationToken);
+        public async Task<TResponse?> TestGetAsync<TResponse>(string path, CancellationToken cancellationToken)
+            where TResponse : notnull
+        {
+            Result<TResponse> result = await GetAsync<TResponse>(path, cancellationToken);
+            return result.Match(v => (TResponse?)v, _ => default);
+        }
 
         public Task TestPostAsync<T>(string path, T body, CancellationToken cancellationToken) =>
             PostAsync(path, body, cancellationToken);
