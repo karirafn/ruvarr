@@ -46,7 +46,7 @@ public sealed class ChangedTitleSync
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key"));
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<Series>());
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<MissingEpisode>());
     }
@@ -104,7 +104,7 @@ public sealed class ChangedTitleSync
         RuvTvProgram apiResponse = CreateRuvTvProgram(RuvProgramId, episodes: [apiEpisode]);
 
         _ruv.GetProgramAsync(RuvProgramId, Arg.Any<CancellationToken>())
-            .Returns(apiResponse);
+            .Returns((Result<RuvTvProgram>)apiResponse);
 
         _syncQueue.Enqueue(RuvProgramId, "Test Program");
 
@@ -172,7 +172,7 @@ public sealed class ChangedTitleSync
         RuvTvProgram apiResponse = CreateRuvTvProgram(RuvProgramId, episodes: [apiEpisode]);
 
         _ruv.GetProgramAsync(RuvProgramId, Arg.Any<CancellationToken>())
-            .Returns(apiResponse);
+            .Returns((Result<RuvTvProgram>)apiResponse);
 
         _syncQueue.Enqueue(RuvProgramId, "Test Program");
 

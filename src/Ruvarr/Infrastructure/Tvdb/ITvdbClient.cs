@@ -2,7 +2,7 @@
 
 namespace Ruvarr.Infrastructure.Tvdb;
 
-public interface ITvdbClient
+internal interface ITvdbClient
 {
     Task<SeriesData?> GetSeriesAsync(
         int id,

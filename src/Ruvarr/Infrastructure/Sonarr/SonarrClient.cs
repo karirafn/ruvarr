@@ -9,11 +9,8 @@ namespace Ruvarr.Infrastructure.Sonarr;
 internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient httpClient)
     : ApiClient(logger, httpClient), ISonarrClient
 {
-    public async Task<IReadOnlyList<Series>> GetSeriesAsync(CancellationToken cancellationToken = default)
-    {
-        Result<IReadOnlyList<Series>> result = await GetMany<Series>("api/v3/series", cancellationToken);
-        return result.Match(v => v, _ => []);
-    }
+    public Task<Result<IReadOnlyList<Series>>> GetSeriesAsync(CancellationToken cancellationToken = default) =>
+        GetMany<Series>("api/v3/series", cancellationToken);
 
     public async Task<IReadOnlyList<SonarrEpisode>> GetEpisodesAsync(int seriesId, CancellationToken cancellationToken = default)
     {
