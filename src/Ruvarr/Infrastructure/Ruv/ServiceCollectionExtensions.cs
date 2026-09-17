@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 
+using Ruvarr.Abstractions;
+
 namespace Ruvarr.Infrastructure.Ruv;
 
 internal static class ServiceCollectionExtensions
@@ -14,7 +16,11 @@ internal static class ServiceCollectionExtensions
             .GetRequiredService<IOptions<RuvOptions>>();
 
         services.AddTransient<IRuvClient, RuvClient>();
-        services.AddHttpClient<IRuvClient, RuvClient>(client => client.BaseAddress = options.Value.BaseAddress);
+        services.AddHttpClient<IRuvClient, RuvClient>(client =>
+        {
+            client.BaseAddress = options.Value.BaseAddress;
+            client.Timeout = ApiClientTimeouts.Default;
+        });
         services.AddHttpClient<IRuvStreamInspector, RuvStreamInspector>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(10);
