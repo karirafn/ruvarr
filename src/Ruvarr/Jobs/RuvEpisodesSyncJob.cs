@@ -36,15 +36,23 @@ internal sealed class RuvEpisodesSyncJob(
 
         logger.LogDebug("Starting RÚV episode sync job");
 
-        List<int> ruvIds = [.. syncQueue.DequeueAll()];
+        List<IQueueLease> leases = [];
+#pragma warning disable CA2000 // Leases are transferred to the leases list and disposed via explicit Dispose calls in the per-item foreach and the trailing unloaded-id foreach below
+        while (syncQueue.TryLeaseNext() is IQueueLease lease)
+        {
+            leases.Add(lease);
+        }
+#pragma warning restore CA2000
 
-        if (ruvIds is [])
+        if (leases is [])
         {
             logger.LogDebug("No programs in refresh queue");
             return;
         }
 
         CancellationToken cancellationToken = context.CancellationToken;
+
+        List<int> ruvIds = [.. leases.Select(l => l.RuvId)];
 
         var programs = await dbContext.Set<RuvProgram>()
             .AsNoTracking()
@@ -67,9 +75,9 @@ internal sealed class RuvEpisodesSyncJob(
         {
             logger.LogError(ex, "Sonarr calls failed during RÚV episode sync");
 
-            foreach (int ruvId in ruvIds)
+            foreach (IQueueLease l in leases)
             {
-                syncQueue.MarkComplete(ruvId);
+                l.Dispose();
             }
 
             broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
@@ -89,12 +97,16 @@ internal sealed class RuvEpisodesSyncJob(
 
         HashSet<int> loadedIds = [.. programs.Select(p => p.RuvId)];
 
+        Dictionary<int, IQueueLease> leaseByRuvId = leases.ToDictionary(l => l.RuvId);
+
         foreach (var projection in programs)
         {
             int ruvId = projection.RuvId;
             string programName = projection.Name;
 
             syncQueue.MarkProcessing(ruvId);
+
+            using IQueueLease programLease = leaseByRuvId[ruvId];
 
             try
             {
@@ -117,18 +129,14 @@ internal sealed class RuvEpisodesSyncJob(
                     ruvId);
 
                 dbContext.ChangeTracker.Clear();
-                syncQueue.MarkComplete(ruvId);
-                broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
-                continue;
             }
 
-            syncQueue.MarkComplete(ruvId);
             broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
         }
 
-        foreach (int ruvId in ruvIds.Where(id => !loadedIds.Contains(id)))
+        foreach (IQueueLease unloadedLease in leases.Where(l => !loadedIds.Contains(l.RuvId)))
         {
-            syncQueue.MarkComplete(ruvId);
+            unloadedLease.Dispose();
         }
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());

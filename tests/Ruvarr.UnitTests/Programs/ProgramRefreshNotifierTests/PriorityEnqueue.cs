@@ -1,3 +1,4 @@
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 
@@ -53,7 +54,11 @@ public sealed class PriorityEnqueue
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
-        List<int> _ = sut.DequeueAll().ToList();
+        // Drain the read-set so MarkProcessing reflects as processing in Items
+        while (sut.TryLeaseNext() is IQueueLease drained)
+        {
+            _ = drained;
+        }
         sut.MarkProcessing(2);
 
         // Act
@@ -82,25 +87,25 @@ public sealed class PriorityEnqueue
     }
 
     [Fact]
-    public void ClearsReadFlagSoItemCanBeReadAgain()
+    public void ClearsReadFlagSoItemCanBeLeasedAgain()
     {
         // Arrange
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
-        List<int> firstRead = sut.DequeueAll().ToList();
-        firstRead.ShouldHaveSingleItem();
+        IQueueLease? firstLease = sut.TryLeaseNext();
+        firstLease.ShouldNotBeNull();
 
         // Act
         sut.PriorityEnqueue(1, "Program A");
 
-        // Assert
-        List<int> secondRead = sut.DequeueAll().ToList();
-        secondRead.ShouldHaveSingleItem();
-        secondRead[0].ShouldBe(1);
+        // Assert — item was re-queued at front, read flag cleared
+        IQueueLease? secondLease = sut.TryLeaseNext();
+        secondLease.ShouldNotBeNull();
+        secondLease.RuvId.ShouldBe(1);
     }
 
     [Fact]
-    public void DequeueOrderRespectsPriority()
+    public void LeaseOrderRespectsPriority()
     {
         // Arrange
         ProgramRefreshNotifier sut = new();
@@ -109,11 +114,13 @@ public sealed class PriorityEnqueue
         sut.PriorityEnqueue(3, "Program C");
 
         // Act
-        List<int> dequeued = sut.DequeueAll().ToList();
+        IQueueLease lease1 = sut.TryLeaseNext().ShouldNotBeNull();
+        IQueueLease lease2 = sut.TryLeaseNext().ShouldNotBeNull();
+        IQueueLease lease3 = sut.TryLeaseNext().ShouldNotBeNull();
 
         // Assert
-        dequeued[0].ShouldBe(3);
-        dequeued[1].ShouldBe(1);
-        dequeued[2].ShouldBe(2);
+        lease1.RuvId.ShouldBe(3);
+        lease2.RuvId.ShouldBe(1);
+        lease3.RuvId.ShouldBe(2);
     }
 }

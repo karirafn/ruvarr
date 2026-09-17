@@ -1,3 +1,4 @@
+using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 
@@ -37,15 +38,15 @@ public sealed class Items
     }
 
     [Fact]
-    public void IsEmptyAfterMarkComplete()
+    public void IsEmptyAfterLeaseDisposed()
     {
         // Arrange
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
-        List<int> _ = sut.DequeueAll().ToList();
+        IQueueLease lease = sut.TryLeaseNext().ShouldNotBeNull();
 
         // Act
-        sut.MarkComplete(1);
+        lease.Dispose();
 
         // Assert
         sut.Items.ShouldBeEmpty();

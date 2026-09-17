@@ -80,13 +80,7 @@ public sealed class ProgramRefreshNotifier : QueueNotifier<ProgramRefreshQueueIt
         }
     }
 
-    public IEnumerable<int> DequeueAll()
-    {
-        while (TryReadNext(out int ruvId))
-        {
-            yield return ruvId;
-        }
-    }
+    public IQueueLease? TryLeaseNext() => TryLeaseNext(MarkComplete);
 
     protected override ProgramRefreshQueueItemSummary CreatePending(int ruvId, string programName) =>
         new(ruvId, programName, ProgramRefreshStatus.Pending);
