@@ -35,15 +35,22 @@ internal sealed class TvdbClient(ILogger<TvdbClient> logger, HttpClient client) 
             .WithLimit(limit)
             .Build();
 
-        return await GetAsync<SearchResponse>(path, cancellationToken)
-            ?? throw new InvalidOperationException("Failed to search the TVDB");
+        Result<SearchResponse> result = await GetAsync<SearchResponse>(path, cancellationToken);
+        return result.Match(v => v, _ => throw new InvalidOperationException("Failed to search the TVDB"));
     }
 
     public async Task<SeriesData?> GetSeriesAsync(int id, CancellationToken cancellationToken = default)
     {
-        SeriesResponse? firstPage = await GetAsync<SeriesResponse>($"v4/series/{id}/episodes/default?page=0", cancellationToken);
+        Result<SeriesResponse> firstPageResult = await GetAsync<SeriesResponse>($"v4/series/{id}/episodes/default?page=0", cancellationToken);
 
-        if (firstPage?.Data is null)
+        if (firstPageResult.IsFailure)
+        {
+            return null;
+        }
+
+        SeriesResponse firstPage = firstPageResult.FromResult();
+
+        if (firstPage.Data is null)
         {
             return null;
         }
@@ -58,9 +65,16 @@ internal sealed class TvdbClient(ILogger<TvdbClient> logger, HttpClient client) 
 
         while (page < MaxPageCount)
         {
-            SeriesResponse? nextPage = await GetAsync<SeriesResponse>($"v4/series/{id}/episodes/default?page={page}", cancellationToken);
+            Result<SeriesResponse> nextPageResult = await GetAsync<SeriesResponse>($"v4/series/{id}/episodes/default?page={page}", cancellationToken);
 
-            if (nextPage?.Data is null)
+            if (nextPageResult.IsFailure)
+            {
+                break;
+            }
+
+            SeriesResponse nextPage = nextPageResult.FromResult();
+
+            if (nextPage.Data is null)
             {
                 break;
             }
@@ -86,12 +100,18 @@ internal sealed class TvdbClient(ILogger<TvdbClient> logger, HttpClient client) 
         return firstPage.Data with { Episodes = allEpisodes };
     }
 
-    public async Task<Episode?> GetEpisodeAsync(int id, CancellationToken cancellationToken = default) =>
-        (await GetAsync<TvdbResponse<Episode?>>($"v4/episodes/{id}", cancellationToken))?.Data;
+    public async Task<Episode?> GetEpisodeAsync(int id, CancellationToken cancellationToken = default)
+    {
+        Result<TvdbResponse<Episode?>> result = await GetAsync<TvdbResponse<Episode?>>($"v4/episodes/{id}", cancellationToken);
+        return result.Match(v => v.Data, _ => null);
+    }
 
     public async Task<EpisodeTranslation?> GetEpisodeTranslationAsync(
         int id,
         string language = "isl",
-        CancellationToken cancellationToken = default) =>
-        (await GetAsync<TvdbResponse<EpisodeTranslation?>>($"v4/episodes/{id}/translations/{language}", cancellationToken))?.Data;
+        CancellationToken cancellationToken = default)
+    {
+        Result<TvdbResponse<EpisodeTranslation?>> result = await GetAsync<TvdbResponse<EpisodeTranslation?>>($"v4/episodes/{id}/translations/{language}", cancellationToken);
+        return result.Match(v => v.Data, _ => null);
+    }
 }
