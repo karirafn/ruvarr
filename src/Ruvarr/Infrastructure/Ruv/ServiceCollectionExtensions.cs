@@ -12,13 +12,10 @@ internal static class ServiceCollectionExtensions
             .Configure<IConfiguration>((options, configuration)
                 => configuration.GetRequiredSection(RuvOptions.SectionName).Bind(options));
 
-        IOptions<RuvOptions> options = services.BuildServiceProvider()
-            .GetRequiredService<IOptions<RuvOptions>>();
-
         services.AddTransient<IRuvClient, RuvClient>();
-        services.AddHttpClient<IRuvClient, RuvClient>(client =>
+        services.AddHttpClient<IRuvClient, RuvClient>((sp, client) =>
         {
-            client.BaseAddress = options.Value.BaseAddress;
+            client.BaseAddress = sp.GetRequiredService<IOptions<RuvOptions>>().Value.BaseAddress;
             client.Timeout = ApiClientTimeouts.Default;
         });
         services.AddHttpClient<IRuvStreamInspector, RuvStreamInspector>(client =>

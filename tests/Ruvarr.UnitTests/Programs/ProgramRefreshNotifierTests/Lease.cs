@@ -58,9 +58,10 @@ public sealed class Lease
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         IQueueLease lease = sut.TryLeaseNext().ShouldNotBeNull();
-        lease.Dispose(); // first dispose — marks item 1 complete, resets CompletedCount to 0 (batch not done yet)
+        lease.Dispose(); // first dispose calls MarkComplete which increments CompletedCount to 1;
+                         // the batch is not done (item 2 still queued) so there is no reset
 
-        // Act — second dispose must be a no-op (CompletedCount must stay 0, not increment again)
+        // Act — second dispose must be a no-op (CompletedCount must stay at 1, not increment again)
         lease.Dispose();
 
         // Assert

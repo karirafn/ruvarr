@@ -12,14 +12,14 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (message.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 string notFoundContent = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("GET {Path} returned 404. Reason: {Content}", path, Truncate(notFoundContent));
+                logger.LogWarning("GET {Path} returned 404. Reason: {Content}", path, SanitizeAndTruncate(notFoundContent));
                 return ApiClientErrors.NotFound;
             }
 
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, Truncate(content));
+                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, SanitizeAndTruncate(content));
                 return ApiClientErrors.RequestFailed;
             }
 
@@ -42,7 +42,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
         }
         catch (HttpRequestException ex)
         {
-            logger.LogError(ex, "GET {Path} failed: Reason: {Message}", path, ex.Message);
+            logger.LogError(ex, "GET {Path} failed: Reason: {Message}", path, SanitizeAndTruncate(ex.Message));
             return ApiClientErrors.RequestFailed;
         }
     }
@@ -56,10 +56,13 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
         {
             HttpResponseMessage message = await httpClient.GetAsync(path, cancellationToken);
 
+            // Intentional asymmetry with GetAsync: all non-2xx responses (including 404) map to
+            // RequestFailed here. List endpoints return an empty body, not 404, so no caller
+            // needs the NotFound distinction.
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, Truncate(content));
+                logger.LogWarning("GET {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, SanitizeAndTruncate(content));
                 return ApiClientErrors.RequestFailed;
             }
 
@@ -78,7 +81,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
         }
         catch (HttpRequestException ex)
         {
-            logger.LogError(ex, "GET {Path} failed: Reason: {Message}", path, ex.Message);
+            logger.LogError(ex, "GET {Path} failed: Reason: {Message}", path, SanitizeAndTruncate(ex.Message));
             return ApiClientErrors.RequestFailed;
         }
     }
@@ -92,12 +95,18 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, Truncate(content));
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, SanitizeAndTruncate(content));
             }
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient's own timeout throws TaskCanceledException (derives from OperationCanceledException)
+            // even when the caller's token is not cancelled — treat as a request failure, not cancellation.
+            logger.LogWarning(ex, "POST {Path} timed out.", path);
         }
         catch (HttpRequestException ex)
         {
-            logger.LogError(ex, "POST {Path} failed: Reason: {Message}", path, ex.Message);
+            logger.LogError(ex, "POST {Path} failed: Reason: {Message}", path, SanitizeAndTruncate(ex.Message));
         }
     }
 
@@ -110,7 +119,7 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
             if (!message.IsSuccessStatusCode)
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken);
-                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, Truncate(content));
+                logger.LogWarning("POST {Path} returned status code {Code}. Reason: {Content}", path, message.StatusCode, SanitizeAndTruncate(content));
                 return default;
             }
 
@@ -118,15 +127,27 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
 
             return response;
         }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient's own timeout throws TaskCanceledException (derives from OperationCanceledException)
+            // even when the caller's token is not cancelled — treat as a request failure, not cancellation.
+            logger.LogWarning(ex, "POST {Path} timed out.", path);
+            return default;
+        }
         catch (HttpRequestException ex)
         {
-            logger.LogError(ex, "POST {Path} failed: Reason: {Message}", path, ex.Message);
+            logger.LogError(ex, "POST {Path} failed: Reason: {Message}", path, SanitizeAndTruncate(ex.Message));
             return default;
         }
     }
 
     private const int MaxLogContentLength = 512;
 
-    private static string Truncate(string value) =>
-        value.Length > MaxLogContentLength ? value[..MaxLogContentLength] : value;
+    private static string SanitizeAndTruncate(string value)
+    {
+        string sanitized = value
+            .Replace("\r", string.Empty, StringComparison.Ordinal)
+            .Replace("\n", string.Empty, StringComparison.Ordinal);
+        return sanitized.Length > MaxLogContentLength ? sanitized[..MaxLogContentLength] : sanitized;
+    }
 }

@@ -22,11 +22,11 @@ using Shouldly;
 namespace Ruvarr.UnitTests.Jobs.RuvEpisodesSyncJobTests;
 
 /// <summary>
-/// Regression test for the exact production defect: a transient TaskCanceledException thrown at the
-/// IRuvClient boundary (before Result-wrapping reaches it) must still drain the sync queue. The lease
-/// carries the item to completion so no item is left stuck in Processing state.
+/// Verifies that the lease structurally drains the sync queue when the client boundary throws any
+/// exception (defence-in-depth). The lease carries the item to completion so no item is left stuck
+/// in Processing state, regardless of how the failure surfaces.
 /// </summary>
-public sealed class TransientTimeoutDrains
+public sealed class TransientTimeoutDrainsQueue
 {
     private const int Program1RuvId = 301;
     private const string Program1Name = "First Program";
@@ -42,7 +42,7 @@ public sealed class TransientTimeoutDrains
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.db");
 
-    public TransientTimeoutDrains()
+    public TransientTimeoutDrainsQueue()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
@@ -123,6 +123,68 @@ public sealed class TransientTimeoutDrains
         using RuvarrDbContext assertContext = CreateDbContext();
         List<RuvEpisode> episodes = await assertContext.Set<RuvEpisode>().ToListAsync(cancellationToken);
         episodes.ShouldContain(e => e.RuvId == Program2EpisodeId);
+    }
+
+    [Fact]
+    public async Task WhenFirstProgramReturnsRequestFailedResult_QueueDrained_SecondProgramEpisodesPersisted()
+    {
+        // Arrange — AC1/AC4: the actual production timeout path: ApiClient absorbs the timeout
+        // into a failure Result<RuvTvProgram> carrying ApiClientErrors.RequestFailed.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using (RuvarrDbContext seedContext = CreateDbContext())
+        {
+            await seedContext.Database.EnsureCreatedAsync(cancellationToken);
+
+            RuvProgram program1 = new RuvProgramBuilder()
+                .WithRuvId(Program1RuvId)
+                .WithName(Program1Name)
+                .WithMultipleEpisodes()
+                .Build();
+
+            RuvProgram program2 = new RuvProgramBuilder()
+                .WithRuvId(Program2RuvId)
+                .WithName(Program2Name)
+                .WithMultipleEpisodes()
+                .Build();
+
+            seedContext.Set<RuvProgram>().Add(program1);
+            seedContext.Set<RuvProgram>().Add(program2);
+            await seedContext.SaveChangesAsync(cancellationToken);
+        }
+
+        // Program1: returns a failure Result — the real production path for a transient timeout
+        // after ApiClient absorbs TaskCanceledException into Result.
+        _ruv.GetProgramAsync(Program1RuvId, Arg.Any<CancellationToken>())
+            .Returns(new Result<RuvTvProgram>(ApiClientErrors.RequestFailed));
+
+        // Program2: returns success so we can prove it still ran.
+        RuvTvEpisode program2Episode = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, "Episode 1");
+        RuvTvProgram program2Response = CreateRuvTvProgram(Program2RuvId, Program2Name, [program2Episode]);
+        _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
+            .Returns(new Result<RuvTvProgram>(program2Response));
+
+        _syncQueue.Enqueue(Program1RuvId, Program1Name);
+        _syncQueue.Enqueue(Program2RuvId, Program2Name);
+
+        using RuvarrDbContext actContext = CreateDbContext();
+        RuvEpisodesSyncJob sut = CreateJob(actContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert — queue is completely drained; no item stuck in Processing
+        _syncQueue.Items.ShouldBeEmpty();
+
+        using RuvarrDbContext assertContext = CreateDbContext();
+        List<RuvEpisode> episodes = await assertContext.Set<RuvEpisode>().ToListAsync(cancellationToken);
+        List<RuvProgram> programs = await assertContext.Set<RuvProgram>().ToListAsync(cancellationToken);
+
+        // Assert — program2's episode was persisted despite program1 failing
+        episodes.ShouldContain(e => e.RuvId == Program2EpisodeId);
+
+        // Assert — program1 was left intact (skipped, not deleted)
+        programs.ShouldContain(p => p.RuvId == Program1RuvId);
     }
 
     private static RuvTvEpisode CreateRuvTvEpisode(int seriesId, string id, string title) => new(

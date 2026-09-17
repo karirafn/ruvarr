@@ -66,7 +66,9 @@ public sealed class GetSeriesFailureAbortsMonitoring
         await dbContext.SaveChangesAsync(cancellationToken);
 
         bool program1InitialMonitored = program1.IsMonitored;
+        bool program1InitialHasMissingEpisodes = program1.HasMissingEpisodes;
         bool program2InitialMonitored = program2.IsMonitored;
+        bool program2InitialHasMissingEpisodes = program2.HasMissingEpisodes;
 
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
             .Returns(new Result<IReadOnlyList<Series>>(ApiClientErrors.RequestFailed));
@@ -88,7 +90,11 @@ public sealed class GetSeriesFailureAbortsMonitoring
         RuvProgram p1After = programsAfter.Single(p => p.RuvId == RuvProgramId1);
         RuvProgram p2After = programsAfter.Single(p => p.RuvId == RuvProgramId2);
 
-        p1After.IsMonitored.ShouldBe(program1InitialMonitored);
-        p2After.IsMonitored.ShouldBe(program2InitialMonitored);
+        p1After.ShouldSatisfyAllConditions(
+            () => p1After.IsMonitored.ShouldBe(program1InitialMonitored),
+            () => p1After.HasMissingEpisodes.ShouldBe(program1InitialHasMissingEpisodes));
+        p2After.ShouldSatisfyAllConditions(
+            () => p2After.IsMonitored.ShouldBe(program2InitialMonitored),
+            () => p2After.HasMissingEpisodes.ShouldBe(program2InitialHasMissingEpisodes));
     }
 }

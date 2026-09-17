@@ -37,7 +37,7 @@ internal sealed class RuvEpisodesSyncJob(
         logger.LogDebug("Starting RÚV episode sync job");
 
         List<IQueueLease> leases = [];
-#pragma warning disable CA2000 // Leases are transferred to the leases list and disposed via explicit Dispose calls in the per-item foreach and the trailing unloaded-id foreach below
+#pragma warning disable CA2000 // Loaded-item leases dispose via their using scope in the per-item foreach. Unloaded-id leases and the Sonarr-failure early-return paths dispose via explicit loops.
         while (syncQueue.TryLeaseNext() is IQueueLease lease)
         {
             leases.Add(lease);
@@ -137,9 +137,9 @@ internal sealed class RuvEpisodesSyncJob(
             }
             catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
             {
-                // Transient timeout — TaskCanceledException derives from OperationCanceledException
-                // but the job token is not cancelled, so this is an infrastructure failure, not a
-                // shutdown signal. Log and skip to the next program.
+                // Defence-in-depth: GetProgramAsync no longer throws (ApiClient absorbs timeouts
+                // into a Result), but this catch covers any future code path in the item body that
+                // could throw a timeout. The lease guarantees completion regardless.
                 logger.LogError(
                     ex,
                     "Transient timeout processing RÚV program '{ProgramName}' (RuvId: {RuvId}); skipping to next",
