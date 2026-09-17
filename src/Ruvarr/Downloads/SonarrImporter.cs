@@ -1,3 +1,4 @@
+using Ruvarr.Abstractions;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
@@ -32,7 +33,20 @@ internal sealed class SonarrImporter(
 
         try
         {
-            IReadOnlyList<Series> sonarrSeries = await sonarr.GetSeriesAsync(cancellationToken);
+            Result<IReadOnlyList<Series>> seriesResult = await sonarr.GetSeriesAsync(cancellationToken);
+
+            if (seriesResult.IsFailure)
+            {
+                logger.LogError(
+                    "Sonarr GetSeriesAsync failed for {Episode} ({ErrorCode}). Marking failed",
+                    item.Episode.ToString(),
+                    seriesResult.Error.Code);
+                item.MarkFailed("Sonarr series lookup failed");
+                await dbContext.SaveChangesAsync(outcomeWrite);
+                return;
+            }
+
+            IReadOnlyList<Series> sonarrSeries = seriesResult.FromResult();
             int? sonarrSeriesId = sonarrSeries
                 .FirstOrDefault(s => s.TvdbId == item.Episode.Program.Series?.TvdbId)
                 ?.Id;

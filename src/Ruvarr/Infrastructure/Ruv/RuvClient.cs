@@ -18,9 +18,6 @@ internal sealed class RuvClient(ILogger<RuvClient> logger, HttpClient httpClient
         return result.Match(v => (RuvFeaturedTv?)v, _ => default);
     }
 
-    public async Task<RuvTvProgram?> GetProgramAsync(int seriesId, CancellationToken cancellationToken = default)
-    {
-        Result<RuvTvProgram> result = await GetAsync<RuvTvProgram>($"/api/programs/program/{seriesId}/all", cancellationToken);
-        return result.Match(v => (RuvTvProgram?)v, _ => default);
-    }
+    public Task<Result<RuvTvProgram>> GetProgramAsync(int seriesId, CancellationToken cancellationToken = default) =>
+        GetAsync<RuvTvProgram>($"/api/programs/program/{seriesId}/all", cancellationToken);
 }

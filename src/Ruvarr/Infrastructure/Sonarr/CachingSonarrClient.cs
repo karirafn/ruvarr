@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr.Models;
 
 namespace Ruvarr.Infrastructure.Sonarr;
@@ -72,7 +73,7 @@ internal sealed class CachingSonarrClient(
         cache.Remove(CacheKey);
     }
 
-    public Task<IReadOnlyList<Series>> GetSeriesAsync(CancellationToken cancellationToken = default) =>
+    public Task<Result<IReadOnlyList<Series>>> GetSeriesAsync(CancellationToken cancellationToken = default) =>
         innerClientFactory().GetSeriesAsync(cancellationToken);
 
     public Task<IReadOnlyList<SonarrEpisode>> GetEpisodesAsync(int seriesId, CancellationToken cancellationToken = default) =>

@@ -47,7 +47,7 @@ public sealed class PerProgramIsolation
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key"));
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<Series>());
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<MissingEpisode>());
     }
@@ -87,7 +87,7 @@ public sealed class PerProgramIsolation
         RuvTvProgram apiResponse = CreateRuvTvProgram(GeisliRuvId, GeisliName, episodes: [titlelessEpisode]);
 
         _ruv.GetProgramAsync(GeisliRuvId, Arg.Any<CancellationToken>())
-            .Returns(apiResponse);
+            .Returns((Result<RuvTvProgram>)apiResponse);
 
         _syncQueue.Enqueue(GeisliRuvId, GeisliName);
 
@@ -139,7 +139,7 @@ public sealed class PerProgramIsolation
         RuvTvEpisode episode2 = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, title: "Episode 1");
         RuvTvProgram apiResponse2 = CreateRuvTvProgram(Program2RuvId, Program2Name, episodes: [episode2]);
         _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
-            .Returns(apiResponse2);
+            .Returns((Result<RuvTvProgram>)apiResponse2);
 
         _syncQueue.Enqueue(Program1RuvId, Program1Name);
         _syncQueue.Enqueue(Program2RuvId, Program2Name);
@@ -209,13 +209,13 @@ public sealed class PerProgramIsolation
                     FROM programs WHERE ruv_id = {Program1RuvId}
                     """,
                     cancellationToken);
-                return (RuvTvProgram?)apiResponse1;
+                return (Result<RuvTvProgram>)apiResponse1;
             });
 
         RuvTvEpisode episode2 = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, title: "Episode 1");
         RuvTvProgram apiResponse2 = CreateRuvTvProgram(Program2RuvId, Program2Name, episodes: [episode2]);
         _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
-            .Returns(apiResponse2);
+            .Returns((Result<RuvTvProgram>)apiResponse2);
 
         _syncQueue.Enqueue(Program1RuvId, Program1Name);
         _syncQueue.Enqueue(Program2RuvId, Program2Name);

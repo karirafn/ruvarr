@@ -62,18 +62,16 @@ internal sealed class RuvEpisodesSyncJob(
             .ToListAsync(cancellationToken);
 
         HashSet<int> missingTvdbIds;
-        IReadOnlyList<Series> sonarrSeries;
 
         try
         {
             missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
-            sonarrSeries = await sonarr.GetSeriesAsync(cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
         catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
-            logger.LogError(ex, "Sonarr calls failed during RÚV episode sync");
+            logger.LogError(ex, "Sonarr GetMissingEpisodesAsync failed during RÚV episode sync");
 
             foreach (IQueueLease l in leases)
             {
@@ -83,6 +81,25 @@ internal sealed class RuvEpisodesSyncJob(
             broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
             return;
         }
+
+        Result<IReadOnlyList<Series>> seriesResult = await sonarr.GetSeriesAsync(cancellationToken);
+
+        if (seriesResult.IsFailure)
+        {
+            logger.LogError(
+                "Sonarr GetSeriesAsync failed during RÚV episode sync ({ErrorCode}); skipping monitored/missing-episode updates",
+                seriesResult.Error.Code);
+
+            foreach (IQueueLease l in leases)
+            {
+                l.Dispose();
+            }
+
+            broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+            return;
+        }
+
+        IReadOnlyList<Series> sonarrSeries = seriesResult.FromResult();
 
         HashSet<int> monitoredTvdbIds = [.. sonarrSeries
             .Where(x => x.Monitored)
@@ -117,6 +134,19 @@ internal sealed class RuvEpisodesSyncJob(
                     monitoredTvdbIds,
                     missingEpisodesTvdbIds,
                     cancellationToken);
+            }
+            catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Transient timeout — TaskCanceledException derives from OperationCanceledException
+                // but the job token is not cancelled, so this is an infrastructure failure, not a
+                // shutdown signal. Log and skip to the next program.
+                logger.LogError(
+                    ex,
+                    "Transient timeout processing RÚV program '{ProgramName}' (RuvId: {RuvId}); skipping to next",
+                    programName,
+                    ruvId);
+
+                dbContext.ChangeTracker.Clear();
             }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -158,15 +188,27 @@ internal sealed class RuvEpisodesSyncJob(
             return;
         }
 
-        RuvTvProgram? ruvProgram = await ruv.GetProgramAsync(ruvId, cancellationToken);
+        Result<RuvTvProgram> programResult = await ruv.GetProgramAsync(ruvId, cancellationToken);
 
-        if (ruvProgram is null)
+        if (programResult.IsFailure && programResult.Error.Code == ApiClientErrors.NotFoundCode)
         {
             logger.LogInformation("Deleting RÚV program {Name} and {Count} episodes", programName, program.Episodes.Count);
             dbContext.Set<RuvProgram>().Remove(program);
             await dbContext.SaveChangesAsync(cancellationToken);
             return;
         }
+
+        if (programResult.IsFailure)
+        {
+            logger.LogWarning(
+                "Skipping RÚV program '{Name}' (RuvId: {RuvId}): API call failed ({ErrorCode})",
+                programName,
+                ruvId,
+                programResult.Error.Code);
+            return;
+        }
+
+        RuvTvProgram ruvProgram = programResult.FromResult();
 
         logger.LogDebug("Adding episodes to RÚV program '{Name}'", programName);
 

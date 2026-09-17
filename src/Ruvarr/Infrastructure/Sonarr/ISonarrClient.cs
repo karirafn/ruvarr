@@ -1,11 +1,12 @@
 ﻿
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr.Models;
 
 namespace Ruvarr.Infrastructure.Sonarr;
 
 internal interface ISonarrClient
 {
-    Task<IReadOnlyList<Series>> GetSeriesAsync(CancellationToken cancellationToken = default);
+    Task<Result<IReadOnlyList<Series>>> GetSeriesAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SonarrEpisode>> GetEpisodesAsync(int seriesId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder, int? seriesId = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<MissingEpisode>> GetMissingEpisodesAsync(int pageSize = int.MaxValue, CancellationToken cancellationToken = default);

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 using Quartz;
 
@@ -20,11 +21,18 @@ using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.RuvEpisodesSyncJobTests;
 
-public sealed class EpisodeRemoval
+/// <summary>
+/// Regression test for the exact production defect: a transient TaskCanceledException thrown at the
+/// IRuvClient boundary (before Result-wrapping reaches it) must still drain the sync queue. The lease
+/// carries the item to completion so no item is left stuck in Processing state.
+/// </summary>
+public sealed class TransientTimeoutDrains
 {
-    private const int RuvProgramId = 42;
-    private const string KeptEpisodeId = "ep-1";
-    private const string RemovedEpisodeId = "ep-2";
+    private const int Program1RuvId = 301;
+    private const string Program1Name = "First Program";
+    private const int Program2RuvId = 302;
+    private const string Program2Name = "Second Program";
+    private const string Program2EpisodeId = "ep-p2-drain";
 
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
@@ -34,7 +42,7 @@ public sealed class EpisodeRemoval
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.db");
 
-    public EpisodeRemoval()
+    public TransientTimeoutDrains()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
@@ -43,6 +51,10 @@ public sealed class EpisodeRemoval
             .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<MissingEpisode>());
+
+        // Simulate a job-level cancellation token that is NOT cancelled — this is a transient
+        // timeout, not cooperative cancellation.
+        _context.CancellationToken.Returns(CancellationToken.None);
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -57,7 +69,7 @@ public sealed class EpisodeRemoval
         _ruv, dbContext, _sonarr, _syncQueue, new DomainEventBroadcaster(), _settingsStore);
 
     [Fact]
-    public async Task RemovesEpisode_WhenNoLongerInRuvApiResponse()
+    public async Task WhenFirstProgramThrowsTaskCanceledException_QueueDrained_SecondProgramEpisodesPresisted()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -66,41 +78,37 @@ public sealed class EpisodeRemoval
         {
             await seedContext.Database.EnsureCreatedAsync(cancellationToken);
 
-            RuvProgram program = new RuvProgramBuilder()
-                .WithRuvId(RuvProgramId)
+            RuvProgram program1 = new RuvProgramBuilder()
+                .WithRuvId(Program1RuvId)
+                .WithName(Program1Name)
                 .WithMultipleEpisodes()
                 .Build();
 
-            program.TryAddEpisode(
-                id: KeptEpisodeId,
-                uri: new Uri("http://ruv.is/ep1"),
-                title: "Episode 1",
-                description: "First",
-                firstRun: DateTime.UtcNow,
-                duration: TimeSpan.FromMinutes(30));
+            RuvProgram program2 = new RuvProgramBuilder()
+                .WithRuvId(Program2RuvId)
+                .WithName(Program2Name)
+                .WithMultipleEpisodes()
+                .Build();
 
-            program.TryAddEpisode(
-                id: RemovedEpisodeId,
-                uri: new Uri("http://ruv.is/ep2"),
-                title: "Episode 2",
-                description: "Second",
-                firstRun: DateTime.UtcNow,
-                duration: TimeSpan.FromMinutes(30));
-
-            seedContext.Set<RuvProgram>().Add(program);
+            seedContext.Set<RuvProgram>().Add(program1);
+            seedContext.Set<RuvProgram>().Add(program2);
             await seedContext.SaveChangesAsync(cancellationToken);
         }
 
-        RuvTvEpisode keptApiEpisode = CreateRuvTvEpisode(KeptEpisodeId, "Episode 1");
+        // Program1: throws TaskCanceledException with an uncancelled context token —
+        // this is the transient timeout pattern from HttpClient that must not escape as
+        // cooperative cancellation.
+        _ruv.GetProgramAsync(Program1RuvId, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("timeout", new TimeoutException()));
 
-        RuvTvProgram apiResponse = CreateRuvTvProgram(
-            RuvProgramId,
-            episodes: [keptApiEpisode]);
+        // Program2: returns success so we can prove it still ran.
+        RuvTvEpisode program2Episode = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, "Episode 1");
+        RuvTvProgram program2Response = CreateRuvTvProgram(Program2RuvId, Program2Name, [program2Episode]);
+        _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
+            .Returns(new Result<RuvTvProgram>(program2Response));
 
-        _ruv.GetProgramAsync(RuvProgramId, Arg.Any<CancellationToken>())
-            .Returns((Result<RuvTvProgram>)apiResponse);
-
-        _syncQueue.Enqueue(RuvProgramId, "Test Program");
+        _syncQueue.Enqueue(Program1RuvId, Program1Name);
+        _syncQueue.Enqueue(Program2RuvId, Program2Name);
 
         using RuvarrDbContext actContext = CreateDbContext();
         RuvEpisodesSyncJob sut = CreateJob(actContext);
@@ -108,64 +116,19 @@ public sealed class EpisodeRemoval
         // Act
         await sut.Execute(_context);
 
-        // Assert
+        // Assert — queue is completely drained; no item stuck in Processing
+        _syncQueue.Items.ShouldBeEmpty();
+
+        // Assert — program2's episode was persisted despite program1 throwing
         using RuvarrDbContext assertContext = CreateDbContext();
-        List<RuvEpisode> remaining = await assertContext.Set<RuvEpisode>().ToListAsync(cancellationToken);
-        remaining.Count.ShouldBe(1);
-        remaining[0].RuvId.ShouldBe(KeptEpisodeId);
-    }
-
-    [Fact]
-    public async Task DeletesProgramAndEpisodes_WhenGetProgramAsyncReturnsNotFound()
-    {
-        // Arrange
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-
-        using (RuvarrDbContext seedContext = CreateDbContext())
-        {
-            await seedContext.Database.EnsureCreatedAsync(cancellationToken);
-
-            RuvProgram program = new RuvProgramBuilder()
-                .WithRuvId(RuvProgramId)
-                .WithMultipleEpisodes()
-                .Build();
-
-            program.TryAddEpisode(
-                id: KeptEpisodeId,
-                uri: new Uri("http://ruv.is/ep1"),
-                title: "Episode 1",
-                description: "First",
-                firstRun: DateTime.UtcNow,
-                duration: TimeSpan.FromMinutes(30));
-
-            seedContext.Set<RuvProgram>().Add(program);
-            await seedContext.SaveChangesAsync(cancellationToken);
-        }
-
-        _ruv.GetProgramAsync(RuvProgramId, Arg.Any<CancellationToken>())
-            .Returns(new Result<RuvTvProgram>(ApiClientErrors.NotFound));
-
-        _syncQueue.Enqueue(RuvProgramId, "Test Program");
-
-        using RuvarrDbContext actContext = CreateDbContext();
-        RuvEpisodesSyncJob sut = CreateJob(actContext);
-
-        // Act
-        await sut.Execute(_context);
-
-        // Assert
-        using RuvarrDbContext assertContext = CreateDbContext();
-        List<RuvProgram> programs = await assertContext.Set<RuvProgram>().ToListAsync(cancellationToken);
         List<RuvEpisode> episodes = await assertContext.Set<RuvEpisode>().ToListAsync(cancellationToken);
-
-        programs.ShouldBeEmpty();
-        episodes.ShouldBeEmpty();
+        episodes.ShouldContain(e => e.RuvId == Program2EpisodeId);
     }
 
-    private static RuvTvEpisode CreateRuvTvEpisode(string id, string title) => new(
+    private static RuvTvEpisode CreateRuvTvEpisode(int seriesId, string id, string title) => new(
         Id: id,
         Number: 1,
-        SeriesId: RuvProgramId,
+        SeriesId: seriesId,
         FirstRun: DateTime.UtcNow,
         FileExpires: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
         Rating: 0,
@@ -190,10 +153,10 @@ public sealed class EpisodeRemoval
         Files: new RuvFiles(new RuvVodmp4("file.mp4", "folder", "file", false, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), 0, "0", "mp4", "ruv")),
         CreditPoint: 0);
 
-    private static RuvTvProgram CreateRuvTvProgram(int id, IReadOnlyList<RuvTvEpisode> episodes) => new(
+    private static RuvTvProgram CreateRuvTvProgram(int id, string name, IReadOnlyList<RuvTvEpisode> episodes) => new(
         LastUpdated: DateTimeOffset.UtcNow,
         Id: id,
-        Title: "Test Program",
+        Title: name,
         ForeignTitle: "Test",
         Slug: "test-program",
         ImageRenditions: new RuvImageRenditions([]),
