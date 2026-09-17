@@ -1,3 +1,4 @@
+using Ruvarr.Abstractions;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 
 using Shouldly;
@@ -7,7 +8,7 @@ namespace Ruvarr.UnitTests.Programs.ProgramRefreshNotifierTests;
 public sealed class Enqueue
 {
     [Fact]
-    public void AllowsDequeue()
+    public void AllowsLease()
     {
         // Arrange
         ProgramRefreshNotifier sut = new();
@@ -16,8 +17,8 @@ public sealed class Enqueue
         sut.Enqueue(1, "Program");
 
         // Assert
-        List<int> dequeued = sut.DequeueAll().ToList();
-        dequeued.ShouldHaveSingleItem();
+        IQueueLease? lease = sut.TryLeaseNext();
+        lease.ShouldNotBeNull();
     }
 
     [Fact]
@@ -31,24 +32,26 @@ public sealed class Enqueue
         sut.Enqueue(1, "Program");
 
         // Assert
-        List<int> dequeued = sut.DequeueAll().ToList();
-        dequeued.Count.ShouldBe(1);
+        IQueueLease? first = sut.TryLeaseNext();
+        first.ShouldNotBeNull();
+        IQueueLease? second = sut.TryLeaseNext();
+        second.ShouldBeNull();
     }
 
     [Fact]
-    public void AllowsReEnqueueAfterMarkComplete()
+    public void AllowsReEnqueueAfterLeaseDisposed()
     {
         // Arrange
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program");
-        List<int> _ = sut.DequeueAll().ToList();
-        sut.MarkComplete(1);
+        IQueueLease lease = sut.TryLeaseNext().ShouldNotBeNull();
+        lease.Dispose();
 
         // Act
         sut.Enqueue(1, "Program");
 
         // Assert
-        List<int> dequeued = sut.DequeueAll().ToList();
-        dequeued.ShouldHaveSingleItem();
+        IQueueLease? newLease = sut.TryLeaseNext();
+        newLease.ShouldNotBeNull();
     }
 }
