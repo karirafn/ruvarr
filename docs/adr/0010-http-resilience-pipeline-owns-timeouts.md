@@ -10,7 +10,7 @@ Outbound calls to RÚV, Sonarr, and TVDB had no retry or circuit breaker; a tran
 blip cost up to an hour of staleness (#411). We adopt `Microsoft.Extensions.Http.Resilience`
 `AddStandardResilienceHandler` (retry 3× exponential+jitter over 5xx/408/429/timeout,
 circuit breaker, `Retry-After`). The standard handler's total-request timeout defaults to
-30s — identical to the existing `ApiClientTimeouts.Default` set as `HttpClient.Timeout`.
+30s — identical to the existing 30s value that was hardcoded as `HttpClient.Timeout` (previously centralised as `ApiClientTimeouts.Default`, since removed by this PR).
 `HttpClient.Timeout` is an outer cancellation wrapping the whole pipeline, so with both at
 30s they race and can cancel a request mid-retry.
 
