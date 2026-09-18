@@ -26,7 +26,7 @@ public sealed class PriorityEnqueue
     }
 
     [Fact]
-    public void WhenItemIsProcessing_PriorityEnqueue_MarkComplete_ReQueuesItemAsPending()
+    public void WhenRefreshAgainFlagSet_ReQueuesItemAsPendingAfterCompletion()
     {
         // Arrange
         TvdbSeriesLookupNotifier sut = new();
@@ -46,7 +46,7 @@ public sealed class PriorityEnqueue
     }
 
     [Fact]
-    public void WhenItemIsProcessing_PriorityEnqueue_MarkComplete_ExactlyOneFollowUpDequeueable()
+    public void WhenRefreshAgainFlagSet_ExactlyOneFollowUpIsDequeued()
     {
         // Arrange
         TvdbSeriesLookupNotifier sut = new();
