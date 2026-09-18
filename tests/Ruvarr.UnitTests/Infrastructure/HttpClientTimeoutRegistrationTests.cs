@@ -20,9 +20,10 @@ public sealed class HttpClientTimeoutRegistrationTests
     private static readonly TimeSpan ExpectedTimeout = TimeSpan.FromSeconds(30);
 
     [Fact]
-    public void WhenRuvClientRegistered_HttpClientTimeoutIs30Seconds()
+    public void WhenRuvClientRegistered_HttpClientTimeoutIsInfiniteSoPipelineOwnsTimeout()
     {
-        // Arrange
+        // Arrange — the resilience pipeline owns the timeout budget; HttpClient.Timeout is
+        // Infinite so the pipeline is the sole authority (see ADR 0010).
         IConfiguration configuration = BuildConfiguration(new Dictionary<string, string?>
         {
             ["Ruv:BaseAddress"] = "https://api.ruv.is/",
@@ -39,7 +40,7 @@ public sealed class HttpClientTimeoutRegistrationTests
         using HttpClient client = factory.CreateClient(nameof(IRuvClient));
 
         // Assert
-        client.Timeout.ShouldBe(ExpectedTimeout);
+        client.Timeout.ShouldBe(Timeout.InfiniteTimeSpan);
     }
 
     [Fact]

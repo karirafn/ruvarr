@@ -14,10 +14,12 @@ internal static class ServiceCollectionExtensions
 
         services.AddTransient<IRuvClient, RuvClient>();
         services.AddHttpClient<IRuvClient, RuvClient>((sp, client) =>
-        {
-            client.BaseAddress = sp.GetRequiredService<IOptions<RuvOptions>>().Value.BaseAddress;
-            client.Timeout = ApiClientTimeouts.Default;
-        });
+            {
+                client.BaseAddress = sp.GetRequiredService<IOptions<RuvOptions>>().Value.BaseAddress;
+                client.Timeout = Timeout.InfiniteTimeSpan;
+            })
+            .AddRuvarrResilience();
+
         services.AddHttpClient<IRuvStreamInspector, RuvStreamInspector>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(10);
