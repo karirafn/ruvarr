@@ -7,12 +7,18 @@ namespace Ruvarr.UnitTests.Infrastructure.Resilience;
 /// Each <see cref="SendAsync"/> dequeues the next response spec; the last spec repeats
 /// when the queue drains. Supports optional per-response delay and <c>Retry-After</c> header.
 /// </summary>
+/// <remarks>
+/// The resilience pipeline dispatches retries sequentially (not concurrently), so
+/// <c>_index</c> advances without a race. <c>RequestCount</c> uses <c>Interlocked</c>
+/// for safety should the handler ever be used under concurrent dispatch.
+/// </remarks>
 internal sealed class ScriptedHttpMessageHandler : HttpMessageHandler
 {
     private readonly ResponseSpec[] _script;
     private int _index;
+    private int _requestCount;
 
-    public int RequestCount { get; private set; }
+    public int RequestCount => _requestCount;
     public List<HttpRequestMessage> CapturedRequests { get; } = [];
 
     public ScriptedHttpMessageHandler(params ResponseSpec[] script)
@@ -25,9 +31,10 @@ internal sealed class ScriptedHttpMessageHandler : HttpMessageHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        RequestCount++;
+        Interlocked.Increment(ref _requestCount);
         CapturedRequests.Add(request);
 
+        // _index is advanced sequentially under the retry contract (one attempt at a time).
         ResponseSpec spec = _index < _script.Length ? _script[_index++] : _script[^1];
 
         if (spec.Delay.HasValue)

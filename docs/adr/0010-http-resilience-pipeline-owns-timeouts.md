@@ -1,7 +1,8 @@
-# 10. HTTP resilience pipeline owns timeouts
+---
+status: accepted
+---
 
-**Date:** 2026-09-18
-**Status:** Accepted
+# HTTP resilience pipeline owns timeouts
 
 ## Context
 
