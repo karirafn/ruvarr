@@ -7,7 +7,7 @@ This meant a user clicking "refresh" while a program was being processed receive
 
 ## Decision
 
-Replace the silent no-op with a `RefreshAgain` boolean flag stored on each queue entry (the `_items` dictionary value tuple is widened from `(TItem Item, LinkedListNode<int> Node)` to `(TItem Item, LinkedListNode<int> Node, bool RefreshAgain)`).
+Replace the silent no-op with a `RefreshAgain` boolean flag stored on each queue entry (the `_items` dictionary value changes from an unnamed tuple `(TItem Item, LinkedListNode<int> Node)` to a named `private readonly record struct QueueEntry(TItem Item, LinkedListNode<int> Node, bool RefreshAgain)`).
 
 When `PriorityEnqueue` targets a Processing item it sets `RefreshAgain = true` and returns without touching `_order` or `_read`, so the in-flight pass is completely undisturbed and the item is not re-leaseable mid-pass.
 Repeated calls on the same processing item are idempotent because the flag is a bool, not a counter.
