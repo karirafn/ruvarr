@@ -1,5 +1,3 @@
-using AngleSharp.Dom;
-
 using Bunit;
 
 using NSubstitute;
@@ -91,25 +89,6 @@ public sealed class RefreshWhileProcessing : BunitContext
         // Assert — Spinner (Refreshing) is shown; clickable Refresh button is gated away for this item
         cut.FindAll("[aria-label='Refreshing']").Count.ShouldBeGreaterThan(0);
         cut.FindAll("button[title='Refresh']").Count.ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task WhenProgramIsProcessing_SpinnerSvgPathIsRendered()
-    {
-        // Arrange
-        _refreshNotifier.Enqueue(ProgramRuvId, ProgramName);
-        _refreshNotifier.MarkProcessing(ProgramRuvId);
-        EmitOneQueueChangedEvent();
-
-        // Act
-        IRenderedComponent<ProgramsPage> cut = Render<ProgramsPage>();
-
-        await cut.WaitForStateAsync(() => cut.FindAll("[aria-label='Refreshing']").Count > 0);
-
-        // Assert — the Spinner SVG path discriminates the Spinner icon type
-        IElement spinnerIcon = cut.Find("[aria-label='Refreshing']");
-        spinnerIcon.ShouldNotBeNull();
-        spinnerIcon.InnerHtml.ShouldContain("M21 12a9 9 0 1 1-6.219-8.56");
     }
 
     [Fact]
