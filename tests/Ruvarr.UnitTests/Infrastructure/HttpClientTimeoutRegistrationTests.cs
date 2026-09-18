@@ -44,9 +44,10 @@ public sealed class HttpClientTimeoutRegistrationTests
     }
 
     [Fact]
-    public void WhenSonarrClientRegistered_HttpClientTimeoutIs30Seconds()
+    public void WhenSonarrClientRegistered_HttpClientTimeoutIsInfiniteSoPipelineOwnsTimeout()
     {
-        // Arrange
+        // Arrange — the resilience pipeline owns the timeout budget; HttpClient.Timeout is
+        // Infinite so the pipeline is the sole authority (see ADR 0010).
         ISettingsStore settingsStore = Substitute.For<ISettingsStore>();
         settingsStore.Current.Returns(new RuvarrSettings());
 
@@ -62,7 +63,7 @@ public sealed class HttpClientTimeoutRegistrationTests
         using HttpClient client = factory.CreateClient(nameof(SonarrClient));
 
         // Assert
-        client.Timeout.ShouldBe(ExpectedTimeout);
+        client.Timeout.ShouldBe(Timeout.InfiniteTimeSpan);
     }
 
     [Fact]

@@ -16,8 +16,9 @@ internal static class ServiceCollectionExtensions
         services.AddHttpClient<SonarrClient>(client =>
             {
                 client.BaseAddress = PlaceholderBaseAddress;
-                client.Timeout = ApiClientTimeouts.Default;
+                client.Timeout = Timeout.InfiniteTimeSpan;
             })
+            .AddRuvarrResilience()
             .AddHttpMessageHandler<SonarrDelegatingHandler>();
 
         services.AddSingleton<ISonarrClient>(sp =>
