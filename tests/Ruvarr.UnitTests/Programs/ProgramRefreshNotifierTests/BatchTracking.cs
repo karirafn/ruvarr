@@ -151,14 +151,14 @@ public sealed class BatchTracking
     }
 
     [Fact]
-    public void WhenRefreshAgainFlagSet_BatchStatsAreDeferredUntilFollowUpCompletes()
+    public void WhenRefreshAgainFlagSet_BatchIsNotFinalisedAfterFirstPass()
     {
         // Arrange — enqueue one item, process it, then request a re-refresh mid-pass
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
-        while (sut.TryLeaseNext() is IQueueLease drained)
+        while (sut.TryLeaseNext() is not null)
         {
-            _ = drained;
+            // discard — drain the read set without disposing leases
         }
 
         sut.MarkProcessing(1);
@@ -173,6 +173,22 @@ public sealed class BatchTracking
         sut.LastRunTotal.ShouldBeNull();
         sut.CompletedCount.ShouldBe(1);
         sut.BatchStartedAt.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void WhenFollowUpPassCompletes_BatchFinalisesWithBothPassesCounted()
+    {
+        // Arrange — enqueue one item, process it, request re-refresh, complete first pass
+        ProgramRefreshNotifier sut = new();
+        sut.Enqueue(1, "Program A");
+        while (sut.TryLeaseNext() is not null)
+        {
+            // discard — drain the read set without disposing leases
+        }
+
+        sut.MarkProcessing(1);
+        sut.PriorityEnqueue(1, "Program A"); // sets RefreshAgain flag
+        sut.MarkComplete(1); // first pass complete; follow-up item re-queued
 
         // Arrange — lease and complete the follow-up pass
         IQueueLease? followUp = sut.TryLeaseNext();

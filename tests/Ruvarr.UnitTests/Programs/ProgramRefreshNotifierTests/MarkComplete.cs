@@ -44,9 +44,9 @@ public sealed class MarkComplete
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
-        while (sut.TryLeaseNext() is IQueueLease drained)
+        while (sut.TryLeaseNext() is not null)
         {
-            _ = drained;
+            // discard — drain the read set without disposing leases
         }
 
         sut.MarkProcessing(1);
@@ -68,9 +68,9 @@ public sealed class MarkComplete
         // Arrange
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
-        while (sut.TryLeaseNext() is IQueueLease drained)
+        while (sut.TryLeaseNext() is not null)
         {
-            _ = drained;
+            // discard — drain the read set without disposing leases
         }
 
         sut.MarkProcessing(1);
@@ -94,9 +94,9 @@ public sealed class MarkComplete
         // Arrange
         ProgramRefreshNotifier sut = new();
         sut.Enqueue(1, "Program A");
-        while (sut.TryLeaseNext() is IQueueLease drained)
+        while (sut.TryLeaseNext() is not null)
         {
-            _ = drained;
+            // discard — drain the read set without disposing leases
         }
 
         sut.MarkProcessing(1);

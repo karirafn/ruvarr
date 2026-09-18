@@ -9,7 +9,7 @@ namespace Ruvarr.UnitTests.Programs.ProgramRefreshNotifierTests;
 public sealed class ReRefresh
 {
     [Fact]
-    public void DrainAll_PriorityEnqueueMidPass_ProducesExactlyOneFollowUpAfterCompletion()
+    public void WhenPriorityEnqueuedMidDrainAllPass_ProducesExactlyOneFollowUpAfterCompletion()
     {
         // Arrange — mirror the exact call order RuvEpisodesSyncJob uses:
         //   drain all leases, then MarkProcessing per item, then Dispose (MarkComplete) per item
@@ -35,7 +35,7 @@ public sealed class ReRefresh
         // Simulate user requesting manual refresh for item 2 while it is in-flight
         sut.PriorityEnqueue(2, "Program B");
 
-        // Assert — item 2 still shows Processing; no extra lease mid-pass
+        // Assert (mid-Arrange) — in-flight pass undisturbed; no extra lease available mid-pass
         IReadOnlyList<ProgramRefreshQueueItemSummary> midPassItems = sut.Items;
         midPassItems.ShouldContain(x => x.RuvId == 2 && x.Status == ProgramRefreshStatus.Processing);
         sut.TryLeaseNext().ShouldBeNull();
