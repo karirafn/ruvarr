@@ -37,9 +37,7 @@ public sealed class ResiliencePipelineBehaviorTests
         });
     }
 
-    private static ServiceProvider BuildProvider(
-        ScriptedHttpMessageHandler handler,
-        Action<IServiceCollection>? configure = null)
+    private static ServiceProvider BuildProvider(ScriptedHttpMessageHandler handler)
     {
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -53,7 +51,6 @@ public sealed class ResiliencePipelineBehaviorTests
         services.AddRuv();
 
         ConfigureFastOptions(services);
-        configure?.Invoke(services);
 
         services.AddHttpClient<IRuvClient, RuvClient>()
             .ConfigurePrimaryHttpMessageHandler(() => handler);
