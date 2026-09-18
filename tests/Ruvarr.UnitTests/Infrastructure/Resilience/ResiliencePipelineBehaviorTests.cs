@@ -63,7 +63,7 @@ public sealed class ResiliencePipelineBehaviorTests
 
     // TDD cycle (b) — Retry cap (AC #3):
     // An all-503 script exhausts retries: the standard handler allows 3 retries for a total
-    // of 4 attempts, then surfaces the failure.
+    // of 4 attempts, then returns the last failure response.
     [Fact]
     public async Task WhenAllAttemptsReturn503_ExactlyFourAttemptsAreMadeAndFailureSurfaces()
     {
@@ -74,24 +74,14 @@ public sealed class ResiliencePipelineBehaviorTests
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
         using HttpClient client = factory.CreateClient(ClientName);
 
-        // Act — the call is expected to fail after exhausting retries.
-        // The resilience pipeline surfaces an HttpRequestException when all attempts fail
-        // on a transient status (5xx). Catching it is sufficient; the count is the real assertion.
-        HttpResponseMessage? response = null;
-        try
-        {
-            response = await client.GetAsync($"{BaseAddress}api/programs/program/1234/all", CancellationToken.None);
-        }
-        catch (HttpRequestException)
-        {
-            // All retries exhausted — the pipeline surfaced the failure as HttpRequestException.
-        }
-        finally
-        {
-            response?.Dispose();
-        }
+        // Act — the pipeline exhausts retries and returns the last 503 response.
+        using HttpResponseMessage response = await client.GetAsync(
+            $"{BaseAddress}api/programs/program/1234/all",
+            CancellationToken.None);
 
-        // Assert — exactly 1 original + 3 retries = 4 total attempts.
+        // Assert — the final response is 503 and exactly 1 original + 3 retries = 4 total attempts.
+        response.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable,
+            "the pipeline returns the last failure response after exhausting retries");
         handler.RequestCount.ShouldBe(4, "standard handler allows 3 retries (4 total attempts) on transient 503");
     }
 
