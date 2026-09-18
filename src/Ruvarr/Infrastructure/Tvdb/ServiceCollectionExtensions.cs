@@ -22,8 +22,9 @@ internal static class ServiceCollectionExtensions
             }
 
             client.BaseAddress = uri;
-            client.Timeout = ApiClientTimeouts.Default;
+            client.Timeout = Timeout.InfiniteTimeSpan;
         })
+        .AddRuvarrResilience()
         .AddHttpMessageHandler<TvdbAuthenticationHandler>();
 
         return services;
