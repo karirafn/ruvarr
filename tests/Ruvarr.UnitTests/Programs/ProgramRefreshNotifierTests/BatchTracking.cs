@@ -1,3 +1,4 @@
+using Ruvarr.Abstractions;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 
 using Shouldly;
@@ -147,5 +148,46 @@ public sealed class BatchTracking
 
         // Act & Assert
         sut.CurrentProgram.ShouldBeNull();
+    }
+
+    [Fact]
+    public void WhenRefreshAgainFlagSet_BatchStatsAreDeferredUntilFollowUpCompletes()
+    {
+        // Arrange — enqueue one item, process it, then request a re-refresh mid-pass
+        ProgramRefreshNotifier sut = new();
+        sut.Enqueue(1, "Program A");
+        while (sut.TryLeaseNext() is IQueueLease drained)
+        {
+            _ = drained;
+        }
+
+        sut.MarkProcessing(1);
+        sut.PriorityEnqueue(1, "Program A"); // sets RefreshAgain flag
+
+        // Act — complete the first pass; the item is re-queued (batch not yet finalised)
+        sut.MarkComplete(1);
+
+        // Assert — batch stats NOT yet finalised because a follow-up item remains
+        sut.LastCompletedAt.ShouldBeNull();
+        sut.LastRunDuration.ShouldBeNull();
+        sut.LastRunTotal.ShouldBeNull();
+        sut.CompletedCount.ShouldBe(1);
+        sut.BatchStartedAt.ShouldNotBeNull();
+
+        // Arrange — lease and complete the follow-up pass
+        IQueueLease? followUp = sut.TryLeaseNext();
+        followUp.ShouldNotBeNull();
+        sut.MarkProcessing(followUp.RuvId);
+
+        // Act — complete the follow-up pass; now the batch should finalise
+        sut.MarkComplete(followUp.RuvId);
+
+        // Assert — batch finalised after the follow-up pass
+        sut.LastCompletedAt.ShouldNotBeNull();
+        sut.LastRunDuration.ShouldNotBeNull();
+        sut.LastRunTotal.ShouldBe(2);
+        sut.CompletedCount.ShouldBe(0);
+        sut.BatchStartedAt.ShouldBeNull();
+        sut.Items.ShouldBeEmpty();
     }
 }
