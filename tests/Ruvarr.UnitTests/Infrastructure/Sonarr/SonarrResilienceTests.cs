@@ -13,6 +13,7 @@ using NSubstitute;
 
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Settings;
+using Ruvarr.UnitTests.Infrastructure.Resilience;
 
 using Shouldly;
 
@@ -36,16 +37,9 @@ public sealed class SonarrResilienceTests
         });
 
         // Script [503, 200] — first attempt fails, pipeline retries, second succeeds.
-        Queue<HttpStatusCode> script = new([HttpStatusCode.ServiceUnavailable, HttpStatusCode.OK]);
-        List<HttpRequestMessage> capturedRequests = [];
-        int callCount = 0;
-
-        using CapturingFakeHandler fake = new(request =>
-        {
-            callCount++;
-            capturedRequests.Add(request);
-            return script.Count > 0 ? script.Dequeue() : HttpStatusCode.OK;
-        });
+        using ScriptedHttpMessageHandler handler = new(
+            new ResponseSpec(HttpStatusCode.ServiceUnavailable),
+            new ResponseSpec(HttpStatusCode.OK));
 
         ServiceCollection services = new();
         services.AddMemoryCache();
@@ -54,8 +48,9 @@ public sealed class SonarrResilienceTests
 
         // Post-configure to sub-second delays: keeps Total >= Attempt and
         // SamplingDuration >= 2 * Attempt so startup validation passes.
+        // AddStandardResilienceHandler registers options under "{clientName}-standard".
         string clientName = nameof(SonarrClient);
-        services.Configure<HttpStandardResilienceOptions>(clientName, options =>
+        services.Configure<HttpStandardResilienceOptions>($"{clientName}-standard", options =>
         {
             options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(5);
             options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(2);
@@ -65,7 +60,7 @@ public sealed class SonarrResilienceTests
 
         // Substitute the primary handler after AddSonarr so it is innermost.
         services.AddHttpClient<SonarrClient>()
-            .ConfigurePrimaryHttpMessageHandler(() => fake);
+            .ConfigurePrimaryHttpMessageHandler(() => handler);
 
         await using ServiceProvider provider = services.BuildServiceProvider();
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
@@ -78,11 +73,11 @@ public sealed class SonarrResilienceTests
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        callCount.ShouldBe(2, "pipeline should retry once and succeed on the second attempt");
+        handler.RequestCount.ShouldBe(2, "pipeline should retry once and succeed on the second attempt");
 
         // The retried (second) request must still carry the rewritten host and X-Api-Key,
         // proving resilience is outermost and the delegating handler ran on the retry.
-        HttpRequestMessage retriedRequest = capturedRequests[1];
+        HttpRequestMessage retriedRequest = handler.CapturedRequests[1];
         retriedRequest.RequestUri.ShouldNotBeNull();
         retriedRequest.RequestUri.Host.ShouldBe("sonarr.local",
             "SonarrDelegatingHandler should have rewritten the URI on retry");
@@ -90,14 +85,5 @@ public sealed class SonarrResilienceTests
             "SonarrDelegatingHandler should have stamped X-Api-Key on retry");
         keyValues.ShouldNotBeNull();
         keyValues.ShouldContain(SonarrApiKey);
-    }
-
-    private sealed class CapturingFakeHandler(Func<HttpRequestMessage, HttpStatusCode> nextStatus)
-        : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(nextStatus(request)));
     }
 }

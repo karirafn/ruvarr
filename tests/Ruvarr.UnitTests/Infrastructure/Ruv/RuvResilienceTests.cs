@@ -7,6 +7,7 @@ using System.Net;
 using Microsoft.Extensions.Http.Resilience;
 
 using Ruvarr.Infrastructure.Ruv;
+using Ruvarr.UnitTests.Infrastructure.Resilience;
 
 using Shouldly;
 
@@ -19,14 +20,9 @@ public sealed class RuvResilienceTests
     {
         // Arrange — script [503, 200] through the primary handler so the resilience
         // pipeline retries the first failure and returns the success on the second attempt.
-        Queue<HttpStatusCode> responses = new([HttpStatusCode.ServiceUnavailable, HttpStatusCode.OK]);
-        int callCount = 0;
-
-        using FakeHandler fake = new(() =>
-        {
-            callCount++;
-            return responses.Count > 0 ? responses.Dequeue() : HttpStatusCode.OK;
-        });
+        using ScriptedHttpMessageHandler handler = new(
+            new ResponseSpec(HttpStatusCode.ServiceUnavailable),
+            new ResponseSpec(HttpStatusCode.OK));
 
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -41,8 +37,9 @@ public sealed class RuvResilienceTests
 
         // Post-configure the named client's options to sub-second delays so the
         // test is fast while keeping Total >= Attempt and SamplingDuration >= 2*Attempt.
+        // AddStandardResilienceHandler registers options under "{clientName}-standard".
         string clientName = nameof(IRuvClient);
-        services.Configure<HttpStandardResilienceOptions>(clientName, options =>
+        services.Configure<HttpStandardResilienceOptions>($"{clientName}-standard", options =>
         {
             options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(5);
             options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(2);
@@ -52,7 +49,7 @@ public sealed class RuvResilienceTests
 
         // Substitute the primary handler after AddRuv so it is innermost.
         services.AddHttpClient<IRuvClient, RuvClient>()
-            .ConfigurePrimaryHttpMessageHandler(() => fake);
+            .ConfigurePrimaryHttpMessageHandler(() => handler);
 
         await using ServiceProvider provider = services.BuildServiceProvider();
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
@@ -65,14 +62,6 @@ public sealed class RuvResilienceTests
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        callCount.ShouldBe(2);
-    }
-
-    private sealed class FakeHandler(Func<HttpStatusCode> nextStatus) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(nextStatus()));
+        handler.RequestCount.ShouldBe(2);
     }
 }

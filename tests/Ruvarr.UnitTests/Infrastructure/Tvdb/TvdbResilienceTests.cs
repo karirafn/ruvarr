@@ -22,6 +22,7 @@ using NSubstitute;
 
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Settings;
+using Ruvarr.UnitTests.Infrastructure.Resilience;
 
 using Shouldly;
 
@@ -60,16 +61,10 @@ public sealed class TvdbResilienceTests
 
         using MemoryCache cache = BuildCacheWithToken(TvdbApiKey, CachedToken);
 
-        Queue<HttpStatusCode> script = new([HttpStatusCode.ServiceUnavailable, HttpStatusCode.OK]);
-        List<HttpRequestMessage> capturedRequests = [];
-        int callCount = 0;
-
-        using CapturingFakeHandler fake = new(request =>
-        {
-            callCount++;
-            capturedRequests.Add(request);
-            return script.Count > 0 ? script.Dequeue() : HttpStatusCode.OK;
-        });
+        // Script [503, 200] — first attempt fails, pipeline retries, second succeeds.
+        using ScriptedHttpMessageHandler handler = new(
+            new ResponseSpec(HttpStatusCode.ServiceUnavailable),
+            new ResponseSpec(HttpStatusCode.OK));
 
         ServiceCollection services = new();
         services.AddSingleton<IMemoryCache>(cache);
@@ -87,8 +82,9 @@ public sealed class TvdbResilienceTests
 
         // Post-configure to sub-second delays: keeps Total >= Attempt and
         // SamplingDuration >= 2 * Attempt so startup validation passes.
+        // AddStandardResilienceHandler registers options under "{clientName}-standard".
         string clientName = nameof(ITvdbClient);
-        services.Configure<HttpStandardResilienceOptions>(clientName, options =>
+        services.Configure<HttpStandardResilienceOptions>($"{clientName}-standard", options =>
         {
             options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(5);
             options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(2);
@@ -98,7 +94,7 @@ public sealed class TvdbResilienceTests
 
         // Substitute the primary handler after AddTvdb so it is innermost.
         services.AddHttpClient<ITvdbClient, TvdbClient>()
-            .ConfigurePrimaryHttpMessageHandler(() => fake);
+            .ConfigurePrimaryHttpMessageHandler(() => handler);
 
         await using ServiceProvider provider = services.BuildServiceProvider();
         IHttpClientFactory factory = provider.GetRequiredService<IHttpClientFactory>();
@@ -111,11 +107,11 @@ public sealed class TvdbResilienceTests
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        callCount.ShouldBe(2, "pipeline should retry once and succeed on the second attempt");
+        handler.RequestCount.ShouldBe(2, "pipeline should retry once and succeed on the second attempt");
 
         // The retried (second) request must carry Authorization: Bearer <token>,
         // proving resilience is outermost and the auth handler ran on the retry.
-        HttpRequestMessage retriedRequest = capturedRequests[1];
+        HttpRequestMessage retriedRequest = handler.CapturedRequests[1];
         AuthenticationHeaderValue? auth = retriedRequest.Headers.Authorization;
         auth.ShouldNotBeNull("TvdbAuthenticationHandler should have attached Authorization on retry");
         auth.Scheme.ShouldBe("Bearer");
@@ -125,6 +121,11 @@ public sealed class TvdbResilienceTests
     // TDD cycle (b): a single 401 is handled by TvdbAuthenticationHandler (its own
     // one re-login + one retry), and the resilience pipeline does NOT retry it — the
     // primary handler is invoked exactly twice (original + auth-handler retry), not more.
+    //
+    // ScriptedWithLoginFakeHandler is kept here (not consolidated into ScriptedHttpMessageHandler)
+    // because it has a genuinely distinct concern: it must distinguish login POST requests from
+    // application GET requests and respond differently to each. ScriptedHttpMessageHandler is
+    // designed for a single uniform scripted sequence and cannot express this routing logic cleanly.
     [Fact]
     public async Task WhenSingle401_AuthHandlerRetriesOnceAndPipelineDoesNotRetry()
     {
@@ -163,8 +164,9 @@ public sealed class TvdbResilienceTests
         services.AddSingleton(configuration);
         services.AddTvdb();
 
+        // AddStandardResilienceHandler registers options under "{clientName}-standard".
         string clientName = nameof(ITvdbClient);
-        services.Configure<HttpStandardResilienceOptions>(clientName, options =>
+        services.Configure<HttpStandardResilienceOptions>($"{clientName}-standard", options =>
         {
             options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(5);
             options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(2);
@@ -195,18 +197,11 @@ public sealed class TvdbResilienceTests
             "401 is not in the transient set — resilience must not retry it; auth handler owns the single 401 refresh");
     }
 
-    private sealed class CapturingFakeHandler(Func<HttpRequestMessage, HttpStatusCode> nextStatus)
-        : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(nextStatus(request)));
-    }
-
     /// <summary>
     /// Handles login POSTs (from TvdbAuthenticationHandler) and application GET requests
     /// with a caller-supplied status selector. Used for the 401-pipeline-isolation test.
+    /// Not consolidated into ScriptedHttpMessageHandler because it must route between login
+    /// and application requests — a concern ScriptedHttpMessageHandler cannot express cleanly.
     /// </summary>
     private sealed class ScriptedWithLoginFakeHandler(string freshLoginJson, Func<HttpStatusCode> getApplicationStatus)
         : HttpMessageHandler
