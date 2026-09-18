@@ -11,11 +11,11 @@ using Shouldly;
 
 namespace Ruvarr.UnitTests.Downloads.Domain.DownloadQueueItemTests;
 
-public sealed class Retry
+public sealed class RetryBehavior
 {
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
 
-    public Retry()
+    public RetryBehavior()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
     }
