@@ -117,15 +117,6 @@ public sealed class ExceptionHandling
             .WithName("Test Program")
             .WithForeignName(null)
             .Build();
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        _tvdb.SearchAsync(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(),
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new OperationCanceledException());
         _lookupQueue.Enqueue(2, program.Name);
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
         await cts.CancelAsync();

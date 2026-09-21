@@ -132,15 +132,7 @@ public sealed class ExceptionHandling
         // Arrange
         using CancellationTokenSource cts = new();
         using RuvarrDbContext dbContext = CreateDbContext();
-        TvdbSeries series = new TvdbSeriesBuilder().WithId(3000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(3).Build();
-        program.TryAddEpisode("ep0003", new Uri("http://test.com"), "Episode 3", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
-        program.MatchTvdb(series);
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        _tvdb.GetSeriesAsync(3000, Arg.Any<CancellationToken>())
-            .ThrowsAsync(new OperationCanceledException());
         _notifier.Enqueue(3, program.Name);
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
         await cts.CancelAsync();
