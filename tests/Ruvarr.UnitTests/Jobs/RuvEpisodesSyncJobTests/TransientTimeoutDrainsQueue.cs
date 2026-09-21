@@ -51,7 +51,6 @@ public sealed class TransientTimeoutDrainsQueue
             .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<MissingEpisode>());
-
     }
 
     private RuvarrDbContext CreateDbContext() => new(
