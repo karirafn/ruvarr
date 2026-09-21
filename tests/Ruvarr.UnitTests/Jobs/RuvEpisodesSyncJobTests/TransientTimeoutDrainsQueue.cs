@@ -52,9 +52,6 @@ public sealed class TransientTimeoutDrainsQueue
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<MissingEpisode>());
 
-        // Simulate a job-level cancellation token that is NOT cancelled — this is a transient
-        // timeout, not cooperative cancellation.
-        _context.CancellationToken.Returns(CancellationToken.None);
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -69,7 +66,7 @@ public sealed class TransientTimeoutDrainsQueue
         _ruv, dbContext, _sonarr, _syncQueue, new DomainEventBroadcaster(), _settingsStore);
 
     [Fact]
-    public async Task WhenFirstProgramThrowsTaskCanceledException_QueueDrained_SecondProgramEpisodesPresisted()
+    public async Task WhenFirstProgramThrowsTaskCanceledException_QueueDrained_SecondProgramEpisodesPersisted()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
