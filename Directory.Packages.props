@@ -40,7 +40,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.12" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="MySql.EntityFrameworkCore" Version="10.0.1" />
-    <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.20.0" />
+    <PackageVersion Include="Quartz.Extensions.Hosting" Version="4.1.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.33.0.1635" />

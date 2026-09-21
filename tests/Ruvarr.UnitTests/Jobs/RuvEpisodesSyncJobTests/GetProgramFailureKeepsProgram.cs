@@ -85,7 +85,7 @@ public sealed class GetProgramFailureKeepsProgram
         RuvEpisodesSyncJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — queue drained
         _syncQueue.Items.ShouldBeEmpty();
@@ -142,7 +142,7 @@ public sealed class GetProgramFailureKeepsProgram
         RuvEpisodesSyncJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — queue fully drained
         _syncQueue.Items.ShouldBeEmpty();

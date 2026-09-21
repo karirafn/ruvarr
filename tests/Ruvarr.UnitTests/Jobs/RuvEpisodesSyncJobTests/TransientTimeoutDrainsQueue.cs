@@ -114,7 +114,7 @@ public sealed class TransientTimeoutDrainsQueue
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — queue is completely drained; no item stuck in Processing
         _syncQueue.Items.ShouldBeEmpty();
@@ -171,7 +171,7 @@ public sealed class TransientTimeoutDrainsQueue
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — queue is completely drained; no item stuck in Processing
         _syncQueue.Items.ShouldBeEmpty();

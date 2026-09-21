@@ -64,7 +64,7 @@ public sealed class ExceptionHandling
         RuvEpisodesSyncJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _syncQueue.Items.ShouldBeEmpty();

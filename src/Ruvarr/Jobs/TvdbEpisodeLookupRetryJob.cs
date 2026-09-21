@@ -13,7 +13,7 @@ internal sealed class TvdbEpisodeLookupRetryJob(
     RuvarrDbContext dbContext,
     TvdbEpisodeLookupNotifier notifier) : IJob
 {
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Starting TVDB episode lookup retry job");
 
@@ -22,7 +22,7 @@ internal sealed class TvdbEpisodeLookupRetryJob(
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
             .Where(x => x.Series != null)
             .Where(x => x.Episodes.Any(e => !e.TvdbEpisodes.Any() && e.NextLookup != null && e.NextLookup <= utcNow))
-            .ToListAsync(context.CancellationToken);
+            .ToListAsync(cancellationToken);
 
         foreach (RuvProgram program in programs)
         {

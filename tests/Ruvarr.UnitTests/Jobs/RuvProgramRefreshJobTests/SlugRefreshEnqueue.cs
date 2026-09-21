@@ -91,7 +91,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _tvdbLookupQueue.Items.ShouldHaveSingleItem();
@@ -111,7 +111,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _tvdbLookupQueue.Items.ShouldBeEmpty();
@@ -128,7 +128,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert - unmatched program goes via the unmatched path (only one enqueue total)
         _tvdbLookupQueue.Items.ShouldHaveSingleItem();
@@ -159,7 +159,7 @@ public sealed class SlugRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _tvdbLookupQueue.Items.Count.ShouldBe(1);

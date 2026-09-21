@@ -54,7 +54,7 @@ public sealed class SettingsGate
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _lookupQueue.Items.ShouldHaveSingleItem();
@@ -74,7 +74,7 @@ public sealed class SettingsGate
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _lookupQueue.Items.ShouldHaveSingleItem();

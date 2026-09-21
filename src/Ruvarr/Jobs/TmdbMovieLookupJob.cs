@@ -19,7 +19,7 @@ namespace Ruvarr.Jobs;
 [DisallowConcurrentExecution]
 internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, RuvarrDbContext dbContext, TmdbClientProvider tmdbClientProvider, ISettingsStore settingsStore) : IJob
 {
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         if (!settingsStore.Current.IsTmdbConfigured)
         {
@@ -30,7 +30,6 @@ internal sealed class TmdbMovieLookupJob(ILogger<TmdbMovieLookupJob> logger, Ruv
         logger.LogDebug("Starting TMDB movie lookup job");
 
         TMDbClient tmdb = tmdbClientProvider.Client;
-        CancellationToken cancellationToken = context.CancellationToken;
 
         RuvProgram? program = await dbContext.Set<RuvProgram>()
             .Where(x => !x.HasMultipleEpisodes)

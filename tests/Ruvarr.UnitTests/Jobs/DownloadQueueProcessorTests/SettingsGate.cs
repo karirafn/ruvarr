@@ -77,7 +77,7 @@ public sealed class SettingsGate
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Pending);

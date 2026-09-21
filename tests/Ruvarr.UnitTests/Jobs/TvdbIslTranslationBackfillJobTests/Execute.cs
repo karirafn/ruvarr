@@ -51,7 +51,7 @@ public sealed class Execute
         TvdbIslTranslationBackfillJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _ = _tvdb.DidNotReceive().GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
@@ -66,7 +66,7 @@ public sealed class Execute
         TvdbIslTranslationBackfillJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _ = _tvdb.DidNotReceive().GetSeriesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
@@ -80,7 +80,7 @@ public sealed class Execute
         TvdbIslTranslationBackfillJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         await _settingsStore.Received(1).SaveAsync(
@@ -118,7 +118,7 @@ public sealed class Execute
         TvdbIslTranslationBackfillJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         TvdbEpisode updated = await dbContext.Set<TvdbEpisode>().FirstAsync(e => e.TvdbId == 100, TestContext.Current.CancellationToken);
@@ -155,7 +155,7 @@ public sealed class Execute
         TvdbIslTranslationBackfillJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         TvdbEpisode updated = await dbContext.Set<TvdbEpisode>().FirstAsync(e => e.TvdbId == 100, TestContext.Current.CancellationToken);
