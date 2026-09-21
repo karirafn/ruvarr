@@ -112,7 +112,7 @@ public sealed class ExceptionHandling : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        OperationCanceledException ex = await Should.ThrowAsync<OperationCanceledException>(() => sut.Execute(_context));
+        OperationCanceledException ex = await Should.ThrowAsync<OperationCanceledException>(async () => await sut.Execute(_context, TestContext.Current.CancellationToken));
 
         // Assert — OCE propagates; item stays Downloading in-job (IncompleteDownloadCleanupService reclaims it to Pending at startup)
         ex.ShouldNotBeNull();
@@ -144,7 +144,7 @@ public sealed class ExceptionHandling : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Failed);

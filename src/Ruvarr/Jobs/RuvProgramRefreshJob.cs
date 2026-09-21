@@ -24,11 +24,9 @@ internal sealed class RuvProgramRefreshJob(
     TvdbSeriesLookupNotifier tvdbLookupQueue,
     IDomainEventBroadcaster broadcaster) : IJob
 {
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Starting RÚV programs refresh job");
-
-        CancellationToken cancellationToken = context.CancellationToken;
 
         List<RuvTvProgram> programs = await FetchRuvPrograms(cancellationToken);
 

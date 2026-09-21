@@ -69,7 +69,7 @@ public sealed class ExceptionHandling
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _lookupQueue.Items.ShouldBeEmpty();

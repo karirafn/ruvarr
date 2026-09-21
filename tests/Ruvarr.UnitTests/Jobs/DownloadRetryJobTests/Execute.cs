@@ -54,7 +54,7 @@ public sealed class Execute
         DownloadRetryJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         DownloadQueueItem updated = await dbContext.Set<DownloadQueueItem>()
@@ -79,7 +79,7 @@ public sealed class Execute
         DownloadRetryJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         DownloadQueueItem updated = await dbContext.Set<DownloadQueueItem>()
@@ -104,7 +104,7 @@ public sealed class Execute
         DownloadRetryJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         DownloadQueueItem updated = await dbContext.Set<DownloadQueueItem>()

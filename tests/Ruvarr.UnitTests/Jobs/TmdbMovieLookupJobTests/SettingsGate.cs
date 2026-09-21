@@ -43,7 +43,7 @@ public sealed class SettingsGate
             dbContext, tmdbClientProvider, _settingsStore);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — should not query DB for programs (no exception from unconfigured TMDb client)
         dbContext.ChangeTracker.HasChanges().ShouldBeFalse();

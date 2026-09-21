@@ -89,7 +89,7 @@ public sealed class TitlelessEpisodeSkip
         RuvEpisodesSyncJob sut = CreateJob(actContext, logger);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         logger.Entries.ShouldContain(e =>
@@ -135,7 +135,7 @@ public sealed class TitlelessEpisodeSkip
         RuvEpisodesSyncJob sut = CreateJob(actContext, logger);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         logger.Entries.ShouldContain(e =>
@@ -176,7 +176,7 @@ public sealed class TitlelessEpisodeSkip
         RuvEpisodesSyncJob sut = CreateJob(actContext, new CapturingLogger<RuvEpisodesSyncJob>());
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         using RuvarrDbContext assertContext = CreateDbContext();

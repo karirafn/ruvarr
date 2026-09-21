@@ -301,6 +301,7 @@ public sealed class Handle
         // Assert
         await _scheduler.Received(1).TriggerJob(
             Arg.Is<JobKey>(k => k.Name == nameof(RuvEpisodesSyncJob)),
+            Arg.Any<JobDataMap?>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -318,6 +319,7 @@ public sealed class Handle
         // Assert
         await _scheduler.DidNotReceive().TriggerJob(
             Arg.Any<JobKey>(),
+            Arg.Any<JobDataMap?>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -335,6 +337,7 @@ public sealed class Handle
         // Assert
         await _scheduler.DidNotReceive().TriggerJob(
             Arg.Any<JobKey>(),
+            Arg.Any<JobDataMap?>(),
             Arg.Any<CancellationToken>());
     }
 
@@ -353,6 +356,7 @@ public sealed class Handle
         result.IsFailure.ShouldBeTrue();
         await _scheduler.DidNotReceive().TriggerJob(
             Arg.Any<JobKey>(),
+            Arg.Any<JobDataMap?>(),
             Arg.Any<CancellationToken>());
     }
 }

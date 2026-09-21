@@ -68,7 +68,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         await _matcher.Received(1).MatchAsync(
@@ -98,7 +98,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         await _matcher.Received(1).MatchAsync(
@@ -123,7 +123,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         await _matcher.DidNotReceive().MatchAsync(Arg.Any<EpisodeMatchingContext>(), Arg.Any<CancellationToken>());
@@ -147,7 +147,7 @@ public sealed class Delegation
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Episodes[0].NextLookup.ShouldNotBeNull();

@@ -225,7 +225,7 @@ internal sealed class GetDashboardHandler(
             IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
             IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(
                 new JobKey(nameof(RuvProgramRefreshJob)), cancellationToken);
-            nextFireTimeUtc = triggers.FirstOrDefault()?.GetNextFireTimeUtc();
+            nextFireTimeUtc = triggers.FirstOrDefault()?.NextFireTimeUtc;
         }
         catch (SchedulerException)
         {

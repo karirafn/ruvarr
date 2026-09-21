@@ -55,7 +55,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(ruvSeriesSync)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInHours(1)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromHours(1))
                     .RepeatForever()));
 
             JobKey ruvEpisodeSync = new(nameof(RuvEpisodesSyncJob));
@@ -63,7 +63,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(ruvEpisodeSync)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5))
                     .RepeatForever()));
 
             JobKey tmdbMovieLookup = new(nameof(TmdbMovieLookupJob));
@@ -71,7 +71,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(tmdbMovieLookup)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5))
                     .RepeatForever()));
 
             JobKey tvdbSeriesLookup = new(nameof(TvdbSeriesLookupJob));
@@ -79,7 +79,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(tvdbSeriesLookup)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5))
                     .RepeatForever()));
 
             JobKey tvdbEpisodeLookup = new(nameof(TvdbEpisodeLookupJob));
@@ -87,7 +87,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(tvdbEpisodeLookup)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5))
                     .RepeatForever()));
 
             JobKey tvdbEpisodeLookupRetry = new(nameof(TvdbEpisodeLookupRetryJob));
@@ -95,7 +95,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(tvdbEpisodeLookupRetry)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInMinutes(10)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(10))
                     .RepeatForever()));
 
             JobKey downloadQueue = new(nameof(DownloadQueueProcessor));
@@ -103,7 +103,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(downloadQueue)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInSeconds(5)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromSeconds(5))
                     .RepeatForever()));
 
             JobKey downloadRetry = new(nameof(DownloadRetryJob));
@@ -111,7 +111,7 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(downloadRetry)
                     .StartNow()
-                    .WithSimpleSchedule(x => x.WithIntervalInMinutes(10)
+                    .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(10))
                     .RepeatForever()));
 
             JobKey tvdbIslTranslationBackfill = new(nameof(TvdbIslTranslationBackfillJob));

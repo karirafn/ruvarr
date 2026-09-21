@@ -26,7 +26,7 @@ internal sealed class TvdbSeriesLookupJob(
 {
     private const int MaxDegreeOfParallelism = 3;
 
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         if (!IsTvdbConfigured())
         {
@@ -43,8 +43,6 @@ internal sealed class TvdbSeriesLookupJob(
 
         lookupQueue.MarkProcessing(ruvId);
         broadcaster.Publish(new QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>());
-
-        CancellationToken cancellationToken = context.CancellationToken;
 
         try
         {

@@ -122,7 +122,7 @@ public sealed class FileReuse : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert: ffmpeg download was NOT called
         await _ffmpeg.DidNotReceive().DownloadAsync(
@@ -163,7 +163,7 @@ public sealed class FileReuse : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert: a fresh download was attempted
         ffmpegCalled.ShouldBeTrue();
@@ -200,7 +200,7 @@ public sealed class FileReuse : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert: a fresh download was performed (file was absent even though dir existed)
         ffmpegCalled.ShouldBeTrue();
@@ -238,7 +238,7 @@ public sealed class FileReuse : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert: ffmpeg was NOT called — file was reused from disk
         await _ffmpeg.DidNotReceive().DownloadAsync(
