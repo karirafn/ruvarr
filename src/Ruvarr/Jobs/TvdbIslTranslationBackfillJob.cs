@@ -18,7 +18,7 @@ internal sealed class TvdbIslTranslationBackfillJob(
 {
     private const int DelayBetweenSeriesFetchesMs = 500;
 
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         RuvarrSettings settings = settingsStore.Current;
 
@@ -41,20 +41,20 @@ internal sealed class TvdbIslTranslationBackfillJob(
             .Where(p => p.Episodes.Any(e => e.TvdbEpisodes.Any()))
             .Include(p => p.Episodes)
                 .ThenInclude(e => e.TvdbEpisodes)
-            .ToListAsync(context.CancellationToken);
+            .ToListAsync(cancellationToken);
 
         bool isFirst = true;
         foreach (IGrouping<int, RuvProgram> group in programs.GroupBy(p => p.Series!.TvdbId))
         {
             if (!isFirst)
             {
-                await Task.Delay(DelayBetweenSeriesFetchesMs, context.CancellationToken);
+                await Task.Delay(DelayBetweenSeriesFetchesMs, cancellationToken);
             }
             isFirst = false;
 
             int seriesTvdbId = group.Key;
 
-            SeriesData? seriesData = await tvdb.GetSeriesAsync(seriesTvdbId, context.CancellationToken);
+            SeriesData? seriesData = await tvdb.GetSeriesAsync(seriesTvdbId, cancellationToken);
             if (seriesData is null)
             {
                 logger.LogWarning("TVDB series {SeriesId} not found during backfill", seriesTvdbId);
@@ -78,11 +78,11 @@ internal sealed class TvdbIslTranslationBackfillJob(
             }
         }
 
-        await dbContext.SaveChangesAsync(context.CancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         await settingsStore.SaveAsync(
             settings with { IslTranslationBackfillComplete = true },
-            context.CancellationToken);
+            cancellationToken);
 
         logger.LogInformation("ISL translation backfill complete");
     }

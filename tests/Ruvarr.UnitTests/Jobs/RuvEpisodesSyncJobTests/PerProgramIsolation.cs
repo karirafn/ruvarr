@@ -95,7 +95,7 @@ public sealed class PerProgramIsolation
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _syncQueue.Items.ShouldBeEmpty();
@@ -148,7 +148,7 @@ public sealed class PerProgramIsolation
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — no item stuck in Processing; queue fully drained
         _syncQueue.Items.ShouldBeEmpty();
@@ -225,7 +225,7 @@ public sealed class PerProgramIsolation
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — no item stuck in Processing; queue fully drained
         _syncQueue.Items.ShouldBeEmpty();

@@ -51,10 +51,6 @@ public sealed class TransientTimeoutDrainsQueue
             .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<MissingEpisode>());
-
-        // Simulate a job-level cancellation token that is NOT cancelled — this is a transient
-        // timeout, not cooperative cancellation.
-        _context.CancellationToken.Returns(CancellationToken.None);
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -69,7 +65,7 @@ public sealed class TransientTimeoutDrainsQueue
         _ruv, dbContext, _sonarr, _syncQueue, new DomainEventBroadcaster(), _settingsStore);
 
     [Fact]
-    public async Task WhenFirstProgramThrowsTaskCanceledException_QueueDrained_SecondProgramEpisodesPresisted()
+    public async Task WhenFirstProgramThrowsTaskCanceledException_QueueDrained_SecondProgramEpisodesPersisted()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -114,7 +110,7 @@ public sealed class TransientTimeoutDrainsQueue
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — queue is completely drained; no item stuck in Processing
         _syncQueue.Items.ShouldBeEmpty();
@@ -171,7 +167,7 @@ public sealed class TransientTimeoutDrainsQueue
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — queue is completely drained; no item stuck in Processing
         _syncQueue.Items.ShouldBeEmpty();

@@ -24,7 +24,7 @@ internal sealed class TvdbEpisodeLookupJob(
     ISettingsStore settingsStore,
     ITvdbEpisodeMatcher matcher) : IJob
 {
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         if (!settingsStore.Current.IsTvdbConfigured || !settingsStore.Current.IsSonarrConfigured)
         {
@@ -42,8 +42,6 @@ internal sealed class TvdbEpisodeLookupJob(
 
         lookupQueue.MarkProcessing(ruvId);
         broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
-
-        CancellationToken cancellationToken = context.CancellationToken;
 
         try
         {
@@ -76,8 +74,12 @@ internal sealed class TvdbEpisodeLookupJob(
 
             await ScheduleLookupAsync(program, cancellationToken);
         }
-#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
-        catch (Exception ex)
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(ex, "HttpClient timeout during TVDB episode lookup for RuvId {RuvId}", ruvId);
+        }
+#pragma warning disable CA1031 // Catch all exceptions except OCE to prevent queue items from getting stuck in Processing state
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Error during TVDB episode lookup for RuvId {RuvId}", ruvId);

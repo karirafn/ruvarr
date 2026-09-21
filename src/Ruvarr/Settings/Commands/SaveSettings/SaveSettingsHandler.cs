@@ -124,7 +124,7 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
         if (!wasSonarrConfigured && settings.IsSonarrConfigured)
         {
             IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
-            await scheduler.TriggerJob(new JobKey(nameof(RuvEpisodesSyncJob)), cancellationToken);
+            await scheduler.TriggerJob(new JobKey(nameof(RuvEpisodesSyncJob)), cancellationToken: cancellationToken);
         }
 
         return RuvarrResult.Success;

@@ -112,7 +112,7 @@ public sealed class EarlyReturns : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — item gets picked up and proceeds past the guard
         item.Status.ShouldNotBe(DownloadQueueStatus.Pending);

@@ -79,7 +79,7 @@ public sealed class GetSeriesFailureAbortsMonitoring
         RuvEpisodesSyncJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — queue fully drained
         _syncQueue.Items.ShouldBeEmpty();

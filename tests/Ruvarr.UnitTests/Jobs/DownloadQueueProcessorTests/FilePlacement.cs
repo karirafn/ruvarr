@@ -114,7 +114,7 @@ public sealed class FilePlacement : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         string expectedIncomplete = _settings.ResolvedIncompleteDirectory;
@@ -160,7 +160,7 @@ public sealed class FilePlacement : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         string expectedIncomplete = _settings.ResolvedIncompleteDirectory;
@@ -197,7 +197,7 @@ public sealed class FilePlacement : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert: file is in completed dir directly (no subdirectory)
         string completedDir = _settings.ResolvedEpisodeDownloadDirectory;
@@ -238,7 +238,7 @@ public sealed class FilePlacement : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert: exactly one file in completed (was moved, not duplicated)
         string[] completedFiles = Directory.GetFiles(completedDir);
@@ -273,7 +273,7 @@ public sealed class FilePlacement : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Failed);
@@ -315,7 +315,7 @@ public sealed class FilePlacement : IDisposable
         DownloadQueueProcessor sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         item.Status.ShouldBe(DownloadQueueStatus.Failed);

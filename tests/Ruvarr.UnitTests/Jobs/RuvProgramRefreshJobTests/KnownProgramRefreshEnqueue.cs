@@ -92,7 +92,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _syncQueue.Items.ShouldContain(x => x.RuvId == 99);
@@ -116,7 +116,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — program 1 should appear exactly once in the queue
         _syncQueue.Items.Count(x => x.RuvId == 1).ShouldBe(1);
@@ -140,7 +140,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _syncQueue.Items.ShouldNotContain(x => x.RuvId == 99);
@@ -165,7 +165,7 @@ public sealed class KnownProgramRefreshEnqueue
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _syncQueue.Items.ShouldContain(x => x.RuvId == 90);
