@@ -51,6 +51,9 @@ internal sealed class RuvProgramRefreshJob(
 
         await EnqueueKnownProgramRefreshes(apiRuvIds, enqueuedIds, cancellationToken);
 
+        // enqueuedIds is the authoritative count of distinct programs enqueued this run.
+        // It stays correct even if the SQL exclusion filter in EnqueueKnownProgramRefreshes
+        // is later changed or removed: a program fed by both passes is counted once.
         syncQueue.RecordEnqueueBatch(enqueuedIds.Count);
 
         await EnqueueUnmatchedProgramsForLookup(cancellationToken);
