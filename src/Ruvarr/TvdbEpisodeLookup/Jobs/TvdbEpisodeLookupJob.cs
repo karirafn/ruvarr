@@ -74,8 +74,8 @@ internal sealed class TvdbEpisodeLookupJob(
 
             await ScheduleLookupAsync(program, cancellationToken);
         }
-#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
-        catch (Exception ex)
+#pragma warning disable CA1031 // Catch all exceptions except OCE to prevent queue items from getting stuck in Processing state
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Error during TVDB episode lookup for RuvId {RuvId}", ruvId);

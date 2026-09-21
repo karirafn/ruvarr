@@ -74,4 +74,33 @@ public sealed class ExceptionHandling
         // Assert
         _lookupQueue.Items.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task WhenCancelled_PropagatesOperationCanceledException()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(2)
+            .WithName("Test Program")
+            .WithForeignName(null)
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _tvdb.SearchAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+        _lookupQueue.Enqueue(2, program.Name);
+        TvdbSeriesLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        Func<Task> act = async () => await sut.Execute(_context, TestContext.Current.CancellationToken);
+
+        // Assert
+        await Should.ThrowAsync<OperationCanceledException>(act);
+    }
 }
