@@ -45,9 +45,11 @@ internal sealed class RuvProgramRefreshJob(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        EnqueueProgramRefreshes(programs);
+        int enqueuedFromApi = EnqueueProgramRefreshes(programs);
 
-        await EnqueueKnownProgramRefreshes(apiRuvIds, cancellationToken);
+        int enqueuedFromKnown = await EnqueueKnownProgramRefreshes(apiRuvIds, cancellationToken);
+
+        syncQueue.RecordEnqueueBatch(enqueuedFromApi + enqueuedFromKnown);
 
         await EnqueueUnmatchedProgramsForLookup(cancellationToken);
 
@@ -143,20 +145,25 @@ internal sealed class RuvProgramRefreshJob(
         }
     }
 
-    private void EnqueueProgramRefreshes(List<RuvTvProgram> programs)
+    private int EnqueueProgramRefreshes(List<RuvTvProgram> programs)
     {
 #pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
         programs.Sort((a, b) => string.Compare(a.Title, b.Title, new CultureInfo("is-IS"), CompareOptions.None));
 #pragma warning restore CA1309
 
-        foreach (RuvTvProgram program in programs.Where(x => x.MultipleEpisodes))
+        List<RuvTvProgram> multiEpisodePrograms = [.. programs.Where(x => x.MultipleEpisodes)];
+
+        foreach (RuvTvProgram program in multiEpisodePrograms)
         {
             syncQueue.Enqueue(program.Id, program.Title);
         }
+
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+
+        return multiEpisodePrograms.Count;
     }
 
-    private async Task EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds, CancellationToken cancellationToken)
+    private async Task<int> EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds, CancellationToken cancellationToken)
     {
         List<RuvProgram> knownPrograms = await dbContext.Set<RuvProgram>()
             .IgnoreAutoIncludes()
@@ -170,6 +177,8 @@ internal sealed class RuvProgramRefreshJob(
         }
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+
+        return knownPrograms.Count;
     }
 
     private async Task EnqueueUnmatchedProgramsForLookup(CancellationToken cancellationToken)
