@@ -13,6 +13,7 @@ using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
 using Ruvarr.Testing.Builders;
+using Ruvarr.Testing.Time;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 using Shouldly;
@@ -41,12 +42,15 @@ public sealed class RecordsEnqueueBatch
             .Options,
         _serviceProvider);
 
-    private RuvProgramRefreshJob CreateJob(RuvarrDbContext dbContext) => new(
+    private RuvProgramRefreshJob CreateJob(RuvarrDbContext dbContext) =>
+        CreateJob(dbContext, _syncQueue);
+
+    private RuvProgramRefreshJob CreateJob(RuvarrDbContext dbContext, ProgramRefreshNotifier syncQueue) => new(
         NullLogger<RuvProgramRefreshJob>.Instance,
         _ruv,
         dbContext,
         _settingsStore,
-        _syncQueue,
+        syncQueue,
         _tvdbLookupQueue,
         Substitute.For<IDomainEventBroadcaster>());
 
@@ -98,22 +102,22 @@ public sealed class RecordsEnqueueBatch
     public async Task WhenProgramsEnqueued_SetsLastEnqueuedAt()
     {
         // Arrange
-        DateTimeOffset before = DateTimeOffset.UtcNow;
+        DateTimeOffset fixedNow = new(2026, 9, 21, 12, 0, 0, TimeSpan.Zero);
+        ProgramRefreshNotifier syncQueue = new(new FixedTimeProvider(fixedNow));
+
         RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
             [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
                 [CreateRuvTvProgram(1)])]);
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         using RuvarrDbContext dbContext = CreateDbContext();
-        RuvProgramRefreshJob sut = CreateJob(dbContext);
+        RuvProgramRefreshJob sut = CreateJob(dbContext, syncQueue);
 
         // Act
         await sut.Execute(_context);
 
         // Assert
-        DateTimeOffset after = DateTimeOffset.UtcNow;
-        _syncQueue.LastEnqueuedAt.ShouldNotBeNull();
-        _syncQueue.LastEnqueuedAt.Value.ShouldBeInRange(before, after);
+        syncQueue.LastEnqueuedAt.ShouldBe(fixedNow);
     }
 
     [Fact]
@@ -146,7 +150,10 @@ public sealed class RecordsEnqueueBatch
     public async Task WhenProgramAppearsInBothApiAndKnownSet_CountsOnce()
     {
         // Arrange — program id 1 is in both the API response AND the known programs in the database.
-        // The queue de-dupes on Enqueue, so the reported count must reflect distinct programs.
+        // EnqueueKnownProgramRefreshes excludes ids already fetched from the API via a SQL filter,
+        // so the known-programs pass never sees id 1. The HashSet<int> distinct-count is a
+        // defence-in-depth guarantee: even if that filter were removed, a program appearing in
+        // both passes would still be counted once.
         using RuvarrDbContext dbContext = CreateDbContext();
 
         RuvProgram knownProgram = new RuvProgramBuilder().WithRuvId(1).WithName("Shared Show").WithMultipleEpisodes().Build();
