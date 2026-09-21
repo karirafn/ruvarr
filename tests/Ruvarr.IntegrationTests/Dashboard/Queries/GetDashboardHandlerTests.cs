@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Dashboard;
 using Ruvarr.Dashboard.Queries.GetDashboard;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 
@@ -538,9 +541,167 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
 
         // Assert
         result.ProgramRefresh.ShouldNotBeNull();
-        result.ProgramRefresh.IsRunning.ShouldBeFalse();
-        result.ProgramRefresh.Depth.ShouldBe(0);
-        result.ProgramRefresh.CompletedCount.ShouldBe(0);
-        result.ProgramRefresh.CurrentProgram.ShouldBeNull();
+        result.ProgramRefresh.LastEnqueuedAt.ShouldBeNull();
+        result.ProgramRefresh.LastEnqueuedCount.ShouldBeNull();
+        result.ProgramRefresh.NextFireTimeUtc.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ReturnsEpisodeSyncCardInfo()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.ShouldNotBeNull();
+        result.EpisodeSync.IsRunning.ShouldBeFalse();
+        result.EpisodeSync.Depth.ShouldBe(0);
+        result.EpisodeSync.CompletedCount.ShouldBe(0);
+        result.EpisodeSync.CurrentProgram.ShouldBeNull();
+        result.EpisodeSync.LastCompletedAt.ShouldBeNull();
+        result.EpisodeSync.NextFireTimeUtc.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task WhenLastCompletedAtOlderThanTwoHours_IsStalled()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset lastCompleted = new(2026, 9, 21, 8, 0, 0, TimeSpan.Zero);
+        DateTimeOffset now = lastCompleted.AddHours(2).AddSeconds(1);
+        FixedTimeProvider timeProvider = new(lastCompleted);
+        ProgramRefreshNotifier notifier = new(timeProvider);
+        notifier.Enqueue(1, "Program A");
+        notifier.MarkComplete(1);
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+                services.RemoveAll<ProgramRefreshNotifier>();
+                services.AddSingleton(notifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.IsStalled.ShouldBeTrue();
+        TimeSpan stalledFor = result.EpisodeSync.StalledFor.ShouldNotBeNull();
+        stalledFor.ShouldBeGreaterThan(TimeSpan.FromHours(2));
+    }
+
+    [Fact]
+    public async Task WhenLastCompletedAtWithinTwoHours_IsNotStalled()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset lastCompleted = new(2026, 9, 21, 9, 0, 0, TimeSpan.Zero);
+        DateTimeOffset now = lastCompleted.AddHours(1);
+        FixedTimeProvider timeProvider = new(lastCompleted);
+        ProgramRefreshNotifier notifier = new(timeProvider);
+        notifier.Enqueue(1, "Program A");
+        notifier.MarkComplete(1);
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+                services.RemoveAll<ProgramRefreshNotifier>();
+                services.AddSingleton(notifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.IsStalled.ShouldBeFalse();
+        result.EpisodeSync.StalledFor.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task WhenNeverCompletedAndStartedAtOlderThanTwoHours_IsStalled()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset startedAt = new(2026, 9, 21, 6, 0, 0, TimeSpan.Zero);
+        DateTimeOffset now = startedAt.AddHours(2).AddSeconds(1);
+        ProgramRefreshNotifier notifier = new(new FixedTimeProvider(startedAt));
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+                services.RemoveAll<ProgramRefreshNotifier>();
+                services.AddSingleton(notifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.IsStalled.ShouldBeTrue();
+        TimeSpan stalledForAc5 = result.EpisodeSync.StalledFor.ShouldNotBeNull();
+        stalledForAc5.ShouldBeGreaterThan(TimeSpan.FromHours(2));
+    }
+
+    [Fact]
+    public async Task WhenNeverCompletedAndStartedAtWithinTwoHours_IsNotStalled()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset startedAt = new(2026, 9, 21, 8, 30, 0, TimeSpan.Zero);
+        DateTimeOffset now = startedAt.AddHours(1);
+        ProgramRefreshNotifier notifier = new(new FixedTimeProvider(startedAt));
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+                services.RemoveAll<ProgramRefreshNotifier>();
+                services.AddSingleton(notifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.IsStalled.ShouldBeFalse();
+        result.EpisodeSync.StalledFor.ShouldBeNull();
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset fixedTime) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => fixedTime;
     }
 }
