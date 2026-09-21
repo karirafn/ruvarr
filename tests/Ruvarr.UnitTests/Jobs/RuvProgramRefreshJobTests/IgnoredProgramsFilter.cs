@@ -88,7 +88,7 @@ public sealed class IgnoredProgramsFilter
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>().ToListAsync(TestContext.Current.CancellationToken);
@@ -111,7 +111,7 @@ public sealed class IgnoredProgramsFilter
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>().ToListAsync(TestContext.Current.CancellationToken);
@@ -134,7 +134,7 @@ public sealed class IgnoredProgramsFilter
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>().ToListAsync(TestContext.Current.CancellationToken);

@@ -222,9 +222,10 @@ internal sealed class GetDashboardHandler(
         try
         {
             IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
-            IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(
-                new JobKey(nameof(RuvProgramRefreshJob)), cancellationToken);
-            nextFireTimeUtc = triggers.FirstOrDefault()?.GetNextFireTimeUtc();
+            PagedResult<TriggerHeader> result = await scheduler.QueryTriggers(
+                new TriggerQuery { Job = new JobKey(nameof(RuvProgramRefreshJob)) },
+                cancellationToken);
+            nextFireTimeUtc = result.Items.Count > 0 ? result.Items[0].NextFireTimeUtc : null;
         }
         catch (SchedulerException)
         {
@@ -247,9 +248,10 @@ internal sealed class GetDashboardHandler(
         try
         {
             IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
-            IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(
-                new JobKey(nameof(RuvEpisodesSyncJob)), cancellationToken);
-            nextFireTimeUtc = triggers.FirstOrDefault()?.GetNextFireTimeUtc();
+            PagedResult<TriggerHeader> result = await scheduler.QueryTriggers(
+                new TriggerQuery { Job = new JobKey(nameof(RuvEpisodesSyncJob)) },
+                cancellationToken);
+            nextFireTimeUtc = result.Items.Count > 0 ? result.Items[0].NextFireTimeUtc : null;
         }
         catch (SchedulerException)
         {

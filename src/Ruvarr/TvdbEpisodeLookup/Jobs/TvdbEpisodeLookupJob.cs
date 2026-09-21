@@ -24,7 +24,7 @@ internal sealed class TvdbEpisodeLookupJob(
     ISettingsStore settingsStore,
     ITvdbEpisodeMatcher matcher) : IJob
 {
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         if (!settingsStore.Current.IsTvdbConfigured || !settingsStore.Current.IsSonarrConfigured)
         {
@@ -42,8 +42,6 @@ internal sealed class TvdbEpisodeLookupJob(
 
         lookupQueue.MarkProcessing(ruvId);
         broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
-
-        CancellationToken cancellationToken = context.CancellationToken;
 
         try
         {

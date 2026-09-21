@@ -112,7 +112,7 @@ public sealed class ChangedTitleSync
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         using RuvarrDbContext assertContext = CreateDbContext();
@@ -180,7 +180,7 @@ public sealed class ChangedTitleSync
         RuvEpisodesSyncJob sut = CreateJob(actContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         using RuvarrDbContext assertContext = CreateDbContext();

@@ -66,7 +66,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         await _tvdb.Received(1).GetSeriesAsync(1000, Arg.Any<CancellationToken>());
@@ -89,7 +89,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         TvdbSeries? saved = await dbContext.Set<TvdbSeries>().FirstOrDefaultAsync(TestContext.Current.CancellationToken);
@@ -114,7 +114,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         await _tvdb.DidNotReceive().SearchAsync(
@@ -149,7 +149,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.NextLookup.ShouldBeNull();
@@ -171,7 +171,7 @@ public sealed class SlugRefresh
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.NextLookup.ShouldBeNull();

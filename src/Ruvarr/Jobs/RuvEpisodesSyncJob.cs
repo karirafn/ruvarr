@@ -26,7 +26,7 @@ internal sealed class RuvEpisodesSyncJob(
     IDomainEventBroadcaster broadcaster,
     ISettingsStore settingsStore) : IJob
 {
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         if (!settingsStore.Current.IsSonarrConfigured)
         {
@@ -49,8 +49,6 @@ internal sealed class RuvEpisodesSyncJob(
             logger.LogDebug("No programs in refresh queue");
             return;
         }
-
-        CancellationToken cancellationToken = context.CancellationToken;
 
         List<int> ruvIds = [.. leases.Select(l => l.RuvId)];
 

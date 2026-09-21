@@ -92,7 +92,7 @@ public sealed class RecordsEnqueueBatch
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _syncQueue.LastEnqueuedCount.ShouldBe(2);
@@ -114,7 +114,7 @@ public sealed class RecordsEnqueueBatch
         RuvProgramRefreshJob sut = CreateJob(dbContext, syncQueue);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         syncQueue.LastEnqueuedAt.ShouldBe(fixedNow);
@@ -140,7 +140,7 @@ public sealed class RecordsEnqueueBatch
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — 2 from API + 1 known = 3 total enqueued
         _syncQueue.LastEnqueuedCount.ShouldBe(3);
@@ -168,7 +168,7 @@ public sealed class RecordsEnqueueBatch
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert — program id 1 was fed from both passes but counts as one distinct enqueue
         _syncQueue.LastEnqueuedCount.ShouldBe(1);
@@ -187,7 +187,7 @@ public sealed class RecordsEnqueueBatch
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _syncQueue.LastEnqueuedCount.ShouldBe(0);

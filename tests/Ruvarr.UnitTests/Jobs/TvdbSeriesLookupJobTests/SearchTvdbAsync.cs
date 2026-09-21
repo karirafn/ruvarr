@@ -87,7 +87,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldBeNull();
@@ -124,7 +124,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldBeNull();
@@ -159,7 +159,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldNotBeNull();
@@ -194,7 +194,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldBeNull();
@@ -224,7 +224,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldBeNull();
@@ -258,7 +258,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldNotBeNull();
@@ -329,7 +329,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldNotBeNull();
@@ -400,7 +400,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldBeNull();
@@ -450,7 +450,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldBeNull();
@@ -484,7 +484,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldBeNull();
@@ -582,7 +582,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldNotBeNull();
@@ -627,7 +627,7 @@ public sealed class SearchTvdbAsync
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         program.Series.ShouldNotBeNull();

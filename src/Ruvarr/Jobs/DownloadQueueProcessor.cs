@@ -23,7 +23,7 @@ internal sealed class DownloadQueueProcessor(
     DownloadFileStore fileStore,
     SonarrImporter sonarrImporter) : IJob
 {
-    public async Task Execute(IJobExecutionContext context)
+    public async ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken = default)
     {
         if (!settingsStore.Current.IsSonarrConfigured)
         {
@@ -32,8 +32,6 @@ internal sealed class DownloadQueueProcessor(
         }
 
         logger.LogDebug("Starting download queue processor job");
-
-        CancellationToken cancellationToken = context.CancellationToken;
 
         // The outcomeWrite token is CancellationToken.None so that genuine ffmpeg/move failure
         // writes succeed even when the scheduler is concurrently shutting down — a cancelled save

@@ -67,7 +67,7 @@ public sealed class ExceptionHandling
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _notifier.Items.ShouldBeEmpty();
@@ -94,7 +94,7 @@ public sealed class ExceptionHandling
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
         // Act
-        await sut.Execute(_context);
+        await sut.Execute(_context, TestContext.Current.CancellationToken);
 
         // Assert
         _notifier.Items.ShouldBeEmpty();
