@@ -260,7 +260,10 @@ internal sealed class GetDashboardHandler(
         DateTimeOffset now = timeProvider.GetUtcNow();
         TimeSpan elapsed = now - (lastCompletedAt ?? programRefreshNotifier.StartedAt);
         TimeSpan threshold = TimeSpan.FromHours(RefreshSchedule.ProgramRefreshIntervalHours * 2);
-        bool isStalled = elapsed > threshold;
+
+        // Strict >: elapsed exactly equal to threshold is "within" per AC#4 (LastCompletedAt within
+        // that threshold → no stall warning), so the boundary itself must not stall.
+        TimeSpan? stalledFor = elapsed > threshold ? elapsed : null;
 
         return new EpisodeSyncCardInfo(
             isRunning,
@@ -271,8 +274,7 @@ internal sealed class GetDashboardHandler(
             programRefreshNotifier.LastRunDuration,
             programRefreshNotifier.LastRunTotal,
             nextFireTimeUtc,
-            isStalled,
-            isStalled ? elapsed : null);
+            stalledFor);
     }
 
     private async Task<TvdbSeriesLookupCardInfo> GetTvdbSeriesLookupCardInfoAsync(CancellationToken cancellationToken)

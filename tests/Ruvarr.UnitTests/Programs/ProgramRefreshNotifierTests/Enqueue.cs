@@ -11,7 +11,7 @@ public sealed class Enqueue
     public void AllowsLease()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.Enqueue(1, "Program");
@@ -25,7 +25,7 @@ public sealed class Enqueue
     public void DeduplicatesById()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program");
 
         // Act
@@ -42,7 +42,7 @@ public sealed class Enqueue
     public void AllowsReEnqueueAfterLeaseDisposed()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program");
         IQueueLease lease = sut.TryLeaseNext().ShouldNotBeNull();
         lease.Dispose();

@@ -444,7 +444,6 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: TimeSpan.FromMinutes(4),
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                IsStalled: false,
                 StalledFor: null));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -479,7 +478,6 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                IsStalled: false,
                 StalledFor: null));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -506,7 +504,6 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: TimeSpan.FromSeconds(45),
                 LastRunTotal: 40,
                 NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero),
-                IsStalled: false,
                 StalledFor: null));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -542,7 +539,6 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                IsStalled: false,
                 StalledFor: null));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -571,7 +567,6 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                IsStalled: true,
                 StalledFor: stalledFor));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -604,7 +599,6 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                IsStalled: false,
                 StalledFor: null));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -631,7 +625,6 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: TimeSpan.FromMinutes(10),
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                IsStalled: true,
                 StalledFor: TimeSpan.FromHours(3)));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -796,7 +789,6 @@ public sealed class DashboardTests : BunitContext
         LastRunDuration: null,
         LastRunTotal: null,
         NextFireTimeUtc: null,
-        IsStalled: false,
         StalledFor: null);
 
     private static readonly TvdbSeriesLookupCardInfo DefaultTvdbSeriesLookupCard = new(

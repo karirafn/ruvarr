@@ -23,7 +23,7 @@ public sealed class IgnoredProgramsFilter
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
-    private readonly ProgramRefreshNotifier _syncQueue = new();
+    private readonly ProgramRefreshNotifier _syncQueue = new(TimeProvider.System);
     private readonly TvdbSeriesLookupNotifier _tvdbLookupQueue = new();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 

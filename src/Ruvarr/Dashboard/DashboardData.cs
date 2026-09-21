@@ -57,7 +57,6 @@ internal sealed record EpisodeSyncCardInfo(
     TimeSpan? LastRunDuration,
     int? LastRunTotal,
     DateTimeOffset? NextFireTimeUtc,
-    bool IsStalled,
     TimeSpan? StalledFor);
 
 internal sealed record DownloadCardInfo(

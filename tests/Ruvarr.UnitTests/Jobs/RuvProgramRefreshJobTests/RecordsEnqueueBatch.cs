@@ -24,7 +24,7 @@ public sealed class RecordsEnqueueBatch
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
-    private readonly ProgramRefreshNotifier _syncQueue = new();
+    private readonly ProgramRefreshNotifier _syncQueue = new(TimeProvider.System);
     private readonly TvdbSeriesLookupNotifier _tvdbLookupQueue = new();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 
@@ -48,7 +48,7 @@ public sealed class RecordsEnqueueBatch
         _settingsStore,
         _syncQueue,
         _tvdbLookupQueue,
-        new DomainEventBroadcaster());
+        Substitute.For<IDomainEventBroadcaster>());
 
     private static RuvTvProgram CreateRuvTvProgram(int id, bool multipleEpisodes = true) => new(
         LastUpdated: DateTimeOffset.UtcNow,
@@ -140,6 +140,31 @@ public sealed class RecordsEnqueueBatch
 
         // Assert — 2 from API + 1 known = 3 total enqueued
         _syncQueue.LastEnqueuedCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task WhenProgramAppearsInBothApiAndKnownSet_CountsOnce()
+    {
+        // Arrange — program id 1 is in both the API response AND the known programs in the database.
+        // The queue de-dupes on Enqueue, so the reported count must reflect distinct programs.
+        using RuvarrDbContext dbContext = CreateDbContext();
+
+        RuvProgram knownProgram = new RuvProgramBuilder().WithRuvId(1).WithName("Shared Show").WithMultipleEpisodes().Build();
+        dbContext.Set<RuvProgram>().Add(knownProgram);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
+            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
+                [CreateRuvTvProgram(1)])]);
+        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
+
+        RuvProgramRefreshJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert — program id 1 was fed from both passes but counts as one distinct enqueue
+        _syncQueue.LastEnqueuedCount.ShouldBe(1);
     }
 
     [Fact]

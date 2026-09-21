@@ -11,7 +11,7 @@ public sealed class MarkProcessing
     public void SetsProcessingStatus()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
 
         // Act

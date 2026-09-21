@@ -45,11 +45,13 @@ internal sealed class RuvProgramRefreshJob(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        int enqueuedFromApi = EnqueueProgramRefreshes(programs);
+        HashSet<int> enqueuedIds = [];
 
-        int enqueuedFromKnown = await EnqueueKnownProgramRefreshes(apiRuvIds, cancellationToken);
+        EnqueueProgramRefreshes(programs, enqueuedIds);
 
-        syncQueue.RecordEnqueueBatch(enqueuedFromApi + enqueuedFromKnown);
+        await EnqueueKnownProgramRefreshes(apiRuvIds, enqueuedIds, cancellationToken);
+
+        syncQueue.RecordEnqueueBatch(enqueuedIds.Count);
 
         await EnqueueUnmatchedProgramsForLookup(cancellationToken);
 
@@ -145,7 +147,7 @@ internal sealed class RuvProgramRefreshJob(
         }
     }
 
-    private int EnqueueProgramRefreshes(List<RuvTvProgram> programs)
+    private void EnqueueProgramRefreshes(List<RuvTvProgram> programs, HashSet<int> enqueuedIds)
     {
 #pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
         programs.Sort((a, b) => string.Compare(a.Title, b.Title, new CultureInfo("is-IS"), CompareOptions.None));
@@ -156,14 +158,13 @@ internal sealed class RuvProgramRefreshJob(
         foreach (RuvTvProgram program in multiEpisodePrograms)
         {
             syncQueue.Enqueue(program.Id, program.Title);
+            enqueuedIds.Add(program.Id);
         }
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
-
-        return multiEpisodePrograms.Count;
     }
 
-    private async Task<int> EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds, CancellationToken cancellationToken)
+    private async Task EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds, HashSet<int> enqueuedIds, CancellationToken cancellationToken)
     {
         List<RuvProgram> knownPrograms = await dbContext.Set<RuvProgram>()
             .IgnoreAutoIncludes()
@@ -174,11 +175,10 @@ internal sealed class RuvProgramRefreshJob(
         foreach (RuvProgram program in knownPrograms)
         {
             syncQueue.Enqueue(program.RuvId, program.Name);
+            enqueuedIds.Add(program.RuvId);
         }
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
-
-        return knownPrograms.Count;
     }
 
     private async Task EnqueueUnmatchedProgramsForLookup(CancellationToken cancellationToken)

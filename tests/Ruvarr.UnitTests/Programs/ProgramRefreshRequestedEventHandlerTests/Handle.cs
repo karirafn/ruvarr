@@ -11,7 +11,7 @@ namespace Ruvarr.UnitTests.Programs.ProgramRefreshRequestedEventHandlerTests;
 
 public sealed class Handle
 {
-    private readonly ProgramRefreshNotifier _programRefreshNotifier = new();
+    private readonly ProgramRefreshNotifier _programRefreshNotifier = new(TimeProvider.System);
     private readonly TvdbSeriesLookupNotifier _tvdbSeriesLookupNotifier = new();
     private readonly TvdbEpisodeLookupNotifier _tvdbEpisodeLookupNotifier = new();
     private readonly DomainEventBroadcaster _broadcaster = new();

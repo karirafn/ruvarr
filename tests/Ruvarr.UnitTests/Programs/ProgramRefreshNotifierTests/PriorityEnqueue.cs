@@ -12,7 +12,7 @@ public sealed class PriorityEnqueue
     public void PlacesItemAtFrontOfItems()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
 
@@ -31,7 +31,7 @@ public sealed class PriorityEnqueue
     public void MovesExistingQueuedItemToFront()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         sut.Enqueue(3, "Program C");
@@ -51,7 +51,7 @@ public sealed class PriorityEnqueue
     public void WhenItemIsProcessing_RecordsReRefreshRequestWithoutDisturbingInFlightPass()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         while (sut.TryLeaseNext() is IQueueLease drained)
@@ -79,7 +79,7 @@ public sealed class PriorityEnqueue
     public void WhenItemIsProcessing_RepeatedPriorityEnqueueIsIdempotent()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         while (sut.TryLeaseNext() is IQueueLease drained)
         {
@@ -110,7 +110,7 @@ public sealed class PriorityEnqueue
     public void StandardEnqueueIsNoOpForPriorityQueuedItem()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.PriorityEnqueue(1, "Program A");
 
         // Act
@@ -125,7 +125,7 @@ public sealed class PriorityEnqueue
     public void ClearsReadFlagSoItemCanBeLeasedAgain()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         using IQueueLease firstLease = sut.TryLeaseNext().ShouldNotBeNull();
 
@@ -141,7 +141,7 @@ public sealed class PriorityEnqueue
     public void LeaseOrderRespectsPriority()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         sut.PriorityEnqueue(3, "Program C");

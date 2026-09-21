@@ -106,7 +106,7 @@ else
             }
         </div>
 
-        @if (_data.EpisodeSync.IsStalled && _data.EpisodeSync.StalledFor is not null)
+        @if (_data.EpisodeSync.StalledFor is not null)
         {
             <div class="episode-sync-card__stall" role="alert">
                 <Icon Type="IconType.Warning" Class="icon episode-sync-card__stall-icon" />
@@ -132,7 +132,7 @@ else
                     <span class="episode-sync-card__current">@_data.EpisodeSync.CurrentProgram</span>
                 }
                 @{ TimeSpan? eta = GetEta(_data.EpisodeSync); }
-                @if (eta is not null && !_data.EpisodeSync.IsStalled)
+                @if (eta is not null && _data.EpisodeSync.StalledFor is null)
                 {
                     <span class="episode-sync-card__eta">ETA @FormatDuration(eta.Value)</span>
                 }
