@@ -76,9 +76,41 @@ public sealed class ExceptionHandling
     }
 
     [Fact]
+    public async Task WhenHttpClientTimesOut_MarksComplete()
+    {
+        // Arrange
+        using CancellationTokenSource cts = new();
+        using RuvarrDbContext dbContext = CreateDbContext();
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(3)
+            .WithName("Test Program")
+            .WithForeignName(null)
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _tvdb.SearchAsync(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int?>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("HttpClient timeout"));
+        _lookupQueue.Enqueue(3, program.Name);
+        _lookupQueue.Items.ShouldHaveSingleItem();
+        TvdbSeriesLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context, cts.Token);
+
+        // Assert
+        _lookupQueue.Items.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task WhenCancelled_PropagatesOperationCanceledException()
     {
         // Arrange
+        using CancellationTokenSource cts = new();
         using RuvarrDbContext dbContext = CreateDbContext();
         RuvProgram program = new RuvProgramBuilder()
             .WithRuvId(2)
@@ -96,9 +128,10 @@ public sealed class ExceptionHandling
             .ThrowsAsync(new OperationCanceledException());
         _lookupQueue.Enqueue(2, program.Name);
         TvdbSeriesLookupJob sut = CreateJob(dbContext);
+        await cts.CancelAsync();
 
         // Act
-        Func<Task> act = async () => await sut.Execute(_context, TestContext.Current.CancellationToken);
+        Func<Task> act = async () => await sut.Execute(_context, cts.Token);
 
         // Assert
         await Should.ThrowAsync<OperationCanceledException>(act);

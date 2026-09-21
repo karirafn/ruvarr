@@ -101,9 +101,36 @@ public sealed class ExceptionHandling
     }
 
     [Fact]
+    public async Task WhenHttpClientTimesOut_MarksComplete()
+    {
+        // Arrange
+        using CancellationTokenSource cts = new();
+        using RuvarrDbContext dbContext = CreateDbContext();
+        TvdbSeries series = new TvdbSeriesBuilder().WithId(4000).Build();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(4).Build();
+        program.TryAddEpisode("ep0004", new Uri("http://test.com"), "Episode 4", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.MatchTvdb(series);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _tvdb.GetSeriesAsync(4000, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("HttpClient timeout"));
+        _notifier.Enqueue(4, program.Name);
+        _notifier.Items.ShouldHaveSingleItem();
+        TvdbEpisodeLookupJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context, cts.Token);
+
+        // Assert
+        _notifier.Items.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task WhenCancelled_PropagatesOperationCanceledException()
     {
         // Arrange
+        using CancellationTokenSource cts = new();
         using RuvarrDbContext dbContext = CreateDbContext();
         TvdbSeries series = new TvdbSeriesBuilder().WithId(3000).Build();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(3).Build();
@@ -116,9 +143,10 @@ public sealed class ExceptionHandling
             .ThrowsAsync(new OperationCanceledException());
         _notifier.Enqueue(3, program.Name);
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
+        await cts.CancelAsync();
 
         // Act
-        Func<Task> act = async () => await sut.Execute(_context, TestContext.Current.CancellationToken);
+        Func<Task> act = async () => await sut.Execute(_context, cts.Token);
 
         // Assert
         await Should.ThrowAsync<OperationCanceledException>(act);
