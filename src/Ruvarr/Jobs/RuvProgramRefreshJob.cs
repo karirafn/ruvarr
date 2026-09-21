@@ -45,9 +45,16 @@ internal sealed class RuvProgramRefreshJob(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        EnqueueProgramRefreshes(programs);
+        HashSet<int> enqueuedIds = [];
 
-        await EnqueueKnownProgramRefreshes(apiRuvIds, cancellationToken);
+        EnqueueProgramRefreshes(programs, enqueuedIds);
+
+        await EnqueueKnownProgramRefreshes(apiRuvIds, enqueuedIds, cancellationToken);
+
+        // enqueuedIds is the authoritative count of distinct programs enqueued this run.
+        // It stays correct even if the SQL exclusion filter in EnqueueKnownProgramRefreshes
+        // is later changed or removed: a program fed by both passes is counted once.
+        syncQueue.RecordEnqueueBatch(enqueuedIds.Count);
 
         await EnqueueUnmatchedProgramsForLookup(cancellationToken);
 
@@ -143,20 +150,24 @@ internal sealed class RuvProgramRefreshJob(
         }
     }
 
-    private void EnqueueProgramRefreshes(List<RuvTvProgram> programs)
+    private void EnqueueProgramRefreshes(List<RuvTvProgram> programs, HashSet<int> enqueuedIds)
     {
 #pragma warning disable CA1309 // Culture-sensitive comparison is intentional for Icelandic alphabetical ordering
         programs.Sort((a, b) => string.Compare(a.Title, b.Title, new CultureInfo("is-IS"), CompareOptions.None));
 #pragma warning restore CA1309
 
-        foreach (RuvTvProgram program in programs.Where(x => x.MultipleEpisodes))
+        List<RuvTvProgram> multiEpisodePrograms = [.. programs.Where(x => x.MultipleEpisodes)];
+
+        foreach (RuvTvProgram program in multiEpisodePrograms)
         {
             syncQueue.Enqueue(program.Id, program.Title);
+            enqueuedIds.Add(program.Id);
         }
+
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
     }
 
-    private async Task EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds, CancellationToken cancellationToken)
+    private async Task EnqueueKnownProgramRefreshes(HashSet<int> apiRuvIds, HashSet<int> enqueuedIds, CancellationToken cancellationToken)
     {
         List<RuvProgram> knownPrograms = await dbContext.Set<RuvProgram>()
             .IgnoreAutoIncludes()
@@ -167,6 +178,7 @@ internal sealed class RuvProgramRefreshJob(
         foreach (RuvProgram program in knownPrograms)
         {
             syncQueue.Enqueue(program.RuvId, program.Name);
+            enqueuedIds.Add(program.RuvId);
         }
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());

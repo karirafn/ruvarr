@@ -4,8 +4,10 @@ namespace Ruvarr.Abstractions;
 
 public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSummary
 {
+    private readonly record struct QueueEntry(TItem Item, LinkedListNode<int> Node, bool RefreshAgain);
+
     private readonly Lock _lock = new();
-    private readonly Dictionary<int, (TItem Item, LinkedListNode<int> Node)> _items = [];
+    private readonly Dictionary<int, QueueEntry> _items = [];
     private readonly LinkedList<int> _order = new();
     private readonly HashSet<int> _read = [];
 
@@ -13,13 +15,13 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
     {
         lock (_lock)
         {
-            if (_items.ContainsKey(ruvId))
+            if (_items.TryGetValue(ruvId, out _))
             {
                 return;
             }
 
             LinkedListNode<int> node = _order.AddLast(ruvId);
-            _items[ruvId] = (CreatePending(ruvId, programName), node);
+            _items[ruvId] = new QueueEntry(CreatePending(ruvId, programName), node, false);
         }
     }
 
@@ -27,22 +29,25 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
     {
         lock (_lock)
         {
-            if (_items.TryGetValue(ruvId, out (TItem Item, LinkedListNode<int> Node) entry))
+            if (_items.TryGetValue(ruvId, out QueueEntry entry))
             {
                 if (entry.Item.IsProcessing)
                 {
+                    // Record a pending re-refresh; do not disturb the in-flight pass.
+                    // The flag is a bool so N calls record exactly one follow-up.
+                    _items[ruvId] = new QueueEntry(entry.Item, entry.Node, true);
                     return;
                 }
 
                 _order.Remove(entry.Node);
                 LinkedListNode<int> node = _order.AddFirst(ruvId);
-                _items[ruvId] = (entry.Item, node);
+                _items[ruvId] = new QueueEntry(entry.Item, node, false);
                 _read.Remove(ruvId);
                 return;
             }
 
             LinkedListNode<int> newNode = _order.AddFirst(ruvId);
-            _items[ruvId] = (CreatePending(ruvId, programName), newNode);
+            _items[ruvId] = new QueueEntry(CreatePending(ruvId, programName), newNode, false);
         }
     }
 
@@ -50,9 +55,9 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
     {
         lock (_lock)
         {
-            if (_items.TryGetValue(ruvId, out (TItem Item, LinkedListNode<int> Node) entry))
+            if (_items.TryGetValue(ruvId, out QueueEntry entry))
             {
-                _items[ruvId] = (WithProcessingStatus(entry.Item), entry.Node);
+                _items[ruvId] = new QueueEntry(WithProcessingStatus(entry.Item), entry.Node, entry.RefreshAgain);
             }
         }
     }
@@ -61,9 +66,17 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
     {
         lock (_lock)
         {
-            if (_items.Remove(ruvId, out (TItem Item, LinkedListNode<int> Node) entry))
+            if (_items.Remove(ruvId, out QueueEntry entry))
             {
                 _order.Remove(entry.Node);
+
+                if (entry.RefreshAgain)
+                {
+                    LinkedListNode<int> newNode = _order.AddFirst(ruvId);
+                    _items[ruvId] = new QueueEntry(CreatePending(ruvId, entry.Item.ProgramName), newNode, false);
+                    _read.Remove(ruvId);
+                    return;
+                }
             }
 
             _read.Remove(ruvId);
@@ -82,7 +95,7 @@ public abstract class QueueNotifier<TItem> where TItem : notnull, IQueueItemSumm
                 LinkedListNode<int>? current = _order.First;
                 while (current is not null)
                 {
-                    if (_items.TryGetValue(current.Value, out (TItem Item, LinkedListNode<int> Node) entry))
+                    if (_items.TryGetValue(current.Value, out QueueEntry entry))
                     {
                         if (entry.Item.IsProcessing)
                         {

@@ -7,6 +7,7 @@ internal sealed record DashboardData(
     DashboardStatistics Statistics,
     DashboardQueueStatus QueueStatus,
     ProgramRefreshCardInfo ProgramRefresh,
+    EpisodeSyncCardInfo EpisodeSync,
     TvdbSeriesLookupCardInfo TvdbSeriesLookup,
     TvdbEpisodeLookupCardInfo TvdbEpisodeLookup,
     DownloadCardInfo Download);
@@ -43,6 +44,11 @@ internal sealed record DashboardQueueInfo(
     string? ActiveItem);
 
 internal sealed record ProgramRefreshCardInfo(
+    DateTimeOffset? LastEnqueuedAt,
+    int? LastEnqueuedCount,
+    DateTimeOffset? NextFireTimeUtc);
+
+internal sealed record EpisodeSyncCardInfo(
     bool IsRunning,
     int Depth,
     int CompletedCount,
@@ -50,7 +56,8 @@ internal sealed record ProgramRefreshCardInfo(
     DateTimeOffset? LastCompletedAt,
     TimeSpan? LastRunDuration,
     int? LastRunTotal,
-    DateTimeOffset? NextFireTimeUtc);
+    DateTimeOffset? NextFireTimeUtc,
+    TimeSpan? StalledFor);
 
 internal sealed record DownloadCardInfo(
     bool IsDownloading,

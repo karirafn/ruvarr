@@ -223,6 +223,7 @@
     border-bottom: none;
 }
 
+/* Program Refresh card — slimmed (enqueue activity only) */
 .refresh-card {
     background-color: #2a2a2a;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -254,77 +255,20 @@
     border-radius: 4px;
 }
 
-.refresh-card__badge--running {
-    color: #60a5fa;
-    background: rgba(96, 165, 250, 0.12);
-}
-
 .refresh-card__badge--idle {
     color: rgba(255, 255, 255, 0.75);
     background: rgba(255, 255, 255, 0.06);
 }
 
-.refresh-card__progress-track {
-    height: 6px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 0.75rem;
-}
-
-.refresh-card__progress-bar {
-    height: 100%;
-    border-radius: 3px;
-    background: repeating-linear-gradient(
-        -45deg,
-        #60a5fa,
-        #60a5fa 8px,
-        #3b82f6 8px,
-        #3b82f6 16px
-    );
-    background-size: 22.63px 100%;
-    animation: progress-stripe 0.8s linear infinite;
-    transition: width 0.3s ease;
-}
-
-@keyframes progress-stripe {
-    from { background-position: 0 0; }
-    to { background-position: 22.63px 0; }
-}
-
-.refresh-card__running-details {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    font-size: 0.85rem;
-}
-
-.refresh-card__count {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: #60a5fa;
-}
-
-.refresh-card__current {
-    color: rgba(255, 255, 255, 0.75);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-}
-
-.refresh-card__eta {
-    color: rgba(255, 255, 255, 0.45);
-    margin-left: auto;
-    white-space: nowrap;
-}
-
 .refresh-card__details {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
     margin: 0;
     padding: 0;
+}
+
+.refresh-card__details--compact {
+    grid-template-columns: repeat(3, 1fr);
 }
 
 .refresh-card__detail {
@@ -341,6 +285,159 @@
 }
 
 .refresh-card__detail dd {
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
+/* Episode Sync card — lifecycle view + stall banner */
+.episode-sync-card {
+    background-color: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.episode-sync-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.episode-sync-card__header .dashboard-section-title {
+    margin: 0;
+}
+
+.episode-sync-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.episode-sync-card__badge--running {
+    color: #60a5fa;
+    background: rgba(96, 165, 250, 0.12);
+}
+
+.episode-sync-card__badge--idle {
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Stall banner — the only new visual state */
+.episode-sync-card__stall {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    border-left: 3px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    color: #fbbf24;
+}
+
+.episode-sync-card__stall-icon {
+    flex: 0 0 auto;
+}
+
+.episode-sync-card__stall-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Running view */
+.episode-sync-card__progress-track {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+
+.episode-sync-card__progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: repeating-linear-gradient(
+        -45deg,
+        #60a5fa,
+        #60a5fa 8px,
+        #3b82f6 8px,
+        #3b82f6 16px
+    );
+    background-size: 22.63px 100%;
+    animation: episode-sync-stripe 0.8s linear infinite;
+    transition: width 0.3s ease;
+}
+
+@keyframes episode-sync-stripe {
+    from { background-position: 0 0; }
+    to { background-position: 22.63px 0; }
+}
+
+.episode-sync-card__progress-bar--stalled {
+    animation: none;
+}
+
+.episode-sync-card__running-details {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+}
+
+.episode-sync-card__count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: #60a5fa;
+}
+
+.episode-sync-card__current {
+    color: rgba(255, 255, 255, 0.75);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.episode-sync-card__eta {
+    color: rgba(255, 255, 255, 0.65);
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+/* Idle detail grid */
+.episode-sync-card__details {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+}
+
+.episode-sync-card__detail {
+    text-align: center;
+}
+
+.episode-sync-card__detail dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 0.25rem;
+}
+
+.episode-sync-card__detail dd {
     font-size: 0.9rem;
     font-variant-numeric: tabular-nums;
     margin: 0;
@@ -492,8 +589,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .refresh-card__progress-bar {
+    .episode-sync-card__progress-bar {
         animation: none;
+        transition: none;
     }
 
     .download-card__progress-bar--indeterminate {
@@ -506,7 +604,15 @@
         grid-template-columns: repeat(2, 1fr);
     }
 
-    .refresh-card__details {
+    .refresh-card__details--compact {
+        grid-template-columns: 1fr;
+    }
+
+    .episode-sync-card__running-details {
+        flex-wrap: wrap;
+    }
+
+    .episode-sync-card__details {
         grid-template-columns: repeat(2, 1fr);
     }
 

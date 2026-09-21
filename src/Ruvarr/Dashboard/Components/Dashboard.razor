@@ -65,61 +65,102 @@ else
     <section class="refresh-card" aria-label="Program Refresh">
         <div class="refresh-card__header">
             <h2 class="dashboard-section-title">Program Refresh</h2>
-            @if (_data.ProgramRefresh.IsRunning)
+            <span class="refresh-card__badge refresh-card__badge--idle">
+                <Icon Type="IconType.Refresh" Class="icon" />
+                Scheduled
+            </span>
+        </div>
+
+        <dl class="refresh-card__details refresh-card__details--compact">
+            <div class="refresh-card__detail">
+                <dt>Last enqueued</dt>
+                <dd>@FormatTimestamp(_data.ProgramRefresh.LastEnqueuedAt)</dd>
+            </div>
+            <div class="refresh-card__detail">
+                <dt>Programs queued</dt>
+                <dd>@(_data.ProgramRefresh.LastEnqueuedCount?.ToString() ?? "—")</dd>
+            </div>
+            <div class="refresh-card__detail">
+                <dt>Next run</dt>
+                <dd>@FormatNextRun(_data.ProgramRefresh.NextFireTimeUtc)</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="episode-sync-card" aria-label="Episode Sync">
+        <div class="episode-sync-card__header">
+            <h2 class="dashboard-section-title">Episode Sync</h2>
+            @if (_data.EpisodeSync.IsRunning)
             {
-                <span class="refresh-card__badge refresh-card__badge--running">
+                <span class="episode-sync-card__badge episode-sync-card__badge--running">
                     <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
                     Running
                 </span>
             }
             else
             {
-                <span class="refresh-card__badge refresh-card__badge--idle">
+                <span class="episode-sync-card__badge episode-sync-card__badge--idle">
                     <Icon Type="IconType.Clock" Class="icon" />
                     Idle
                 </span>
             }
         </div>
 
-        @if (_data.ProgramRefresh.IsRunning)
+        <div role="alert">
+            @if (_data.EpisodeSync.StalledFor is not null)
+            {
+                <div class="episode-sync-card__stall">
+                    <Icon Type="IconType.Warning" Class="icon episode-sync-card__stall-icon" />
+                    <span class="episode-sync-card__stall-text">
+                        Stalled &mdash; no completion for @FormatDuration(_data.EpisodeSync.StalledFor.Value)
+                    </span>
+                </div>
+            }
+        </div>
+
+        @if (_data.EpisodeSync.IsRunning)
         {
-            <div class="refresh-card__progress-track" role="progressbar"
-                 aria-label="Program refresh progress"
-                 aria-valuenow="@((int)GetProgressPercent(_data.ProgramRefresh))"
-                 aria-valuemin="0" aria-valuemax="100">
-                <div class="refresh-card__progress-bar" style="width:@(GetProgressPercent(_data.ProgramRefresh).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+            int completed = _data.EpisodeSync.CompletedCount;
+            int total = completed + _data.EpisodeSync.Depth;
+            <div class="episode-sync-card__progress-track" role="progressbar"
+                 aria-label="Episode sync progress"
+                 aria-valuenow="@((int)GetProgressPercent(_data.EpisodeSync))"
+                 aria-valuemin="0" aria-valuemax="100"
+                 aria-valuetext="@(_data.EpisodeSync.StalledFor is not null ? $"Stalled — {completed} / {total} episodes" : $"{completed} / {total} episodes")">
+                <div class="episode-sync-card__progress-bar @(_data.EpisodeSync.StalledFor is not null ? "episode-sync-card__progress-bar--stalled" : "")"
+                     style="width:@(GetProgressPercent(_data.EpisodeSync).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
             </div>
-            <div class="refresh-card__running-details">
-                <span class="refresh-card__count">@_data.ProgramRefresh.CompletedCount / @(_data.ProgramRefresh.CompletedCount + _data.ProgramRefresh.Depth)</span>
-                @if (_data.ProgramRefresh.CurrentProgram is not null)
+            <div class="episode-sync-card__running-details">
+                <span class="episode-sync-card__count">@completed / @total</span>
+                @if (_data.EpisodeSync.CurrentProgram is not null)
                 {
-                    <span class="refresh-card__current">@_data.ProgramRefresh.CurrentProgram</span>
+                    <span class="episode-sync-card__current">@_data.EpisodeSync.CurrentProgram</span>
                 }
-                @{ TimeSpan? eta = GetEta(_data.ProgramRefresh); }
-                @if (eta is not null)
+                @{ TimeSpan? eta = GetEta(_data.EpisodeSync); }
+                @if (eta is not null && _data.EpisodeSync.StalledFor is null)
                 {
-                    <span class="refresh-card__eta">ETA @FormatDuration(eta.Value)</span>
+                    <span class="episode-sync-card__eta">ETA @FormatDuration(eta.Value)</span>
                 }
             </div>
         }
         else
         {
-            <dl class="refresh-card__details">
-                <div class="refresh-card__detail">
+            <dl class="episode-sync-card__details">
+                <div class="episode-sync-card__detail">
                     <dt>Last completed</dt>
-                    <dd>@FormatTimestamp(_data.ProgramRefresh.LastCompletedAt)</dd>
+                    <dd>@FormatTimestamp(_data.EpisodeSync.LastCompletedAt)</dd>
                 </div>
-                <div class="refresh-card__detail">
+                <div class="episode-sync-card__detail">
                     <dt>Duration</dt>
-                    <dd>@(_data.ProgramRefresh.LastRunDuration is not null ? FormatDuration(_data.ProgramRefresh.LastRunDuration.Value) : "—")</dd>
+                    <dd>@(_data.EpisodeSync.LastRunDuration is not null ? FormatDuration(_data.EpisodeSync.LastRunDuration.Value) : "—")</dd>
                 </div>
-                <div class="refresh-card__detail">
-                    <dt>Programs</dt>
-                    <dd>@(_data.ProgramRefresh.LastRunTotal?.ToString() ?? "—")</dd>
+                <div class="episode-sync-card__detail">
+                    <dt>Episodes</dt>
+                    <dd>@(_data.EpisodeSync.LastRunTotal?.ToString() ?? "—")</dd>
                 </div>
-                <div class="refresh-card__detail">
+                <div class="episode-sync-card__detail">
                     <dt>Next run</dt>
-                    <dd>@FormatNextRun(_data.ProgramRefresh.NextFireTimeUtc)</dd>
+                    <dd>@FormatNextRun(_data.EpisodeSync.NextFireTimeUtc)</dd>
                 </div>
             </dl>
         }
@@ -495,13 +536,13 @@ else
         _cts.Dispose();
     }
 
-    private static double GetProgressPercent(ProgramRefreshCardInfo info)
+    private static double GetProgressPercent(EpisodeSyncCardInfo info)
     {
         int total = info.CompletedCount + info.Depth;
         return total == 0 ? 0 : (double)info.CompletedCount / total * 100;
     }
 
-    private static TimeSpan? GetEta(ProgramRefreshCardInfo info)
+    private static TimeSpan? GetEta(EpisodeSyncCardInfo info)
     {
         if (!info.IsRunning || info.LastRunDuration is null)
         {
@@ -571,5 +612,5 @@ else
         ts?.LocalDateTime.ToString("yyyy-MM-dd HH:mm") ?? "Never";
 
     private static string FormatNextRun(DateTimeOffset? ts) =>
-        ts?.LocalDateTime.ToString("yyyy-MM-dd HH:mm") ?? "\u2014";
+        ts?.LocalDateTime.ToString("yyyy-MM-dd HH:mm") ?? "—";
 }

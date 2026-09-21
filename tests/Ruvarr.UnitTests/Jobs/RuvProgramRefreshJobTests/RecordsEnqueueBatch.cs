@@ -12,14 +12,15 @@ using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
-using Ruvarr.TvdbSeriesLookup.Notifiers;
 using Ruvarr.Testing.Builders;
+using Ruvarr.Testing.Time;
+using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.RuvProgramRefreshJobTests;
 
-public sealed class KnownProgramRefreshEnqueue
+public sealed class RecordsEnqueueBatch
 {
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
@@ -28,10 +29,11 @@ public sealed class KnownProgramRefreshEnqueue
     private readonly TvdbSeriesLookupNotifier _tvdbLookupQueue = new();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
 
-    public KnownProgramRefreshEnqueue()
+    public RecordsEnqueueBatch()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings { IgnoredChannels = [] });
+        _ruv.GetKidsTvAsync(Arg.Any<CancellationToken>()).Returns((RuvFeaturedTv?)null);
     }
 
     private RuvarrDbContext CreateDbContext() => new(
@@ -40,14 +42,17 @@ public sealed class KnownProgramRefreshEnqueue
             .Options,
         _serviceProvider);
 
-    private RuvProgramRefreshJob CreateJob(RuvarrDbContext dbContext) => new(
+    private RuvProgramRefreshJob CreateJob(RuvarrDbContext dbContext) =>
+        CreateJob(dbContext, _syncQueue);
+
+    private RuvProgramRefreshJob CreateJob(RuvarrDbContext dbContext, ProgramRefreshNotifier syncQueue) => new(
         NullLogger<RuvProgramRefreshJob>.Instance,
         _ruv,
         dbContext,
         _settingsStore,
-        _syncQueue,
+        syncQueue,
         _tvdbLookupQueue,
-        new DomainEventBroadcaster());
+        Substitute.For<IDomainEventBroadcaster>());
 
     private static RuvTvProgram CreateRuvTvProgram(int id, bool multipleEpisodes = true) => new(
         LastUpdated: DateTimeOffset.UtcNow,
@@ -75,100 +80,116 @@ public sealed class KnownProgramRefreshEnqueue
         WebPlayerUrl: new Uri("http://example.com/player"));
 
     [Fact]
-    public async Task EnqueuesDbProgram_NotInApiResponse_WhenHasMultipleEpisodesIsTrue()
+    public async Task WhenProgramsEnqueued_SetsLastEnqueuedCount()
+    {
+        // Arrange
+        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
+            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
+                [CreateRuvTvProgram(1), CreateRuvTvProgram(2)])]);
+        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
+
+        using RuvarrDbContext dbContext = CreateDbContext();
+        RuvProgramRefreshJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        _syncQueue.LastEnqueuedCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task WhenProgramsEnqueued_SetsLastEnqueuedAt()
+    {
+        // Arrange
+        DateTimeOffset fixedNow = new(2026, 9, 21, 12, 0, 0, TimeSpan.Zero);
+        ProgramRefreshNotifier syncQueue = new(new FixedTimeProvider(fixedNow));
+
+        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
+            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
+                [CreateRuvTvProgram(1)])]);
+        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
+
+        using RuvarrDbContext dbContext = CreateDbContext();
+        RuvProgramRefreshJob sut = CreateJob(dbContext, syncQueue);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert
+        syncQueue.LastEnqueuedAt.ShouldBe(fixedNow);
+    }
+
+    [Fact]
+    public async Task WhenApiAndKnownProgramsEnqueued_SumsTotal()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
+
+        // One known program not in API response
         RuvProgram knownProgram = new RuvProgramBuilder().WithRuvId(99).WithName("Known Show").WithMultipleEpisodes().Build();
+        dbContext.Set<RuvProgram>().Add(knownProgram);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Two programs from the API
+        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
+            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
+                [CreateRuvTvProgram(1), CreateRuvTvProgram(2)])]);
+        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
+
+        RuvProgramRefreshJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert — 2 from API + 1 known = 3 total enqueued
+        _syncQueue.LastEnqueuedCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task WhenProgramAppearsInBothApiAndKnownSet_CountsOnce()
+    {
+        // Arrange — program id 1 is in both the API response AND the known programs in the database.
+        // EnqueueKnownProgramRefreshes excludes ids already fetched from the API via a SQL filter,
+        // so the known-programs pass never sees id 1. The HashSet<int> distinct-count is a
+        // defence-in-depth guarantee: even if that filter were removed, a program appearing in
+        // both passes would still be counted once.
+        using RuvarrDbContext dbContext = CreateDbContext();
+
+        RuvProgram knownProgram = new RuvProgramBuilder().WithRuvId(1).WithName("Shared Show").WithMultipleEpisodes().Build();
         dbContext.Set<RuvProgram>().Add(knownProgram);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
             [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(id: 1)])]);
+                [CreateRuvTvProgram(1)])]);
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
-        _ruv.GetKidsTvAsync(Arg.Any<CancellationToken>()).Returns((RuvFeaturedTv?)null);
 
+        RuvProgramRefreshJob sut = CreateJob(dbContext);
+
+        // Act
+        await sut.Execute(_context);
+
+        // Assert — program id 1 was fed from both passes but counts as one distinct enqueue
+        _syncQueue.LastEnqueuedCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task WhenNoMultiEpisodePrograms_SetsCountToZero()
+    {
+        // Arrange
+        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
+            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
+                [CreateRuvTvProgram(1, multipleEpisodes: false)])]);
+        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
+
+        using RuvarrDbContext dbContext = CreateDbContext();
         RuvProgramRefreshJob sut = CreateJob(dbContext);
 
         // Act
         await sut.Execute(_context);
 
         // Assert
-        _syncQueue.Items.ShouldContain(x => x.RuvId == 99);
-    }
-
-    [Fact]
-    public async Task DoesNotDoubleEnqueue_WhenProgramIsInApiResponse()
-    {
-        // Arrange
-        using RuvarrDbContext dbContext = CreateDbContext();
-        RuvProgram existingProgram = new RuvProgramBuilder().WithRuvId(1).WithMultipleEpisodes().Build();
-        dbContext.Set<RuvProgram>().Add(existingProgram);
-        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(id: 1)])]);
-        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
-        _ruv.GetKidsTvAsync(Arg.Any<CancellationToken>()).Returns((RuvFeaturedTv?)null);
-
-        RuvProgramRefreshJob sut = CreateJob(dbContext);
-
-        // Act
-        await sut.Execute(_context);
-
-        // Assert — program 1 should appear exactly once in the queue
-        _syncQueue.Items.Count(x => x.RuvId == 1).ShouldBe(1);
-    }
-
-    [Fact]
-    public async Task SkipsPrograms_WhenHasMultipleEpisodesIsFalse()
-    {
-        // Arrange
-        using RuvarrDbContext dbContext = CreateDbContext();
-        RuvProgram singleEpisodeProgram = new RuvProgramBuilder().WithRuvId(99).WithName("Single Episode").WithMultipleEpisodes(false).Build();
-        dbContext.Set<RuvProgram>().Add(singleEpisodeProgram);
-        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(id: 1)])]);
-        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
-        _ruv.GetKidsTvAsync(Arg.Any<CancellationToken>()).Returns((RuvFeaturedTv?)null);
-
-        RuvProgramRefreshJob sut = CreateJob(dbContext);
-
-        // Act
-        await sut.Execute(_context);
-
-        // Assert
-        _syncQueue.Items.ShouldNotContain(x => x.RuvId == 99);
-    }
-
-    [Fact]
-    public async Task EnqueuesMultipleKnownPrograms()
-    {
-        // Arrange
-        using RuvarrDbContext dbContext = CreateDbContext();
-        RuvProgram known1 = new RuvProgramBuilder().WithRuvId(90).WithName("Known A").WithMultipleEpisodes().Build();
-        RuvProgram known2 = new RuvProgramBuilder().WithRuvId(91).WithName("Known B").WithMultipleEpisodes().Build();
-        dbContext.Set<RuvProgram>().AddRange(known1, known2);
-        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(id: 1)])]);
-        _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
-        _ruv.GetKidsTvAsync(Arg.Any<CancellationToken>()).Returns((RuvFeaturedTv?)null);
-
-        RuvProgramRefreshJob sut = CreateJob(dbContext);
-
-        // Act
-        await sut.Execute(_context);
-
-        // Assert
-        _syncQueue.Items.ShouldContain(x => x.RuvId == 90);
-        _syncQueue.Items.ShouldContain(x => x.RuvId == 91);
+        _syncQueue.LastEnqueuedCount.ShouldBe(0);
     }
 }

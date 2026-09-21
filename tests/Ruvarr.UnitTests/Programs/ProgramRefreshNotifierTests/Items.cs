@@ -12,7 +12,7 @@ public sealed class Items
     public void IsEmptyWhenNothingEnqueued()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         IReadOnlyList<ProgramRefreshQueueItemSummary> items = sut.Items;
@@ -25,7 +25,7 @@ public sealed class Items
     public void ContainsEnqueuedItemWithPendingStatus()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.Enqueue(1, "Program A");
@@ -41,7 +41,7 @@ public sealed class Items
     public void IsEmptyAfterLeaseDisposed()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         IQueueLease lease = sut.TryLeaseNext().ShouldNotBeNull();
 
@@ -56,7 +56,7 @@ public sealed class Items
     public void ReturnsPendingItemsInEnqueueOrder()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.Enqueue(2, "Program B");
@@ -73,7 +73,7 @@ public sealed class Items
     public void ReturnsProcessingItemBeforePendingItems()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
 

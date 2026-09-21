@@ -319,50 +319,16 @@ public sealed class DashboardTests : BunitContext
         section.QuerySelector(".empty-message")!.TextContent.ShouldBe("No unmatched episodes on monitored programs.");
     }
 
+    // ── Program Refresh card (slimmed) ─────────────────────────────────────────
+
     [Fact]
-    public void RendersProgramRefreshCard_WhenRunning()
+    public void RendersProgramRefreshCard_WhenScheduled_ShowsScheduledBadge()
     {
         // Arrange
         DashboardData data = CreateDashboardData(
             programRefresh: new ProgramRefreshCardInfo(
-                IsRunning: true,
-                Depth: 33,
-                CompletedCount: 12,
-                CurrentProgram: "Kastljós",
-                LastCompletedAt: null,
-                LastRunDuration: TimeSpan.FromMinutes(4),
-                LastRunTotal: null,
-                NextFireTimeUtc: null));
-        RegisterHandler(data);
-        RegisterBroadcaster();
-
-        // Act
-        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
-
-        // Assert
-        IElement section = cut.Find("section[aria-label='Program Refresh']");
-        section.QuerySelector(".refresh-card__badge--running").ShouldNotBeNull();
-        section.QuerySelector(".refresh-card__count")!.TextContent.ShouldBe("12 / 45");
-        section.QuerySelector(".refresh-card__current")!.TextContent.ShouldBe("Kastljós");
-        IElement progressBar = section.QuerySelector("[role='progressbar']")!;
-        progressBar.GetAttribute("aria-valuenow").ShouldBe("26");
-        progressBar.GetAttribute("aria-valuemin").ShouldBe("0");
-        progressBar.GetAttribute("aria-valuemax").ShouldBe("100");
-    }
-
-    [Fact]
-    public void RendersProgramRefreshCard_WhenIdle()
-    {
-        // Arrange
-        DashboardData data = CreateDashboardData(
-            programRefresh: new ProgramRefreshCardInfo(
-                IsRunning: false,
-                Depth: 0,
-                CompletedCount: 0,
-                CurrentProgram: null,
-                LastCompletedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
-                LastRunDuration: TimeSpan.FromSeconds(45),
-                LastRunTotal: 40,
+                LastEnqueuedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+                LastEnqueuedCount: 42,
                 NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero)));
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -372,11 +338,419 @@ public sealed class DashboardTests : BunitContext
 
         // Assert
         IElement section = cut.Find("section[aria-label='Program Refresh']");
-        section.QuerySelector(".refresh-card__badge--idle").ShouldNotBeNull();
-        IReadOnlyList<IElement> details = cut.FindAll(".refresh-card__detail dd");
-        details.Count.ShouldBe(4);
-        details[2].TextContent.ShouldBe("40");
+        IElement badge = section.QuerySelector(".refresh-card__badge--idle")!;
+        badge.ShouldNotBeNull();
+        badge.TextContent.Trim().ShouldContain("Scheduled");
     }
+
+    [Fact]
+    public void RendersProgramRefreshCard_ShowsThreeDetailLabels()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+                LastEnqueuedCount: 7,
+                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero)));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        List<IElement> dts = section.QuerySelectorAll(".refresh-card__detail dt").ToList();
+        dts.Count.ShouldBe(3);
+        dts[0].TextContent.Trim().ShouldBe("Last enqueued");
+        dts[1].TextContent.Trim().ShouldBe("Programs queued");
+        dts[2].TextContent.Trim().ShouldBe("Next run");
+    }
+
+    [Fact]
+    public void RendersProgramRefreshCard_ShowsEnqueueValues()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+                LastEnqueuedCount: 12,
+                NextFireTimeUtc: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        List<IElement> dds = section.QuerySelectorAll(".refresh-card__detail dd").ToList();
+        dds.Count.ShouldBe(3);
+        dds[1].TextContent.Trim().ShouldBe("12");
+        dds[2].TextContent.Trim().ShouldBe("—"); // em dash for null NextFireTimeUtc
+    }
+
+    [Fact]
+    public void RendersProgramRefreshCard_ShowsNever_WhenLastEnqueuedAtIsNull()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        List<IElement> dds = section.QuerySelectorAll(".refresh-card__detail dd").ToList();
+        dds[0].TextContent.Trim().ShouldBe("Never");
+        dds[1].TextContent.Trim().ShouldBe("—");
+    }
+
+    [Fact]
+    public void RendersProgramRefreshCard_AbsenceOfProgressTrack()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData();
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        section.QuerySelector(".refresh-card__progress-track").ShouldBeNull();
+    }
+
+    // ── Episode Sync card ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void RendersEpisodeSyncCard_WhenRunning()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: true,
+                Depth: 33,
+                CompletedCount: 12,
+                CurrentProgram: "Kastljós",
+                LastCompletedAt: null,
+                LastRunDuration: TimeSpan.FromMinutes(4),
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        section.QuerySelector(".episode-sync-card__badge--running").ShouldNotBeNull();
+        section.QuerySelector(".episode-sync-card__progress-track").ShouldNotBeNull();
+        IElement count = section.QuerySelector(".episode-sync-card__count")!;
+        count.ShouldNotBeNull();
+        count.TextContent.Trim().ShouldBe("12 / 45");
+        IElement progressBar = section.QuerySelector("[role='progressbar']")!;
+        progressBar.GetAttribute("aria-valuenow").ShouldBe("26");
+        progressBar.GetAttribute("aria-valuemin").ShouldBe("0");
+        progressBar.GetAttribute("aria-valuemax").ShouldBe("100");
+    }
+
+    [Fact]
+    public void RendersEpisodeSyncCard_WhenRunning_ShowsCurrentProgram()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: true,
+                Depth: 10,
+                CompletedCount: 5,
+                CurrentProgram: "Fréttir",
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        section.QuerySelector(".episode-sync-card__current")!.TextContent.Trim().ShouldBe("Fréttir");
+    }
+
+    [Fact]
+    public void RendersEpisodeSyncCard_WhenIdle()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: false,
+                Depth: 0,
+                CompletedCount: 0,
+                CurrentProgram: null,
+                LastCompletedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+                LastRunDuration: TimeSpan.FromSeconds(45),
+                LastRunTotal: 40,
+                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero),
+                StalledFor: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        section.QuerySelector(".episode-sync-card__badge--idle").ShouldNotBeNull();
+        section.QuerySelector(".episode-sync-card__progress-track").ShouldBeNull();
+        List<IElement> dts = section.QuerySelectorAll(".episode-sync-card__detail dt").ToList();
+        dts.Count.ShouldBe(4);
+        dts[0].TextContent.Trim().ShouldBe("Last completed");
+        dts[1].TextContent.Trim().ShouldBe("Duration");
+        dts[2].TextContent.Trim().ShouldBe("Episodes");
+        dts[3].TextContent.Trim().ShouldBe("Next run");
+        List<IElement> dds = section.QuerySelectorAll(".episode-sync-card__detail dd").ToList();
+        dds[2].TextContent.Trim().ShouldBe("40");
+    }
+
+    [Fact]
+    public void RendersEpisodeSyncCard_WhenIdle_ShowsNever_WhenLastCompletedAtIsNull()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: false,
+                Depth: 0,
+                CompletedCount: 0,
+                CurrentProgram: null,
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        List<IElement> dds = section.QuerySelectorAll(".episode-sync-card__detail dd").ToList();
+        dds[0].TextContent.Trim().ShouldBe("Never");
+    }
+
+    [Fact]
+    public void WhenStalled_StallBannerContainerPresentWithTextAndIcon()
+    {
+        // Arrange
+        TimeSpan stalledFor = TimeSpan.FromHours(3) + TimeSpan.FromMinutes(12);
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: false,
+                Depth: 0,
+                CompletedCount: 5,
+                CurrentProgram: null,
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: stalledFor));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert — live region container must be present; inner content shows stall text + icon
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        IElement alertContainer = section.QuerySelector("[role='alert']").ShouldNotBeNull();
+        alertContainer.QuerySelector(".episode-sync-card__stall-text").ShouldNotBeNull();
+        IElement stallText = alertContainer.QuerySelector(".episode-sync-card__stall-text")!;
+        stallText.TextContent.ShouldContain("Stalled");
+        stallText.TextContent.ShouldContain("no completion for");
+        stallText.TextContent.ShouldContain("3h 12m");
+        // Warning icon svg must be rendered inside the alert container
+        alertContainer.QuerySelector("svg").ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void WhenNotStalled_StallBannerContainerPresentButTextAndIconAbsent()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: false,
+                Depth: 0,
+                CompletedCount: 0,
+                CurrentProgram: null,
+                LastCompletedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert — live region container is permanently mounted (always in DOM for screen readers)
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        IElement alertContainer = section.QuerySelector("[role='alert']").ShouldNotBeNull();
+        // Inner content absent: no stall text or warning icon
+        alertContainer.QuerySelector(".episode-sync-card__stall-text").ShouldBeNull();
+        alertContainer.QuerySelector("svg").ShouldBeNull();
+    }
+
+    [Fact]
+    public void WhenRunning_ProgressBar_HasAriaValueText_WithEpisodeFraction()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: true,
+                Depth: 33,
+                CompletedCount: 12,
+                CurrentProgram: null,
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        IElement progressBar = section.QuerySelector("[role='progressbar']").ShouldNotBeNull();
+        progressBar.GetAttribute("aria-valuetext").ShouldBe("12 / 45 episodes");
+    }
+
+    [Fact]
+    public void WhenRunningAndStalled_ProgressBar_AriaValueText_HasStalledPrefix()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: true,
+                Depth: 20,
+                CompletedCount: 5,
+                CurrentProgram: null,
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: TimeSpan.FromHours(2)));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        IElement progressBar = section.QuerySelector("[role='progressbar']").ShouldNotBeNull();
+        progressBar.GetAttribute("aria-valuetext").ShouldBe("Stalled — 5 / 25 episodes");
+    }
+
+    [Fact]
+    public void WhenRunningAndStalled_ProgressBar_HasStalledModifierClass()
+    {
+        // Arrange — locks in #409: animated stripe must not convey motion while stalled
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: true,
+                Depth: 20,
+                CompletedCount: 5,
+                CurrentProgram: null,
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: TimeSpan.FromHours(2)));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        IElement bar = section.QuerySelector(".episode-sync-card__progress-bar").ShouldNotBeNull();
+        bar.ClassList.ShouldContain("episode-sync-card__progress-bar--stalled");
+    }
+
+    [Fact]
+    public void WhenRunningAndNotStalled_ProgressBar_LacksStalledModifierClass()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: true,
+                Depth: 20,
+                CompletedCount: 5,
+                CurrentProgram: null,
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        IElement bar = section.QuerySelector(".episode-sync-card__progress-bar").ShouldNotBeNull();
+        bar.ClassList.ShouldNotContain("episode-sync-card__progress-bar--stalled");
+    }
+
+    [Fact]
+    public void RendersEpisodeSyncCard_WhenStalled_EtaIsSuppressed()
+    {
+        // Arrange — stalled while running (wedged queue scenario)
+        DashboardData data = CreateDashboardData(
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: true,
+                Depth: 20,
+                CompletedCount: 5,
+                CurrentProgram: "Kastljós",
+                LastCompletedAt: null,
+                LastRunDuration: TimeSpan.FromMinutes(10),
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: TimeSpan.FromHours(3)));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert — progress bar still visible (count framing), but ETA is absent
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        section.QuerySelector(".episode-sync-card__progress-track").ShouldNotBeNull();
+        section.QuerySelector(".episode-sync-card__eta").ShouldBeNull();
+    }
+
+    // ── TVDB cards ─────────────────────────────────────────────────────────────
 
     [Fact]
     public void RendersTvdbSeriesLookupCard_WhenIdle()
@@ -490,6 +864,7 @@ public sealed class DashboardTests : BunitContext
         DashboardStatistics? statistics = null,
         DashboardQueueStatus? queueStatus = null,
         ProgramRefreshCardInfo? programRefresh = null,
+        EpisodeSyncCardInfo? episodeSync = null,
         TvdbSeriesLookupCardInfo? tvdbSeriesLookup = null,
         TvdbEpisodeLookupCardInfo? tvdbEpisodeLookup = null,
         DownloadCardInfo? download = null)
@@ -505,12 +880,28 @@ public sealed class DashboardTests : BunitContext
                 new DashboardQueueInfo(0, null),
                 new DashboardQueueInfo(0, null),
                 new DashboardQueueInfo(0, null)),
-            programRefresh ?? new ProgramRefreshCardInfo(
-                false, 0, 0, null, null, null, null, null),
+            programRefresh ?? DefaultProgramRefreshCard,
+            episodeSync ?? DefaultEpisodeSyncCard,
             tvdbSeriesLookup ?? DefaultTvdbSeriesLookupCard,
             tvdbEpisodeLookup ?? DefaultTvdbEpisodeLookupCard,
             download ?? DefaultDownloadCard);
     }
+
+    private static readonly ProgramRefreshCardInfo DefaultProgramRefreshCard = new(
+        LastEnqueuedAt: null,
+        LastEnqueuedCount: null,
+        NextFireTimeUtc: null);
+
+    private static readonly EpisodeSyncCardInfo DefaultEpisodeSyncCard = new(
+        IsRunning: false,
+        Depth: 0,
+        CompletedCount: 0,
+        CurrentProgram: null,
+        LastCompletedAt: null,
+        LastRunDuration: null,
+        LastRunTotal: null,
+        NextFireTimeUtc: null,
+        StalledFor: null);
 
     private static readonly TvdbSeriesLookupCardInfo DefaultTvdbSeriesLookupCard = new(
         IsProcessing: false,

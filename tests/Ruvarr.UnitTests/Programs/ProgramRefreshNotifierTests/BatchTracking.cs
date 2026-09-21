@@ -1,3 +1,4 @@
+using Ruvarr.Abstractions;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 
 using Shouldly;
@@ -10,7 +11,7 @@ public sealed class BatchTracking
     public void Enqueue_WhenQueueWasEmpty_SetsBatchStartedAt()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.Enqueue(1, "Program A");
@@ -23,7 +24,7 @@ public sealed class BatchTracking
     public void Enqueue_WhenQueueAlreadyHadItems_DoesNotResetBatchStartedAt()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         DateTimeOffset? firstBatchStart = sut.BatchStartedAt;
 
@@ -38,7 +39,7 @@ public sealed class BatchTracking
     public void CompletedCount_InitiallyZero()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act & Assert
         sut.CompletedCount.ShouldBe(0);
@@ -48,7 +49,7 @@ public sealed class BatchTracking
     public void MarkComplete_IncrementsCompletedCount()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
 
@@ -63,7 +64,7 @@ public sealed class BatchTracking
     public void MarkComplete_WhenLastItemCompleted_RecordsLastRunStats()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         sut.MarkComplete(1);
@@ -83,7 +84,7 @@ public sealed class BatchTracking
     public void MarkComplete_WhenItemsRemain_DoesNotRecordLastRunStats()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
 
@@ -100,7 +101,7 @@ public sealed class BatchTracking
     public void NewBatch_AfterPreviousBatchCompleted_TracksNewBatch()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.MarkComplete(1);
         DateTimeOffset? firstLastCompleted = sut.LastCompletedAt;
@@ -120,7 +121,7 @@ public sealed class BatchTracking
     public void CurrentProgram_ReturnsProcessingItemName()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.MarkProcessing(1);
 
@@ -132,7 +133,7 @@ public sealed class BatchTracking
     public void CurrentProgram_ReturnsNull_WhenNoItemProcessing()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
 
         // Act & Assert
@@ -143,9 +144,66 @@ public sealed class BatchTracking
     public void CurrentProgram_ReturnsNull_WhenQueueEmpty()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act & Assert
         sut.CurrentProgram.ShouldBeNull();
+    }
+
+    [Fact]
+    public void WhenRefreshAgainFlagSet_BatchIsNotFinalisedAfterFirstPass()
+    {
+        // Arrange — enqueue one item, process it, then request a re-refresh mid-pass
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
+        sut.Enqueue(1, "Program A");
+        while (sut.TryLeaseNext() is not null)
+        {
+            // discard — drain the read set without disposing leases
+        }
+
+        sut.MarkProcessing(1);
+        sut.PriorityEnqueue(1, "Program A"); // sets RefreshAgain flag
+
+        // Act — complete the first pass; the item is re-queued (batch not yet finalised)
+        sut.MarkComplete(1);
+
+        // Assert — batch stats NOT yet finalised because a follow-up item remains
+        sut.LastCompletedAt.ShouldBeNull();
+        sut.LastRunDuration.ShouldBeNull();
+        sut.LastRunTotal.ShouldBeNull();
+        sut.CompletedCount.ShouldBe(1);
+        sut.BatchStartedAt.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void WhenFollowUpPassCompletes_BatchFinalisesWithBothPassesCounted()
+    {
+        // Arrange — enqueue one item, process it, request re-refresh, complete first pass
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
+        sut.Enqueue(1, "Program A");
+        while (sut.TryLeaseNext() is not null)
+        {
+            // discard — drain the read set without disposing leases
+        }
+
+        sut.MarkProcessing(1);
+        sut.PriorityEnqueue(1, "Program A"); // sets RefreshAgain flag
+        sut.MarkComplete(1); // first pass complete; follow-up item re-queued
+
+        // Arrange — lease and complete the follow-up pass
+        IQueueLease? followUp = sut.TryLeaseNext();
+        followUp.ShouldNotBeNull();
+        sut.MarkProcessing(followUp.RuvId);
+
+        // Act — complete the follow-up pass; now the batch should finalise
+        sut.MarkComplete(followUp.RuvId);
+
+        // Assert — batch finalised after the follow-up pass
+        sut.LastCompletedAt.ShouldNotBeNull();
+        sut.LastRunDuration.ShouldNotBeNull();
+        sut.LastRunTotal.ShouldBe(2);
+        sut.CompletedCount.ShouldBe(0);
+        sut.BatchStartedAt.ShouldBeNull();
+        sut.Items.ShouldBeEmpty();
     }
 }

@@ -11,7 +11,7 @@ public sealed class Lease
     public void WhenQueueIsEmpty_TryLeaseNextReturnsNull()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         IQueueLease? lease = sut.TryLeaseNext();
@@ -24,7 +24,7 @@ public sealed class Lease
     public void WhenQueueHasItem_TryLeaseNextReturnsLeaseWithCorrectRuvId()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(42, "Program A");
 
         // Act
@@ -39,7 +39,7 @@ public sealed class Lease
     public void WhenLeaseDisposed_ItemIsRemovedFromQueue()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(42, "Program A");
         IQueueLease lease = sut.TryLeaseNext().ShouldNotBeNull();
 
@@ -54,7 +54,7 @@ public sealed class Lease
     public void WhenLeaseDisposedTwice_MarkCompleteCalledOnlyOnce()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         IQueueLease lease = sut.TryLeaseNext().ShouldNotBeNull();
@@ -73,7 +73,7 @@ public sealed class Lease
     public void WhenLastLeaseDisposed_BatchBookkeepingFires()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         IQueueLease lease1 = sut.TryLeaseNext().ShouldNotBeNull();
@@ -96,7 +96,7 @@ public sealed class Lease
     public void WhenMultipleItemsEnqueued_LeasesReturnInFifoOrder()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         sut.Enqueue(3, "Program C");
@@ -116,7 +116,7 @@ public sealed class Lease
     public void WhenAllItemsLeased_TryLeaseNextReturnsNull()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         _ = sut.TryLeaseNext();
