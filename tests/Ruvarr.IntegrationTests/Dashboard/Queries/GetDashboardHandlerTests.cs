@@ -566,6 +566,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
             () => result.EpisodeSync.CompletedCount.ShouldBe(0),
             () => result.EpisodeSync.CurrentProgram.ShouldBeNull(),
             () => result.EpisodeSync.LastCompletedAt.ShouldBeNull(),
+            () => result.EpisodeSync.StalledFor.ShouldBeNull(),
             () => result.EpisodeSync.NextFireTimeUtc.ShouldBeNull());
     }
 
