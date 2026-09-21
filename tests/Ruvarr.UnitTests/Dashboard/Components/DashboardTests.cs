@@ -324,7 +324,7 @@ public sealed class DashboardTests : BunitContext
     {
         // Arrange
         DashboardData data = CreateDashboardData(
-            programRefresh: new ProgramRefreshCardInfo(
+            episodeSync: new EpisodeSyncCardInfo(
                 IsRunning: true,
                 Depth: 33,
                 CompletedCount: 12,
@@ -332,7 +332,9 @@ public sealed class DashboardTests : BunitContext
                 LastCompletedAt: null,
                 LastRunDuration: TimeSpan.FromMinutes(4),
                 LastRunTotal: null,
-                NextFireTimeUtc: null));
+                NextFireTimeUtc: null,
+                IsStalled: false,
+                StalledFor: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -355,7 +357,7 @@ public sealed class DashboardTests : BunitContext
     {
         // Arrange
         DashboardData data = CreateDashboardData(
-            programRefresh: new ProgramRefreshCardInfo(
+            episodeSync: new EpisodeSyncCardInfo(
                 IsRunning: false,
                 Depth: 0,
                 CompletedCount: 0,
@@ -363,7 +365,9 @@ public sealed class DashboardTests : BunitContext
                 LastCompletedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
                 LastRunDuration: TimeSpan.FromSeconds(45),
                 LastRunTotal: 40,
-                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero)));
+                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero),
+                IsStalled: false,
+                StalledFor: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -490,6 +494,7 @@ public sealed class DashboardTests : BunitContext
         DashboardStatistics? statistics = null,
         DashboardQueueStatus? queueStatus = null,
         ProgramRefreshCardInfo? programRefresh = null,
+        EpisodeSyncCardInfo? episodeSync = null,
         TvdbSeriesLookupCardInfo? tvdbSeriesLookup = null,
         TvdbEpisodeLookupCardInfo? tvdbEpisodeLookup = null,
         DownloadCardInfo? download = null)
@@ -506,11 +511,26 @@ public sealed class DashboardTests : BunitContext
                 new DashboardQueueInfo(0, null),
                 new DashboardQueueInfo(0, null)),
             programRefresh ?? new ProgramRefreshCardInfo(
-                false, 0, 0, null, null, null, null, null),
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null),
+            episodeSync ?? DefaultEpisodeSyncCard,
             tvdbSeriesLookup ?? DefaultTvdbSeriesLookupCard,
             tvdbEpisodeLookup ?? DefaultTvdbEpisodeLookupCard,
             download ?? DefaultDownloadCard);
     }
+
+    private static readonly EpisodeSyncCardInfo DefaultEpisodeSyncCard = new(
+        IsRunning: false,
+        Depth: 0,
+        CompletedCount: 0,
+        CurrentProgram: null,
+        LastCompletedAt: null,
+        LastRunDuration: null,
+        LastRunTotal: null,
+        NextFireTimeUtc: null,
+        IsStalled: false,
+        StalledFor: null);
 
     private static readonly TvdbSeriesLookupCardInfo DefaultTvdbSeriesLookupCard = new(
         IsProcessing: false,

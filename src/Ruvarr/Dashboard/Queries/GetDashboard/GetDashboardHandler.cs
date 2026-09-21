@@ -20,7 +20,8 @@ internal sealed class GetDashboardHandler(
     TvdbEpisodeLookupNotifier tvdbEpisodeLookupNotifier,
     ProgramRefreshNotifier programRefreshNotifier,
     DownloadProgressNotifier downloadProgressNotifier,
-    ISchedulerFactory schedulerFactory)
+    ISchedulerFactory schedulerFactory,
+    TimeProvider timeProvider)
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int EpisodeTableLimit = 10;
@@ -37,11 +38,12 @@ internal sealed class GetDashboardHandler(
 
         Task<DashboardQueueStatus> queueStatusTask = GetQueueStatusAsync(cancellationToken);
         Task<ProgramRefreshCardInfo> programRefreshTask = GetProgramRefreshCardInfoAsync(cancellationToken);
+        Task<EpisodeSyncCardInfo> episodeSyncTask = GetEpisodeSyncCardInfoAsync(cancellationToken);
         Task<TvdbSeriesLookupCardInfo> tvdbSeriesLookupTask = GetTvdbSeriesLookupCardInfoAsync(cancellationToken);
         Task<TvdbEpisodeLookupCardInfo> tvdbEpisodeLookupTask = GetTvdbEpisodeLookupCardInfoAsync(cancellationToken);
         Task<DownloadCardInfo> downloadCardTask = GetDownloadCardInfoAsync(cancellationToken);
 
-        await Task.WhenAll(queueStatusTask, programRefreshTask, tvdbSeriesLookupTask, tvdbEpisodeLookupTask, downloadCardTask);
+        await Task.WhenAll(queueStatusTask, programRefreshTask, episodeSyncTask, tvdbSeriesLookupTask, tvdbEpisodeLookupTask, downloadCardTask);
 
         return new DashboardData(
             await recentlyAddedTask,
@@ -50,6 +52,7 @@ internal sealed class GetDashboardHandler(
             await statisticsTask,
             await queueStatusTask,
             await programRefreshTask,
+            await episodeSyncTask,
             await tvdbSeriesLookupTask,
             await tvdbEpisodeLookupTask,
             await downloadCardTask);
@@ -215,10 +218,6 @@ internal sealed class GetDashboardHandler(
 
     private async Task<ProgramRefreshCardInfo> GetProgramRefreshCardInfoAsync(CancellationToken cancellationToken)
     {
-        IReadOnlyList<ProgramRefreshQueueItemSummary> items = programRefreshNotifier.Items;
-        bool isRunning = items.Count > 0;
-        int depth = items.Count;
-
         DateTimeOffset? nextFireTimeUtc = null;
         try
         {
@@ -233,14 +232,47 @@ internal sealed class GetDashboardHandler(
         }
 
         return new ProgramRefreshCardInfo(
+            programRefreshNotifier.LastEnqueuedAt,
+            programRefreshNotifier.LastEnqueuedCount,
+            nextFireTimeUtc);
+    }
+
+    private async Task<EpisodeSyncCardInfo> GetEpisodeSyncCardInfoAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<ProgramRefreshQueueItemSummary> items = programRefreshNotifier.Items;
+        bool isRunning = items.Count > 0;
+        int depth = items.Count;
+
+        DateTimeOffset? nextFireTimeUtc = null;
+        try
+        {
+            IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+            IReadOnlyCollection<ITrigger> triggers = await scheduler.GetTriggersOfJob(
+                new JobKey(nameof(RuvEpisodesSyncJob)), cancellationToken);
+            nextFireTimeUtc = triggers.FirstOrDefault()?.GetNextFireTimeUtc();
+        }
+        catch (SchedulerException)
+        {
+            // Scheduler not started or job not found
+        }
+
+        DateTimeOffset? lastCompletedAt = programRefreshNotifier.LastCompletedAt;
+        DateTimeOffset now = timeProvider.GetUtcNow();
+        TimeSpan elapsed = now - (lastCompletedAt ?? programRefreshNotifier.StartedAt);
+        TimeSpan threshold = TimeSpan.FromHours(RefreshSchedule.ProgramRefreshIntervalHours * 2);
+        bool isStalled = elapsed > threshold;
+
+        return new EpisodeSyncCardInfo(
             isRunning,
             depth,
             programRefreshNotifier.CompletedCount,
             programRefreshNotifier.CurrentProgram,
-            programRefreshNotifier.LastCompletedAt,
+            lastCompletedAt,
             programRefreshNotifier.LastRunDuration,
             programRefreshNotifier.LastRunTotal,
-            nextFireTimeUtc);
+            nextFireTimeUtc,
+            isStalled,
+            isStalled ? elapsed : null);
     }
 
     private async Task<TvdbSeriesLookupCardInfo> GetTvdbSeriesLookupCardInfoAsync(CancellationToken cancellationToken)

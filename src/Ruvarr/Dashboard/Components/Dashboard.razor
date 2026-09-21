@@ -65,7 +65,7 @@ else
     <section class="refresh-card" aria-label="Program Refresh">
         <div class="refresh-card__header">
             <h2 class="dashboard-section-title">Program Refresh</h2>
-            @if (_data.ProgramRefresh.IsRunning)
+            @if (_data.EpisodeSync.IsRunning)
             {
                 <span class="refresh-card__badge refresh-card__badge--running">
                     <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
@@ -81,21 +81,21 @@ else
             }
         </div>
 
-        @if (_data.ProgramRefresh.IsRunning)
+        @if (_data.EpisodeSync.IsRunning)
         {
             <div class="refresh-card__progress-track" role="progressbar"
                  aria-label="Program refresh progress"
-                 aria-valuenow="@((int)GetProgressPercent(_data.ProgramRefresh))"
+                 aria-valuenow="@((int)GetProgressPercent(_data.EpisodeSync))"
                  aria-valuemin="0" aria-valuemax="100">
-                <div class="refresh-card__progress-bar" style="width:@(GetProgressPercent(_data.ProgramRefresh).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                <div class="refresh-card__progress-bar" style="width:@(GetProgressPercent(_data.EpisodeSync).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
             </div>
             <div class="refresh-card__running-details">
-                <span class="refresh-card__count">@_data.ProgramRefresh.CompletedCount / @(_data.ProgramRefresh.CompletedCount + _data.ProgramRefresh.Depth)</span>
-                @if (_data.ProgramRefresh.CurrentProgram is not null)
+                <span class="refresh-card__count">@_data.EpisodeSync.CompletedCount / @(_data.EpisodeSync.CompletedCount + _data.EpisodeSync.Depth)</span>
+                @if (_data.EpisodeSync.CurrentProgram is not null)
                 {
-                    <span class="refresh-card__current">@_data.ProgramRefresh.CurrentProgram</span>
+                    <span class="refresh-card__current">@_data.EpisodeSync.CurrentProgram</span>
                 }
-                @{ TimeSpan? eta = GetEta(_data.ProgramRefresh); }
+                @{ TimeSpan? eta = GetEta(_data.EpisodeSync); }
                 @if (eta is not null)
                 {
                     <span class="refresh-card__eta">ETA @FormatDuration(eta.Value)</span>
@@ -107,15 +107,15 @@ else
             <dl class="refresh-card__details">
                 <div class="refresh-card__detail">
                     <dt>Last completed</dt>
-                    <dd>@FormatTimestamp(_data.ProgramRefresh.LastCompletedAt)</dd>
+                    <dd>@FormatTimestamp(_data.EpisodeSync.LastCompletedAt)</dd>
                 </div>
                 <div class="refresh-card__detail">
                     <dt>Duration</dt>
-                    <dd>@(_data.ProgramRefresh.LastRunDuration is not null ? FormatDuration(_data.ProgramRefresh.LastRunDuration.Value) : "—")</dd>
+                    <dd>@(_data.EpisodeSync.LastRunDuration is not null ? FormatDuration(_data.EpisodeSync.LastRunDuration.Value) : "—")</dd>
                 </div>
                 <div class="refresh-card__detail">
                     <dt>Programs</dt>
-                    <dd>@(_data.ProgramRefresh.LastRunTotal?.ToString() ?? "—")</dd>
+                    <dd>@(_data.EpisodeSync.LastRunTotal?.ToString() ?? "—")</dd>
                 </div>
                 <div class="refresh-card__detail">
                     <dt>Next run</dt>
@@ -495,13 +495,13 @@ else
         _cts.Dispose();
     }
 
-    private static double GetProgressPercent(ProgramRefreshCardInfo info)
+    private static double GetProgressPercent(EpisodeSyncCardInfo info)
     {
         int total = info.CompletedCount + info.Depth;
         return total == 0 ? 0 : (double)info.CompletedCount / total * 100;
     }
 
-    private static TimeSpan? GetEta(ProgramRefreshCardInfo info)
+    private static TimeSpan? GetEta(EpisodeSyncCardInfo info)
     {
         if (!info.IsRunning || info.LastRunDuration is null)
         {
