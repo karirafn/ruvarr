@@ -94,8 +94,12 @@ internal sealed class TvdbSeriesLookupJob(
 
             logger.LogInformation("Matched RÚV program '{Program}' with TVDB series '{Series}'", program.Name, entity.Name);
         }
-#pragma warning disable CA1031 // Catch all exceptions to prevent queue items from getting stuck in Processing state
-        catch (Exception ex)
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(ex, "HttpClient timeout during TVDB series lookup for RuvId {RuvId}", ruvId);
+        }
+#pragma warning disable CA1031 // Catch all exceptions except OCE to prevent queue items from getting stuck in Processing state
+        catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
             logger.LogError(ex, "Error during TVDB series lookup for RuvId {RuvId}", ruvId);
