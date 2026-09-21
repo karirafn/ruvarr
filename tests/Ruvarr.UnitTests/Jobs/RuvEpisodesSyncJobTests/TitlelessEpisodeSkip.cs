@@ -28,7 +28,7 @@ public sealed class TitlelessEpisodeSkip
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly IRuvClient _ruv = Substitute.For<IRuvClient>();
     private readonly ISonarrClient _sonarr = Substitute.For<ISonarrClient>();
-    private readonly ProgramRefreshNotifier _syncQueue = new();
+    private readonly ProgramRefreshNotifier _syncQueue = new(TimeProvider.System);
     private readonly IServiceProvider _serviceProvider = Substitute.For<IServiceProvider>();
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.db");

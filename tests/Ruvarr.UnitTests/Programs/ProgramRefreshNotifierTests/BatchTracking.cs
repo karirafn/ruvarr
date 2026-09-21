@@ -11,7 +11,7 @@ public sealed class BatchTracking
     public void Enqueue_WhenQueueWasEmpty_SetsBatchStartedAt()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.Enqueue(1, "Program A");
@@ -24,7 +24,7 @@ public sealed class BatchTracking
     public void Enqueue_WhenQueueAlreadyHadItems_DoesNotResetBatchStartedAt()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         DateTimeOffset? firstBatchStart = sut.BatchStartedAt;
 
@@ -39,7 +39,7 @@ public sealed class BatchTracking
     public void CompletedCount_InitiallyZero()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act & Assert
         sut.CompletedCount.ShouldBe(0);
@@ -49,7 +49,7 @@ public sealed class BatchTracking
     public void MarkComplete_IncrementsCompletedCount()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
 
@@ -64,7 +64,7 @@ public sealed class BatchTracking
     public void MarkComplete_WhenLastItemCompleted_RecordsLastRunStats()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         sut.MarkComplete(1);
@@ -84,7 +84,7 @@ public sealed class BatchTracking
     public void MarkComplete_WhenItemsRemain_DoesNotRecordLastRunStats()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
 
@@ -101,7 +101,7 @@ public sealed class BatchTracking
     public void NewBatch_AfterPreviousBatchCompleted_TracksNewBatch()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.MarkComplete(1);
         DateTimeOffset? firstLastCompleted = sut.LastCompletedAt;
@@ -121,7 +121,7 @@ public sealed class BatchTracking
     public void CurrentProgram_ReturnsProcessingItemName()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.MarkProcessing(1);
 
@@ -133,7 +133,7 @@ public sealed class BatchTracking
     public void CurrentProgram_ReturnsNull_WhenNoItemProcessing()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
 
         // Act & Assert
@@ -144,7 +144,7 @@ public sealed class BatchTracking
     public void CurrentProgram_ReturnsNull_WhenQueueEmpty()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act & Assert
         sut.CurrentProgram.ShouldBeNull();
@@ -154,7 +154,7 @@ public sealed class BatchTracking
     public void WhenRefreshAgainFlagSet_BatchIsNotFinalisedAfterFirstPass()
     {
         // Arrange — enqueue one item, process it, then request a re-refresh mid-pass
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         while (sut.TryLeaseNext() is not null)
         {
@@ -179,7 +179,7 @@ public sealed class BatchTracking
     public void WhenFollowUpPassCompletes_BatchFinalisesWithBothPassesCounted()
     {
         // Arrange — enqueue one item, process it, request re-refresh, complete first pass
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         while (sut.TryLeaseNext() is not null)
         {

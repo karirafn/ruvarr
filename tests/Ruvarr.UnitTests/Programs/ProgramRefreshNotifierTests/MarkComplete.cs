@@ -12,7 +12,7 @@ public sealed class MarkComplete
     public void RemovesItemFromQueue()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
 
         // Act
@@ -26,7 +26,7 @@ public sealed class MarkComplete
     public void AllowsReEnqueueAfterComplete()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.MarkComplete(1);
 
@@ -41,7 +41,7 @@ public sealed class MarkComplete
     public void WhenRefreshAgainFlagSet_ReEnqueuesItemAsPendingAtFront()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
         while (sut.TryLeaseNext() is not null)
@@ -66,7 +66,7 @@ public sealed class MarkComplete
     public void WhenRefreshAgainFlagSet_ReEnqueuedItemIsLeaseable()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         while (sut.TryLeaseNext() is not null)
         {
@@ -92,7 +92,7 @@ public sealed class MarkComplete
     public void WhenRefreshAgainFlagNotSet_RemovesItemNormally()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         while (sut.TryLeaseNext() is not null)
         {

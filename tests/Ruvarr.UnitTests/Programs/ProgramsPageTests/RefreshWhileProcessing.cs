@@ -25,7 +25,7 @@ public sealed class RefreshWhileProcessing : BunitContext
 
     public RefreshWhileProcessing()
     {
-        _refreshNotifier = new ProgramRefreshNotifier();
+        _refreshNotifier = new ProgramRefreshNotifier(TimeProvider.System);
         Services.AddSingleton(_refreshNotifier);
 
         _broadcaster = Substitute.For<IDomainEventBroadcaster>();

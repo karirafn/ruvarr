@@ -28,7 +28,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddRuvarr(this IServiceCollection services, string dbConnectionString, string settingsFilePath)
     {
         services.AddSettings(settingsFilePath);
-        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IDomainEventBroadcaster, DomainEventBroadcaster>();
         services.AddSingleton<ProgramRefreshNotifier>();
         services.AddSingleton<TvdbSeriesLookupNotifier>();

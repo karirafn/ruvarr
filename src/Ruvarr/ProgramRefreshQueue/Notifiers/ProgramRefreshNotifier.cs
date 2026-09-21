@@ -15,11 +15,7 @@ public sealed class ProgramRefreshNotifier : QueueNotifier<ProgramRefreshQueueIt
     private DateTimeOffset? _lastEnqueuedAt;
     private int? _lastEnqueuedCount;
 
-    public ProgramRefreshNotifier() : this(TimeProvider.System)
-    {
-    }
-
-    internal ProgramRefreshNotifier(TimeProvider timeProvider)
+    public ProgramRefreshNotifier(TimeProvider timeProvider)
     {
         _timeProvider = timeProvider;
         StartedAt = _timeProvider.GetUtcNow();

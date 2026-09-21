@@ -13,7 +13,7 @@ public sealed class ReRefresh
     {
         // Arrange — mirror the exact call order RuvEpisodesSyncJob uses:
         //   drain all leases, then MarkProcessing per item, then Dispose (MarkComplete) per item
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
         sut.Enqueue(2, "Program B");
 
@@ -62,7 +62,7 @@ public sealed class ReRefresh
     public void WhenItemCompletesBeforePriorityEnqueue_PriorityEnqueueAddsItBack()
     {
         // Arrange — edge case: item completes between user click and PriorityEnqueue call
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
         sut.Enqueue(1, "Program A");
 
         IQueueLease? lease = sut.TryLeaseNext();

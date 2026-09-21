@@ -1,4 +1,5 @@
 using Ruvarr.ProgramRefreshQueue.Notifiers;
+using Ruvarr.Testing.Time;
 
 using Shouldly;
 
@@ -10,7 +11,7 @@ public sealed class EnqueueActivity
     public void WhenRecordEnqueueBatchCalled_SetsLastEnqueuedCount()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.RecordEnqueueBatch(5);
@@ -24,7 +25,7 @@ public sealed class EnqueueActivity
     {
         // Arrange
         DateTimeOffset before = DateTimeOffset.UtcNow;
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.RecordEnqueueBatch(3);
@@ -39,7 +40,7 @@ public sealed class EnqueueActivity
     public void WhenNeverCalled_LastEnqueuedAtIsNull()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         // (no call)
@@ -52,7 +53,7 @@ public sealed class EnqueueActivity
     public void WhenNeverCalled_LastEnqueuedCountIsNull()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         // (no call)
@@ -65,17 +66,20 @@ public sealed class EnqueueActivity
     public void WhenCountIsNegative_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
-        // Act / Assert
-        Should.Throw<ArgumentOutOfRangeException>(() => sut.RecordEnqueueBatch(-1));
+        // Act
+        Action act = () => sut.RecordEnqueueBatch(-1);
+
+        // Assert
+        Should.Throw<ArgumentOutOfRangeException>(act);
     }
 
     [Fact]
     public void WhenCountIsZero_IsAccepted()
     {
         // Arrange
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Act
         sut.RecordEnqueueBatch(0);
@@ -114,21 +118,17 @@ public sealed class EnqueueActivity
     }
 
     [Fact]
-    public void WhenConstructedWithDefaultCtor_StartedAtIsApproximatelyNow()
+    public void WhenConstructedWithSystemTimeProvider_StartedAtIsApproximatelyNow()
     {
         // Arrange
         DateTimeOffset before = DateTimeOffset.UtcNow;
 
         // Act
-        ProgramRefreshNotifier sut = new();
+        ProgramRefreshNotifier sut = new(TimeProvider.System);
 
         // Assert
         DateTimeOffset after = DateTimeOffset.UtcNow;
         sut.StartedAt.ShouldBeInRange(before, after);
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset fixedTime) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => fixedTime;
-    }
 }
