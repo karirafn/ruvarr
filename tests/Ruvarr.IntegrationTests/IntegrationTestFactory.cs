@@ -67,8 +67,9 @@ public sealed class IntegrationTestFactory : WebApplicationFactory<Program>, IAs
             services.RemoveAll<ISchedulerFactory>();
             IScheduler scheduler = Substitute.For<IScheduler>();
 #pragma warning disable CA2012 // NSubstitute's Returns() setup records the call — the ValueTask is not consumed by the caller
-            scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
-                .Returns(callInfo => new ValueTask<List<ITrigger>>([]));
+            scheduler.QueryTriggers(Arg.Any<TriggerQuery>(), Arg.Any<CancellationToken>())
+                .Returns(callInfo => new ValueTask<PagedResult<TriggerHeader>>(
+                    new PagedResult<TriggerHeader>([], false, null)));
 #pragma warning restore CA2012
             ISchedulerFactory schedulerFactory = Substitute.For<ISchedulerFactory>();
             schedulerFactory.GetScheduler(Arg.Any<CancellationToken>())
