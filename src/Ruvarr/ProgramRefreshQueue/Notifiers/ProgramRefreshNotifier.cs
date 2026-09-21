@@ -5,12 +5,27 @@ namespace Ruvarr.ProgramRefreshQueue.Notifiers;
 
 public sealed class ProgramRefreshNotifier : QueueNotifier<ProgramRefreshQueueItemSummary>
 {
+    private readonly TimeProvider _timeProvider;
     private readonly Lock _batchLock = new();
     private int _completedCount;
     private DateTimeOffset? _batchStartedAt;
     private DateTimeOffset? _lastCompletedAt;
     private TimeSpan? _lastRunDuration;
     private int? _lastRunTotal;
+    private DateTimeOffset? _lastEnqueuedAt;
+    private int? _lastEnqueuedCount;
+
+    public ProgramRefreshNotifier() : this(TimeProvider.System)
+    {
+    }
+
+    internal ProgramRefreshNotifier(TimeProvider timeProvider)
+    {
+        _timeProvider = timeProvider;
+        StartedAt = _timeProvider.GetUtcNow();
+    }
+
+    public DateTimeOffset StartedAt { get; }
 
     public int CompletedCount
     {
@@ -37,6 +52,27 @@ public sealed class ProgramRefreshNotifier : QueueNotifier<ProgramRefreshQueueIt
         get { lock (_batchLock) { return _lastRunTotal; } }
     }
 
+    public DateTimeOffset? LastEnqueuedAt
+    {
+        get { lock (_batchLock) { return _lastEnqueuedAt; } }
+    }
+
+    public int? LastEnqueuedCount
+    {
+        get { lock (_batchLock) { return _lastEnqueuedCount; } }
+    }
+
+    public void RecordEnqueueBatch(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        lock (_batchLock)
+        {
+            _lastEnqueuedAt = _timeProvider.GetUtcNow();
+            _lastEnqueuedCount = count;
+        }
+    }
+
     public string? CurrentProgram
     {
         get
@@ -54,7 +90,7 @@ public sealed class ProgramRefreshNotifier : QueueNotifier<ProgramRefreshQueueIt
             base.Enqueue(ruvId, programName);
             if (wasEmpty && Items.Count > 0)
             {
-                _batchStartedAt = DateTimeOffset.UtcNow;
+                _batchStartedAt = _timeProvider.GetUtcNow();
             }
         }
     }
@@ -68,7 +104,7 @@ public sealed class ProgramRefreshNotifier : QueueNotifier<ProgramRefreshQueueIt
 
             if (Items.Count == 0)
             {
-                _lastCompletedAt = DateTimeOffset.UtcNow;
+                _lastCompletedAt = _timeProvider.GetUtcNow();
                 _lastRunTotal = _completedCount;
                 if (_batchStartedAt is not null)
                 {
