@@ -25,7 +25,7 @@ internal sealed class GetDashboardHandler(
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int EpisodeTableLimit = 10;
-    private const int RecentlyAddedWindowDays = 7;
+    internal const int RecentlyAddedWindowDays = 7;
     private const int LikelyDownloadedCandidateLimit = 50;
 
     public async Task<DashboardData> Handle(GetDashboardQuery request, CancellationToken cancellationToken)

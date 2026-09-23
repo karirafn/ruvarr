@@ -77,6 +77,31 @@ public sealed class IconTests : BunitContext
     }
 
     [Fact]
+    public void Renders_RoleImg_When_AriaLabel_Specified()
+    {
+        // Arrange / Act
+        IRenderedComponent<Icon> cut = Render<Icon>(parameters => parameters
+            .Add(p => p.Type, IconType.CheckmarkCircle)
+            .Add(p => p.AriaLabel, "Matched"));
+
+        // Assert
+        IElement svg = cut.Find("svg");
+        svg.GetAttribute("role").ShouldBe("img");
+    }
+
+    [Fact]
+    public void Does_Not_Render_Role_When_AriaLabel_Is_Null()
+    {
+        // Arrange / Act
+        IRenderedComponent<Icon> cut = Render<Icon>(parameters => parameters
+            .Add(p => p.Type, IconType.BackArrow));
+
+        // Assert
+        IElement svg = cut.Find("svg");
+        svg.GetAttribute("role").ShouldBeNull();
+    }
+
+    [Fact]
     public void Renders_AriaHidden_When_AriaLabel_Is_Null()
     {
         IRenderedComponent<Icon> cut = Render<Icon>(parameters => parameters
