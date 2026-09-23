@@ -254,7 +254,7 @@ public sealed class DashboardTests : BunitContext
     {
         // Arrange
         DashboardData data = CreateDashboardData(
-            recentlyAdded: [new("Show A", 100, "Episode 1", new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc))]);
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show A", 100, "Episode 1", 1, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), false)]);
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -858,7 +858,7 @@ public sealed class DashboardTests : BunitContext
     }
 
     private static DashboardData CreateDashboardData(
-        IReadOnlyList<DashboardEpisodeItem>? recentlyAdded = null,
+        IReadOnlyList<DashboardRecentlyAddedItem>? recentlyAdded = null,
         IReadOnlyList<DashboardEpisodeItem>? requiresTranslation = null,
         IReadOnlyList<DashboardEpisodeItem>? likelyDownloaded = null,
         DashboardStatistics? statistics = null,

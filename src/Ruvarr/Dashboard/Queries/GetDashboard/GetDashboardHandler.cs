@@ -25,11 +25,12 @@ internal sealed class GetDashboardHandler(
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int EpisodeTableLimit = 10;
+    private const int RecentlyAddedWindowDays = 7;
     private const int LikelyDownloadedCandidateLimit = 50;
 
     public async Task<DashboardData> Handle(GetDashboardQuery request, CancellationToken cancellationToken)
     {
-        Task<IReadOnlyList<DashboardEpisodeItem>> recentlyAddedTask = GetRecentlyAddedEpisodesAsync(cancellationToken);
+        Task<IReadOnlyList<DashboardRecentlyAddedItem>> recentlyAddedTask = GetRecentlyAddedEpisodesAsync(cancellationToken);
         Task<IReadOnlyList<DashboardEpisodeItem>> requiresTranslationTask = GetRequiresTranslationEpisodesAsync(cancellationToken);
         Task<IReadOnlyList<DashboardEpisodeItem>> likelyDownloadedTask = GetLikelyDownloadedOnceMatchedAsync(cancellationToken);
         Task<DashboardStatistics> statisticsTask = GetStatisticsAsync(cancellationToken);
@@ -58,20 +59,46 @@ internal sealed class GetDashboardHandler(
             await downloadCardTask);
     }
 
-    private async Task<IReadOnlyList<DashboardEpisodeItem>> GetRecentlyAddedEpisodesAsync(CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<DashboardRecentlyAddedItem>> GetRecentlyAddedEpisodesAsync(CancellationToken cancellationToken)
     {
         await using AsyncServiceScope scope = serviceScopeFactory.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-        return await dbContext.Set<RuvEpisode>()
-            .Where(e => e.Program.Series != null || e.Program.Movie != null)
-            .OrderByDescending(e => e.FirstRun)
-            .Take(EpisodeTableLimit)
-            .Select(e => new DashboardEpisodeItem(
-                e.Program.Name,
-                e.Program.RuvId,
+
+        DateTime cutoff = timeProvider.GetUtcNow().UtcDateTime - TimeSpan.FromDays(RecentlyAddedWindowDays);
+
+        // Phase 1: SQL filter — retrieve only windowed episodes; project flat fields.
+        // Grouping is deferred to in-memory phase to avoid EF Core SQLite grouped-query issues.
+        var rows = await dbContext.Set<RuvEpisode>()
+            .Where(e => e.Created >= cutoff)
+            .Select(e => new
+            {
+                ProgramName = e.Program.Name,
+                ProgramRuvId = e.Program.RuvId,
+                IsMatched = e.Program.Series != null || e.Program.Movie != null,
                 e.Title,
-                e.FirstRun))
+                e.Created,
+            })
             .ToListAsync(cancellationToken);
+
+        // Phase 2: in-memory group by program, shape output.
+        return rows
+            .GroupBy(r => new { r.ProgramName, r.ProgramRuvId, r.IsMatched })
+            .Select(g =>
+            {
+                int count = g.Count();
+                DateTime added = g.Max(r => r.Created);
+                string? episodeTitle = count == 1 ? g.Single().Title : null;
+                return new DashboardRecentlyAddedItem(
+                    g.Key.ProgramName,
+                    g.Key.ProgramRuvId,
+                    episodeTitle,
+                    count,
+                    added,
+                    g.Key.IsMatched);
+            })
+            .OrderByDescending(item => item.Added)
+            .Take(EpisodeTableLimit)
+            .ToList();
     }
 
     private async Task<IReadOnlyList<DashboardEpisodeItem>> GetRequiresTranslationEpisodesAsync(CancellationToken cancellationToken)
