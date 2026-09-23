@@ -105,4 +105,17 @@ public sealed class Create
         // Assert
         result.DownloadQueueItems.ShouldBeEmpty();
     }
+
+    [Fact]
+    public void SetsCreatedToUtcNow()
+    {
+        // Arrange
+        DateTime before = DateTime.UtcNow;
+
+        // Act
+        RuvEpisode result = new RuvEpisodeBuilder().Build();
+
+        // Assert
+        result.Created.ShouldBeInRange(before, DateTime.UtcNow);
+    }
 }
