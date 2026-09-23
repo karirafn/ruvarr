@@ -378,7 +378,7 @@ else
         <h2 class="dashboard-section-title">Recently Added Episodes</h2>
         @if (_data.RecentlyAddedEpisodes.Count == 0)
         {
-            <p class="empty-message">No recently added episodes.</p>
+            <p class="empty-message">No episodes ingested in the last 7 days.</p>
         }
         else
         {
@@ -388,6 +388,7 @@ else
                         <th>Program</th>
                         <th>Episode</th>
                         <th>Added</th>
+                        <th class="col-center"><span class="visually-hidden">Match status</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -395,8 +396,18 @@ else
                     {
                         <tr>
                             <td><a class="program-link" href="/program/@episode.ProgramRuvId">@episode.ProgramName</a></td>
-                            <td>@(episode.EpisodeTitle ?? $"{episode.EpisodeCount} episodes")</td>
+                            <td>@(episode.EpisodeCount == 1 ? (episode.EpisodeTitle ?? "1 episode") : $"{episode.EpisodeCount} episodes")</td>
                             <td>@episode.Added.ToString("yyyy-MM-dd")</td>
+                            <td class="col-center">
+                                @if (episode.IsMatched)
+                                {
+                                    <span title="Matched"><Icon Type="IconType.CheckmarkCircle" Class="icon icon--matched-all" AriaLabel="Matched" /></span>
+                                }
+                                else
+                                {
+                                    <span title="Unmatched"><Icon Type="IconType.LinkDiagonal" Class="icon icon--matched-none" AriaLabel="Unmatched" /></span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

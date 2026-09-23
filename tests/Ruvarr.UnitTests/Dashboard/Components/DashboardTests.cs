@@ -250,7 +250,7 @@ public sealed class DashboardTests : BunitContext
     }
 
     [Fact]
-    public void RendersRecentlyAddedEpisodes()
+    public void WhenSingleEpisodeWithTitle_EpisodeTitleRendered()
     {
         // Arrange
         DashboardData data = CreateDashboardData(
@@ -268,11 +268,78 @@ public sealed class DashboardTests : BunitContext
         link.TextContent.ShouldBe("Show A");
         IReadOnlyList<IElement> cells = cut.FindAll("section[aria-label='Recently Added Episodes'] tbody td");
         cells[1].TextContent.ShouldBe("Episode 1");
+    }
+
+    [Fact]
+    public void WhenMultipleEpisodes_CountRendered()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show B", 200, null, 3, new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc), true)]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> cells = cut.FindAll("section[aria-label='Recently Added Episodes'] tbody td");
+        cells[1].TextContent.ShouldBe("3 episodes");
+    }
+
+    [Fact]
+    public void WhenMatchedEpisode_MatchedIndicatorRendered()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show A", 100, "Episode 1", 1, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), IsMatched: true)]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Recently Added Episodes']");
+        section.QuerySelector("[aria-label='Matched']").ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void WhenUnmatchedEpisode_UnmatchedIndicatorRendered()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show A", 100, "Episode 1", 1, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), IsMatched: false)]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Recently Added Episodes']");
+        section.QuerySelector("[aria-label='Unmatched']").ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void WhenRecentlyAddedEpisode_AddedDateRendered()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show A", 100, "Episode 1", 1, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), false)]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> cells = cut.FindAll("section[aria-label='Recently Added Episodes'] tbody td");
         cells[2].TextContent.ShouldBe("2026-03-01");
     }
 
     [Fact]
-    public void RendersEmptyMessage_WhenNoRecentlyAddedEpisodes()
+    public void WhenNoRecentlyAddedEpisodes_EmptyMessageRendered()
     {
         // Arrange
         DashboardData data = CreateDashboardData(recentlyAdded: []);
@@ -284,7 +351,7 @@ public sealed class DashboardTests : BunitContext
 
         // Assert
         IElement section = cut.Find("section[aria-label='Recently Added Episodes']");
-        section.QuerySelector(".empty-message")!.TextContent.ShouldBe("No recently added episodes.");
+        section.QuerySelector(".empty-message")!.TextContent.ShouldBe("No episodes ingested in the last 7 days.");
     }
 
     [Fact]
