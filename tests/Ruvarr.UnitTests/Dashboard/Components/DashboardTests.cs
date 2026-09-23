@@ -250,6 +250,24 @@ public sealed class DashboardTests : BunitContext
     }
 
     [Fact]
+    public void WhenRecentlyAddedEpisodes_TableHeadersHaveScopeCol()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show A", 100, "Episode 1", 1, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), false)]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> headers = cut.FindAll("section[aria-label='Recently Added Episodes'] thead th");
+        headers.Count.ShouldBe(4);
+        headers.ShouldAllBe(th => th.GetAttribute("scope") == "col");
+    }
+
+    [Fact]
     public void WhenSingleEpisodeWithTitle_EpisodeTitleRendered()
     {
         // Arrange
@@ -334,8 +352,10 @@ public sealed class DashboardTests : BunitContext
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
 
         // Assert
-        IReadOnlyList<IElement> cells = cut.FindAll("section[aria-label='Recently Added Episodes'] tbody td");
-        cells[2].TextContent.ShouldBe("2026-03-01");
+        IElement cell = cut.FindAll("section[aria-label='Recently Added Episodes'] tbody td")[2];
+        IElement time = cell.QuerySelector("time").ShouldNotBeNull();
+        time.GetAttribute("datetime").ShouldBe("2026-03-01");
+        time.TextContent.ShouldBe("2026-03-01");
     }
 
     [Fact]
@@ -351,7 +371,7 @@ public sealed class DashboardTests : BunitContext
 
         // Assert
         IElement section = cut.Find("section[aria-label='Recently Added Episodes']");
-        section.QuerySelector(".empty-message")!.TextContent.ShouldBe("No episodes ingested in the last 7 days.");
+        section.QuerySelector(".empty-message")!.TextContent.ShouldBe($"No episodes added in the last {GetDashboardHandler.RecentlyAddedWindowDays} days.");
     }
 
     [Fact]

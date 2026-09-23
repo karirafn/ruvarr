@@ -407,6 +407,62 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
     }
 
     [Fact]
+    public async Task WhenEpisodeCreatedEqualsWindowCutoff_IsIncluded_WhenOneTickEarlier_IsExcluded()
+    {
+        // Arrange: one episode at exactly the cutoff (included) and one one tick before it (excluded).
+        // RuvEpisode.Create stamps Created = now and cannot backdate ingest time,
+        // so past Created values are set directly via DbContext (same approach as sibling window tests).
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        DateTime cutoff = now.UtcDateTime - TimeSpan.FromDays(GetDashboardHandler.RecentlyAddedWindowDays);
+
+        RuvProgram atBoundaryProgram = new RuvProgramBuilder()
+            .WithRuvId(1801)
+            .WithName("At Boundary Show")
+            .WithMultipleEpisodes()
+            .Build();
+        atBoundaryProgram.TryAddEpisode("ep-at-boundary", new Uri("http://test.com"), "Boundary Episode", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        RuvProgram beforeBoundaryProgram = new RuvProgramBuilder()
+            .WithRuvId(1802)
+            .WithName("Before Boundary Show")
+            .WithMultipleEpisodes()
+            .Build();
+        beforeBoundaryProgram.TryAddEpisode("ep-before-boundary", new Uri("http://test.com"), "Before Boundary Episode", "Desc", new DateTime(2026, 9, 10, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().AddRange(atBoundaryProgram, beforeBoundaryProgram);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode epAtBoundary = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep-at-boundary", cancellationToken);
+        dbContext.Entry(epAtBoundary).Property(nameof(RuvEpisode.Created)).CurrentValue = cutoff;
+
+        RuvEpisode epBeforeBoundary = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep-before-boundary", cancellationToken);
+        dbContext.Entry(epBeforeBoundary).Property(nameof(RuvEpisode.Created)).CurrentValue = cutoff - TimeSpan.FromTicks(1);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert: only the episode at the cutoff boundary is included; the episode one tick earlier is excluded
+        result.RecentlyAddedEpisodes.Count.ShouldBe(1);
+        result.RecentlyAddedEpisodes[0].ProgramName.ShouldBe("At Boundary Show");
+    }
+
+    [Fact]
     public async Task WhenElevenWindowedPrograms_ReturnsOnlyTen()
     {
         // Arrange: 11 programs each with one windowed episode; only 10 may appear
