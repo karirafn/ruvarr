@@ -387,16 +387,16 @@ else
                     <tr>
                         <th>Program</th>
                         <th>Episode</th>
-                        <th>First Run</th>
+                        <th>Added</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (DashboardEpisodeItem episode in _data.RecentlyAddedEpisodes)
+                    @foreach (DashboardRecentlyAddedItem episode in _data.RecentlyAddedEpisodes)
                     {
                         <tr>
                             <td><a class="program-link" href="/program/@episode.ProgramRuvId">@episode.ProgramName</a></td>
-                            <td>@episode.EpisodeTitle</td>
-                            <td>@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                            <td>@(episode.EpisodeTitle ?? $"{episode.EpisodeCount} episodes")</td>
+                            <td>@episode.Added.ToString("yyyy-MM-dd")</td>
                         </tr>
                     }
                 </tbody>

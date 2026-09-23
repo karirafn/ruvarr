@@ -59,11 +59,21 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
     }
 
     [Fact]
-    public async Task ReturnsRecentlyAddedEpisodes_ForMatchedPrograms()
+    public async Task WhenEpisodesWithinWindow_ReturnsAllProgramsOrderedByMostRecentIngest()
     {
-        // Arrange
+        // Arrange: two programs (one matched, one unmatched) both within the 7-day window.
+        // The unmatched program's episode has the more-recent Created timestamp.
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
         IRequestHandler<GetDashboardQuery, DashboardData> handler =
             scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
@@ -74,16 +84,65 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
             .WithMultipleEpisodes()
             .Build();
         matchedProgram.MatchTvdb(new TvdbSeriesBuilder().WithName("Matched Series").Build());
-        matchedProgram.TryAddEpisode("ep1", new Uri("http://test.com"), "Episode 1", "Desc", new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+        matchedProgram.TryAddEpisode("ep1", new Uri("http://test.com"), "Matched Episode", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
 
         RuvProgram unmatchedProgram = new RuvProgramBuilder()
             .WithRuvId(1002)
             .WithName("Unmatched Show")
             .WithMultipleEpisodes()
             .Build();
-        unmatchedProgram.TryAddEpisode("ep2", new Uri("http://test.com"), "Episode 2", "Desc", new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+        unmatchedProgram.TryAddEpisode("ep2", new Uri("http://test.com"), "Unmatched Episode", "Desc", new DateTime(2026, 9, 21, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
 
         dbContext.Set<RuvProgram>().AddRange(matchedProgram, unmatchedProgram);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Backdate Created to within the 7-day window (domain path cannot backdate ingest time).
+        RuvEpisode ep1 = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep1", cancellationToken);
+        RuvEpisode ep2 = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep2", cancellationToken);
+        dbContext.Entry(ep1).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-3);
+        dbContext.Entry(ep2).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-1);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert: both programs appear; unmatched comes first (more recent ingest)
+        result.RecentlyAddedEpisodes.Count.ShouldBe(2);
+        result.RecentlyAddedEpisodes[0].ProgramName.ShouldBe("Unmatched Show");
+        result.RecentlyAddedEpisodes[1].ProgramName.ShouldBe("Matched Show");
+    }
+
+    [Fact]
+    public async Task WhenExactlyOneWindowedEpisode_EpisodeTitleSetAndCountIsOne()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(1101)
+            .WithName("Single Episode Show")
+            .WithMultipleEpisodes()
+            .Build();
+        program.TryAddEpisode("ep-single", new Uri("http://test.com"), "The One Episode", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode ep = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep-single", cancellationToken);
+        dbContext.Entry(ep).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-2);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -91,8 +150,307 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
 
         // Assert
         result.RecentlyAddedEpisodes.Count.ShouldBe(1);
-        result.RecentlyAddedEpisodes[0].ProgramName.ShouldBe("Matched Show");
-        result.RecentlyAddedEpisodes[0].EpisodeTitle.ShouldBe("Episode 1");
+        DashboardRecentlyAddedItem item = result.RecentlyAddedEpisodes[0];
+        item.ShouldSatisfyAllConditions(
+            () => item.EpisodeTitle.ShouldBe("The One Episode"),
+            () => item.EpisodeCount.ShouldBe(1));
+    }
+
+    [Fact]
+    public async Task WhenMultipleWindowedEpisodes_EpisodeTitleNullAndCountIsN()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(1201)
+            .WithName("Multi Episode Show")
+            .WithMultipleEpisodes()
+            .Build();
+        program.TryAddEpisode("ep-multi-1", new Uri("http://test.com"), "Episode A", "Desc", new DateTime(2026, 9, 18, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep-multi-2", new Uri("http://test.com"), "Episode B", "Desc", new DateTime(2026, 9, 19, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep-multi-3", new Uri("http://test.com"), "Episode C", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (string ruvId in new[] { "ep-multi-1", "ep-multi-2", "ep-multi-3" })
+        {
+            RuvEpisode ep = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == ruvId, cancellationToken);
+            dbContext.Entry(ep).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-4);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.RecentlyAddedEpisodes.Count.ShouldBe(1);
+        DashboardRecentlyAddedItem item = result.RecentlyAddedEpisodes[0];
+        item.ShouldSatisfyAllConditions(
+            () => item.EpisodeTitle.ShouldBeNull(),
+            () => item.EpisodeCount.ShouldBe(3));
+    }
+
+    [Fact]
+    public async Task WhenNoWindowedEpisodes_ReturnsEmptyList()
+    {
+        // Arrange: episode Created is outside the 7-day window
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(1301)
+            .WithName("Old Show")
+            .WithMultipleEpisodes()
+            .Build();
+        program.TryAddEpisode("ep-old", new Uri("http://test.com"), "Old Episode", "Desc", new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Set Created to 8 days ago (outside the 7-day window)
+        RuvEpisode ep = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep-old", cancellationToken);
+        dbContext.Entry(ep).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-8);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.RecentlyAddedEpisodes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task WhenMatchedProgram_IsMatchedTrue_WhenUnmatched_IsMatchedFalse()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram matchedProgram = new RuvProgramBuilder()
+            .WithRuvId(1401)
+            .WithName("Matched Program")
+            .WithMultipleEpisodes()
+            .Build();
+        matchedProgram.MatchTvdb(new TvdbSeriesBuilder().WithName("Some Series").Build());
+        matchedProgram.TryAddEpisode("ep-matched", new Uri("http://test.com"), "Matched Ep", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        RuvProgram unmatchedProgram = new RuvProgramBuilder()
+            .WithRuvId(1402)
+            .WithName("Unmatched Program")
+            .WithMultipleEpisodes()
+            .Build();
+        unmatchedProgram.TryAddEpisode("ep-unmatched", new Uri("http://test.com"), "Unmatched Ep", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().AddRange(matchedProgram, unmatchedProgram);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (string ruvId in new[] { "ep-matched", "ep-unmatched" })
+        {
+            RuvEpisode ep = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == ruvId, cancellationToken);
+            dbContext.Entry(ep).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-2);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        DashboardRecentlyAddedItem matched = result.RecentlyAddedEpisodes.Single(x => x.ProgramName == "Matched Program");
+        DashboardRecentlyAddedItem unmatched = result.RecentlyAddedEpisodes.Single(x => x.ProgramName == "Unmatched Program");
+        matched.IsMatched.ShouldBeTrue();
+        unmatched.IsMatched.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task WhenOneProgramWithSeveralWindowedEpisodes_ReturnsOneRowWithCount()
+    {
+        // Arrange: back-catalogue burst. One program with many windowed episodes produces one grouped row.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(1501)
+            .WithName("Burst Show")
+            .WithMultipleEpisodes()
+            .Build();
+
+        string[] ruvIds = ["burst-1", "burst-2", "burst-3", "burst-4", "burst-5"];
+        foreach (string id in ruvIds)
+        {
+            program.TryAddEpisode(id, new Uri("http://test.com"), $"Episode {id}", "Desc", new DateTime(2026, 9, 18, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+        }
+
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (string id in ruvIds)
+        {
+            RuvEpisode ep = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == id, cancellationToken);
+            dbContext.Entry(ep).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-3);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.RecentlyAddedEpisodes.Count.ShouldBe(1);
+        result.RecentlyAddedEpisodes[0].EpisodeCount.ShouldBe(5);
+        result.RecentlyAddedEpisodes[0].EpisodeTitle.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task WhenTwoProgramsBothWithinWindow_ReturnsTwoRows()
+    {
+        // Arrange: two distinct programs with windowed episodes produce two rows
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        RuvProgram programA = new RuvProgramBuilder()
+            .WithRuvId(1601)
+            .WithName("Sign Language A")
+            .WithMultipleEpisodes()
+            .Build();
+        programA.TryAddEpisode("sl-a-ep", new Uri("http://test.com"), "Episode A", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        RuvProgram programB = new RuvProgramBuilder()
+            .WithRuvId(1602)
+            .WithName("Sign Language B")
+            .WithMultipleEpisodes()
+            .Build();
+        programB.TryAddEpisode("sl-b-ep", new Uri("http://test.com"), "Episode B", "Desc", new DateTime(2026, 9, 20, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+
+        dbContext.Set<RuvProgram>().AddRange(programA, programB);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (string id in new[] { "sl-a-ep", "sl-b-ep" })
+        {
+            RuvEpisode ep = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == id, cancellationToken);
+            dbContext.Entry(ep).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-2);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.RecentlyAddedEpisodes.Count.ShouldBe(2);
+        result.RecentlyAddedEpisodes.ShouldContain(x => x.ProgramName == "Sign Language A");
+        result.RecentlyAddedEpisodes.ShouldContain(x => x.ProgramName == "Sign Language B");
+    }
+
+    [Fact]
+    public async Task WhenElevenWindowedPrograms_ReturnsOnlyTen()
+    {
+        // Arrange: 11 programs each with one windowed episode; only 10 may appear
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        for (int i = 1; i <= 11; i++)
+        {
+            RuvProgram program = new RuvProgramBuilder()
+                .WithRuvId(1700 + i)
+                .WithName($"Cap Show {i}")
+                .WithMultipleEpisodes()
+                .Build();
+            program.TryAddEpisode($"cap-ep-{i}", new Uri("http://test.com"), $"Cap Episode {i}", "Desc", new DateTime(2026, 9, 18, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromMinutes(30));
+            dbContext.Set<RuvProgram>().Add(program);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (int i in Enumerable.Range(1, 11))
+        {
+            RuvEpisode ep = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == $"cap-ep-{i}", cancellationToken);
+            dbContext.Entry(ep).Property(nameof(RuvEpisode.Created)).CurrentValue = now.UtcDateTime.AddDays(-4);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.RecentlyAddedEpisodes.Count.ShouldBe(10);
     }
 
     [Fact]

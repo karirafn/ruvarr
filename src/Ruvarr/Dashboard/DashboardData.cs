@@ -1,7 +1,7 @@
 namespace Ruvarr.Dashboard;
 
 internal sealed record DashboardData(
-    IReadOnlyList<DashboardEpisodeItem> RecentlyAddedEpisodes,
+    IReadOnlyList<DashboardRecentlyAddedItem> RecentlyAddedEpisodes,
     IReadOnlyList<DashboardEpisodeItem> RequiresTranslationEpisodes,
     IReadOnlyList<DashboardEpisodeItem> LikelyDownloadedOnceMatchedEpisodes,
     DashboardStatistics Statistics,
@@ -11,6 +11,14 @@ internal sealed record DashboardData(
     TvdbSeriesLookupCardInfo TvdbSeriesLookup,
     TvdbEpisodeLookupCardInfo TvdbEpisodeLookup,
     DownloadCardInfo Download);
+
+internal sealed record DashboardRecentlyAddedItem(
+    string ProgramName,
+    int ProgramRuvId,
+    string? EpisodeTitle,
+    int EpisodeCount,
+    DateTime Added,
+    bool IsMatched);
 
 internal sealed record DashboardEpisodeItem(
     string ProgramName,
