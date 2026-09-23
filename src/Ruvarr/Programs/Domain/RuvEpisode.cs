@@ -34,6 +34,8 @@ internal sealed partial class RuvEpisode
 
     public required DateTime FirstRun { get; init; }
 
+    public required DateTime Created { get; init; }
+
     public IReadOnlyList<TvdbEpisode> TvdbEpisodes => _tvdbEpisodes.AsReadOnly();
 
     public int LookupCount { get; private set; }
@@ -87,6 +89,7 @@ internal sealed partial class RuvEpisode
             Description = description,
             FirstRun = firstRun,
             Duration = duration,
+            Created = DateTime.UtcNow,
         };
     }
 

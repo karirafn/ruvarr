@@ -204,8 +204,8 @@ public sealed class PerProgramIsolation
                 using RuvarrDbContext sideContext = CreateDbContext();
                 await sideContext.Database.ExecuteSqlAsync(
                     $"""
-                    INSERT INTO episodes (ruv_id, uri, title, description, first_run, duration_seconds, lookup_count, program_id)
-                    SELECT {ConflictingEpisodeId}, 'http://ruv.is/x', 'Conflict', '', datetime('now'), 1800, 0, id
+                    INSERT INTO episodes (ruv_id, uri, title, description, first_run, duration_seconds, lookup_count, program_id, created)
+                    SELECT {ConflictingEpisodeId}, 'http://ruv.is/x', 'Conflict', '', datetime('now'), 1800, 0, id, datetime('now')
                     FROM programs WHERE ruv_id = {Program1RuvId}
                     """,
                     cancellationToken);
