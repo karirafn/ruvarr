@@ -200,6 +200,21 @@
 .dashboard-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
+}
+
+/* Column map — .col-episode is intentionally undeclared so it absorbs the remainder.
+   Declared widths do not total 100%; under table-layout:fixed the slack falls to the
+   unsized Episode column, so one map serves both the 4-col and 3-col table shapes. */
+.dashboard-table .col-program { width: 28%; }
+.dashboard-table .col-date    { width: 7rem; }
+.dashboard-table .col-center  { width: 2.5rem; }
+
+.dashboard-table .col-program,
+.dashboard-table .col-episode {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .dashboard-table th {
@@ -634,5 +649,9 @@
 
     .dashboard-section {
         overflow-x: auto;
+    }
+
+    .dashboard-table {
+        min-inline-size: 32rem;
     }
 }
