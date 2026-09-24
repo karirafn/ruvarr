@@ -394,9 +394,12 @@ else
                 <tbody>
                     @foreach (DashboardRecentlyAddedItem episode in _data.RecentlyAddedEpisodes)
                     {
+                        string episodeLabel = episode.EpisodeCount == 1
+                            ? (episode.EpisodeTitle ?? "1 episode")
+                            : $"{episode.EpisodeCount} episodes";
                         <tr>
                             <td class="col-program" title="@episode.ProgramName"><a class="program-link" href="/program/@episode.ProgramRuvId">@episode.ProgramName</a></td>
-                            <td class="col-episode" title="@(episode.EpisodeCount == 1 ? (episode.EpisodeTitle ?? "1 episode") : $"{episode.EpisodeCount} episodes")">@(episode.EpisodeCount == 1 ? (episode.EpisodeTitle ?? "1 episode") : $"{episode.EpisodeCount} episodes")</td>
+                            <td class="col-episode" title="@episodeLabel">@episodeLabel</td>
                             <td class="col-date"><time datetime="@episode.Added.ToString("yyyy-MM-dd")">@episode.Added.ToString("yyyy-MM-dd")</time></td>
                             <td class="col-center">
                                 @if (episode.IsMatched)
@@ -426,9 +429,9 @@ else
             <table class="dashboard-table">
                 <thead>
                     <tr>
-                        <th class="col-program">Program</th>
-                        <th class="col-episode">Episode</th>
-                        <th class="col-date">First Run</th>
+                        <th scope="col" class="col-program">Program</th>
+                        <th scope="col" class="col-episode">Episode</th>
+                        <th scope="col" class="col-date">First Run</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -456,9 +459,9 @@ else
             <table class="dashboard-table">
                 <thead>
                     <tr>
-                        <th class="col-program">Program</th>
-                        <th class="col-episode">Episode</th>
-                        <th class="col-date">First Run</th>
+                        <th scope="col" class="col-program">Program</th>
+                        <th scope="col" class="col-episode">Episode</th>
+                        <th scope="col" class="col-date">First Run</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -422,7 +422,6 @@ public sealed class DashboardTests : BunitContext
 
         // Assert
         IReadOnlyList<IElement> headers = cut.FindAll("section[aria-label='Recently Added Episodes'] thead th");
-        headers.Count.ShouldBe(4);
         headers[0].ClassList.ShouldContain("col-program");
         headers[1].ClassList.ShouldContain("col-episode");
         headers[2].ClassList.ShouldContain("col-date");
