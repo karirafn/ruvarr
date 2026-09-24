@@ -406,6 +406,130 @@ public sealed class DashboardTests : BunitContext
         section.QuerySelector(".empty-message")!.TextContent.ShouldBe("No unmatched episodes on monitored programs.");
     }
 
+    // ── Dashboard column classes ────────────────────────────────────────────────
+
+    [Fact]
+    public void WhenRecentlyAddedEpisodes_TableHeaders_CarryColumnClasses()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show A", 100, "Episode 1", 1, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), false)]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> headers = cut.FindAll("section[aria-label='Recently Added Episodes'] thead th");
+        headers.Count.ShouldBe(4);
+        headers[0].ClassList.ShouldContain("col-program");
+        headers[1].ClassList.ShouldContain("col-episode");
+        headers[2].ClassList.ShouldContain("col-date");
+        headers[3].ClassList.ShouldContain("col-center");
+    }
+
+    [Fact]
+    public void WhenRecentlyAddedEpisodes_TableBodyCells_CarryColumnClasses()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            recentlyAdded: [new DashboardRecentlyAddedItem("Show A", 100, "Episode 1", 1, new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), false)]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> cells = cut.FindAll("section[aria-label='Recently Added Episodes'] tbody td");
+        cells.Count.ShouldBe(4);
+        cells[0].ClassList.ShouldContain("col-program");
+        cells[1].ClassList.ShouldContain("col-episode");
+        cells[2].ClassList.ShouldContain("col-date");
+        cells[3].ClassList.ShouldContain("col-center");
+    }
+
+    [Fact]
+    public void WhenRequiresTranslationEpisodes_TableHeaders_CarryColumnClasses()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            requiresTranslation: [new DashboardEpisodeItem("Show B", 200, "Episode 2", new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc))]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> headers = cut.FindAll("section[aria-label='Requires Translation'] thead th");
+        headers.Count.ShouldBe(3);
+        headers[0].ClassList.ShouldContain("col-program");
+        headers[1].ClassList.ShouldContain("col-episode");
+        headers[2].ClassList.ShouldContain("col-date");
+    }
+
+    [Fact]
+    public void WhenRequiresTranslationEpisodes_TableBodyCells_CarryColumnClasses()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            requiresTranslation: [new DashboardEpisodeItem("Show B", 200, "Episode 2", new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc))]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> cells = cut.FindAll("section[aria-label='Requires Translation'] tbody td");
+        cells.Count.ShouldBe(3);
+        cells[0].ClassList.ShouldContain("col-program");
+        cells[1].ClassList.ShouldContain("col-episode");
+        cells[2].ClassList.ShouldContain("col-date");
+    }
+
+    [Fact]
+    public void WhenLikelyDownloadedEpisodes_TableHeaders_CarryColumnClasses()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            likelyDownloaded: [new DashboardEpisodeItem("Show C", 300, "Episode 3", new DateTime(2026, 3, 3, 0, 0, 0, DateTimeKind.Utc))]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> headers = cut.FindAll("section[aria-label='Likely Downloaded Once Matched'] thead th");
+        headers.Count.ShouldBe(3);
+        headers[0].ClassList.ShouldContain("col-program");
+        headers[1].ClassList.ShouldContain("col-episode");
+        headers[2].ClassList.ShouldContain("col-date");
+    }
+
+    [Fact]
+    public void WhenLikelyDownloadedEpisodes_TableBodyCells_CarryColumnClasses()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            likelyDownloaded: [new DashboardEpisodeItem("Show C", 300, "Episode 3", new DateTime(2026, 3, 3, 0, 0, 0, DateTimeKind.Utc))]);
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IReadOnlyList<IElement> cells = cut.FindAll("section[aria-label='Likely Downloaded Once Matched'] tbody td");
+        cells.Count.ShouldBe(3);
+        cells[0].ClassList.ShouldContain("col-program");
+        cells[1].ClassList.ShouldContain("col-episode");
+        cells[2].ClassList.ShouldContain("col-date");
+    }
+
     // ── Program Refresh card (slimmed) ─────────────────────────────────────────
 
     [Fact]
