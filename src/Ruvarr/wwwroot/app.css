@@ -161,18 +161,18 @@ table {
     table-layout: auto;
 }
 
-th:nth-child(1), td:nth-child(1) { width: 7%; }
-th:nth-child(2), td:nth-child(2) { width: 7%; }
-th:nth-child(3), td:nth-child(3) { white-space: nowrap; width: 8rem; }
-th:nth-child(4), td:nth-child(4) { white-space: nowrap; width: 5rem; }
-th:nth-child(5), td:nth-child(5) { width: 20rem; }
+.episodes-table th:nth-child(1), .episodes-table td:nth-child(1) { width: 7%; }
+.episodes-table th:nth-child(2), .episodes-table td:nth-child(2) { width: 7%; }
+.episodes-table th:nth-child(3), .episodes-table td:nth-child(3) { white-space: nowrap; width: 8rem; }
+.episodes-table th:nth-child(4), .episodes-table td:nth-child(4) { white-space: nowrap; width: 5rem; }
+.episodes-table th:nth-child(5), .episodes-table td:nth-child(5) { width: 20rem; }
 
 thead {
     background-color: rgba(255, 255, 255, 0.08);
 }
 
-th:last-child,
-td:last-child {
+.episodes-table th:last-child,
+.episodes-table td:last-child {
     width: 1%;
     white-space: nowrap;
     text-align: right;
