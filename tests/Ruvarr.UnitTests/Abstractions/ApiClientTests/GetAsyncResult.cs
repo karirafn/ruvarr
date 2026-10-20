@@ -117,9 +117,12 @@ public sealed class GetAsyncResult
         using HttpClient httpClient = CreateHttpClient(HttpStatusCode.OK, body);
         TestableApiClient sut = new(NullLogger.Instance, httpClient);
 
-        // Act & Assert
-        await Should.ThrowAsync<JsonException>(
+        // Act
+        JsonException ex = await Should.ThrowAsync<JsonException>(
             async () => await sut.TestGetAsync<TestResponse>("/test", RuvJson.Default, TestContext.Current.CancellationToken));
+
+        // Assert
+        ex.ShouldNotBeNull();
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "Handler is disposed by HttpClient via disposeHandler: true")]
