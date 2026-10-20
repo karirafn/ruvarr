@@ -1294,6 +1294,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         // Assert
         result.EpisodeSync.StalledFor.ShouldNotBeNull();
         result.EpisodeSync.Reason.ShouldBe(StallReason.Unknown);
+        result.EpisodeSync.UpstreamRefreshFailureCount.ShouldBe(0);
     }
 
     [Fact]
