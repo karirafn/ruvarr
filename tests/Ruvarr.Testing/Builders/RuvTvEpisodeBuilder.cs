@@ -49,29 +49,9 @@ internal sealed class RuvTvEpisodeBuilder
 
     public RuvTvEpisode Build() => new(
         Id: _id,
-        Number: 1,
-        SeriesId: 0,
         FirstRun: _firstRun,
-        FileExpires: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-        Rating: 0,
         Duration: _duration,
-        DurationFriendly: "30 min",
-        Event: 0,
         Title: _title,
-        Slug: "test-episode",
         Description: _description,
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: new Uri("https://ruv.is/image.jpg"),
-        ImageOg: new Uri("https://ruv.is/image-og.jpg"),
-        Scope: "ruv",
-        SubtitlesUrl: new Uri("https://ruv.is/subs.vtt"),
-        Subtitles: new RuvSubtitles(new Uri("https://ruv.is/subs-is.vtt")),
-        OpenSubtitles: false,
-        ClosedSubtitles: false,
-        AutoSubtitles: false,
-        File: _file,
-        Temp: new RuvTemp("file.mp4", "folder"),
-        Clips: [],
-        Files: new RuvFiles(new RuvVodmp4("file.mp4", "folder", "file", false, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), 0, "0", "mp4", "ruv")),
-        CreditPoint: 0);
+        File: _file);
 }

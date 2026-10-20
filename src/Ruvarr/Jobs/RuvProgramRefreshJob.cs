@@ -115,7 +115,7 @@ internal sealed class RuvProgramRefreshJob(
 
     private static void UpdateExistingProgramMetadata(List<RuvProgram> existingTvPrograms, List<RuvTvProgram> programs)
     {
-        Dictionary<int, string> slugByRuvId = programs
+        Dictionary<int, string?> slugByRuvId = programs
             .Where(x => x.Slug is not null)
             .ToDictionary(x => x.Id, x => x.Slug);
 
