@@ -83,8 +83,16 @@ public sealed class PerProgramIsolation
             await seedContext.SaveChangesAsync(cancellationToken);
         }
 
-        RuvTvEpisode titlelessEpisode = CreateRuvTvEpisode(GeisliRuvId, TitlelessEpisodeId, title: null);
-        RuvTvProgram apiResponse = CreateRuvTvProgram(GeisliRuvId, GeisliName, episodes: [titlelessEpisode]);
+        RuvTvEpisode titlelessEpisode = new RuvTvEpisodeBuilder()
+            .WithId(TitlelessEpisodeId)
+            .WithTitle(null)
+            .Build();
+
+        RuvTvProgram apiResponse = new RuvTvProgramBuilder()
+            .WithId(GeisliRuvId)
+            .WithTitle(GeisliName)
+            .WithEpisodes([titlelessEpisode])
+            .Build();
 
         _ruv.GetProgramAsync(GeisliRuvId, Arg.Any<CancellationToken>())
             .Returns((Result<RuvTvProgram>)apiResponse);
@@ -136,8 +144,17 @@ public sealed class PerProgramIsolation
         _ruv.GetProgramAsync(Program1RuvId, Arg.Any<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("RÚV unavailable"));
 
-        RuvTvEpisode episode2 = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, title: "Episode 1");
-        RuvTvProgram apiResponse2 = CreateRuvTvProgram(Program2RuvId, Program2Name, episodes: [episode2]);
+        RuvTvEpisode episode2 = new RuvTvEpisodeBuilder()
+            .WithId(Program2EpisodeId)
+            .WithTitle("Episode 1")
+            .Build();
+
+        RuvTvProgram apiResponse2 = new RuvTvProgramBuilder()
+            .WithId(Program2RuvId)
+            .WithTitle(Program2Name)
+            .WithEpisodes([episode2])
+            .Build();
+
         _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
             .Returns((Result<RuvTvProgram>)apiResponse2);
 
@@ -196,8 +213,17 @@ public sealed class PerProgramIsolation
         // The RÚV API returns an episode with ConflictingEpisodeId for program1.
         // As a side-effect of returning the response, insert that same RuvId into the DB
         // via a separate context so SaveChanges sees a unique-index collision.
-        RuvTvEpisode conflictEpisode = CreateRuvTvEpisode(Program1RuvId, ConflictingEpisodeId, title: "Conflict Episode");
-        RuvTvProgram apiResponse1 = CreateRuvTvProgram(Program1RuvId, Program1Name, episodes: [conflictEpisode]);
+        RuvTvEpisode conflictEpisode = new RuvTvEpisodeBuilder()
+            .WithId(ConflictingEpisodeId)
+            .WithTitle("Conflict Episode")
+            .Build();
+
+        RuvTvProgram apiResponse1 = new RuvTvProgramBuilder()
+            .WithId(Program1RuvId)
+            .WithTitle(Program1Name)
+            .WithEpisodes([conflictEpisode])
+            .Build();
+
         _ruv.GetProgramAsync(Program1RuvId, Arg.Any<CancellationToken>())
             .Returns(async (_) =>
             {
@@ -212,8 +238,17 @@ public sealed class PerProgramIsolation
                 return (Result<RuvTvProgram>)apiResponse1;
             });
 
-        RuvTvEpisode episode2 = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, title: "Episode 1");
-        RuvTvProgram apiResponse2 = CreateRuvTvProgram(Program2RuvId, Program2Name, episodes: [episode2]);
+        RuvTvEpisode episode2 = new RuvTvEpisodeBuilder()
+            .WithId(Program2EpisodeId)
+            .WithTitle("Episode 1")
+            .Build();
+
+        RuvTvProgram apiResponse2 = new RuvTvProgramBuilder()
+            .WithId(Program2RuvId)
+            .WithTitle(Program2Name)
+            .WithEpisodes([episode2])
+            .Build();
+
         _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
             .Returns((Result<RuvTvProgram>)apiResponse2);
 
@@ -243,57 +278,4 @@ public sealed class PerProgramIsolation
         episodes.ShouldContain(e => e.RuvId == Program2EpisodeId,
             "program2's episode must be saved; ChangeTracker.Clear() must have isolated program1's failure");
     }
-
-    private static RuvTvEpisode CreateRuvTvEpisode(int seriesId, string id, string? title) => new(
-        Id: id,
-        Number: 1,
-        SeriesId: seriesId,
-        FirstRun: DateTime.UtcNow,
-        FileExpires: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-        Rating: 0,
-        Duration: 1800,
-        DurationFriendly: "30 min",
-        Event: 0,
-        Title: title,
-        Slug: "test-episode",
-        Description: ["Test description"],
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: new Uri("http://ruv.is/image.jpg"),
-        ImageOg: new Uri("http://ruv.is/image-og.jpg"),
-        Scope: "ruv",
-        SubtitlesUrl: new Uri("http://ruv.is/subs.vtt"),
-        Subtitles: new RuvSubtitles(new Uri("http://ruv.is/subs-is.vtt")),
-        OpenSubtitles: false,
-        ClosedSubtitles: false,
-        AutoSubtitles: false,
-        File: new Uri("http://ruv.is/stream.m3u8"),
-        Temp: new RuvTemp("file.mp4", "folder"),
-        Clips: [],
-        Files: new RuvFiles(new RuvVodmp4("file.mp4", "folder", "file", false, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), 0, "0", "mp4", "ruv")),
-        CreditPoint: 0);
-
-    private static RuvTvProgram CreateRuvTvProgram(int id, string name, IReadOnlyList<RuvTvEpisode> episodes) => new(
-        LastUpdated: DateTimeOffset.UtcNow,
-        Id: id,
-        Title: name,
-        ForeignTitle: "Test",
-        Slug: "test-program",
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: null,
-        ImageOg: new Uri("http://ruv.is/og.jpg"),
-        PortraitImageRenditions: new RuvPortraitImageRenditions([]),
-        PortraitImage: new Uri("http://ruv.is/portrait.jpg"),
-        Description: ["Test description"],
-        Format: "tv",
-        Categories: [],
-        Division: "test",
-        MultipleEpisodes: true,
-        Episodes: episodes,
-        ReverseEpisodeOrder: false,
-        WebAvailableEpisodes: episodes.Count,
-        VodAvailableEpisodes: episodes.Count,
-        PodcastVailableEpisodes: 0,
-        WebLatestDate: DateTime.UtcNow,
-        Channel: "ruv",
-        WebPlayerUrl: new Uri("http://ruv.is/player"));
 }

@@ -12,6 +12,7 @@ using Ruvarr.Jobs;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
+using Ruvarr.Testing.Builders;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 using Shouldly;
@@ -48,40 +49,17 @@ public sealed class IgnoredProgramsFilter
         _tvdbLookupQueue,
         new DomainEventBroadcaster());
 
-    private static RuvTvProgram CreateRuvTvProgram(int id, string title, string channel = "ruv") => new(
-        LastUpdated: DateTimeOffset.UtcNow,
-        Id: id,
-        Title: title,
-        ForeignTitle: $"Foreign {title}",
-        Slug: $"program-{id}",
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: new Uri("http://example.com/image.jpg"),
-        ImageOg: new Uri("http://example.com/image-og.jpg"),
-        PortraitImageRenditions: new RuvPortraitImageRenditions([]),
-        PortraitImage: new Uri("http://example.com/portrait.jpg"),
-        Description: [],
-        Format: "format",
-        Categories: [],
-        Division: "division",
-        MultipleEpisodes: true,
-        Episodes: [],
-        ReverseEpisodeOrder: false,
-        WebAvailableEpisodes: 1,
-        VodAvailableEpisodes: 0,
-        PodcastVailableEpisodes: 0,
-        WebLatestDate: DateTime.UtcNow,
-        Channel: channel,
-        WebPlayerUrl: new Uri("http://example.com/player"));
-
     [Fact]
     public async Task ExcludesProgramsWhoseTitleIsInIgnoredPrograms()
     {
         // Arrange
         _settingsStore.Current.Returns(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["Fréttir"] });
 
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1, "Fréttir"), CreateRuvTvProgram(2, "Kastljós")])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(
+                new RuvTvProgramBuilder().WithId(1).WithTitle("Fréttir").Build(),
+                new RuvTvProgramBuilder().WithId(2).WithTitle("Kastljós").Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -102,9 +80,11 @@ public sealed class IgnoredProgramsFilter
         // Arrange
         _settingsStore.Current.Returns(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = ["fréttir"] });
 
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1, "Fréttir"), CreateRuvTvProgram(2, "Kastljós")])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(
+                new RuvTvProgramBuilder().WithId(1).WithTitle("Fréttir").Build(),
+                new RuvTvProgramBuilder().WithId(2).WithTitle("Kastljós").Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -125,9 +105,11 @@ public sealed class IgnoredProgramsFilter
         // Arrange
         _settingsStore.Current.Returns(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
 
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1, "Fréttir"), CreateRuvTvProgram(2, "Kastljós")])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(
+                new RuvTvProgramBuilder().WithId(1).WithTitle("Fréttir").Build(),
+                new RuvTvProgramBuilder().WithId(2).WithTitle("Kastljós").Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         using RuvarrDbContext dbContext = CreateDbContext();

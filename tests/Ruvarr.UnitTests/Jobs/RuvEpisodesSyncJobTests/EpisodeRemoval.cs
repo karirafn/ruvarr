@@ -91,11 +91,15 @@ public sealed class EpisodeRemoval
             await seedContext.SaveChangesAsync(cancellationToken);
         }
 
-        RuvTvEpisode keptApiEpisode = CreateRuvTvEpisode(KeptEpisodeId, "Episode 1");
+        RuvTvEpisode keptApiEpisode = new RuvTvEpisodeBuilder()
+            .WithId(KeptEpisodeId)
+            .WithTitle("Episode 1")
+            .Build();
 
-        RuvTvProgram apiResponse = CreateRuvTvProgram(
-            RuvProgramId,
-            episodes: [keptApiEpisode]);
+        RuvTvProgram apiResponse = new RuvTvProgramBuilder()
+            .WithId(RuvProgramId)
+            .WithEpisodes([keptApiEpisode])
+            .Build();
 
         _ruv.GetProgramAsync(RuvProgramId, Arg.Any<CancellationToken>())
             .Returns((Result<RuvTvProgram>)apiResponse);
@@ -161,57 +165,4 @@ public sealed class EpisodeRemoval
         programs.ShouldBeEmpty();
         episodes.ShouldBeEmpty();
     }
-
-    private static RuvTvEpisode CreateRuvTvEpisode(string id, string title) => new(
-        Id: id,
-        Number: 1,
-        SeriesId: RuvProgramId,
-        FirstRun: DateTime.UtcNow,
-        FileExpires: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-        Rating: 0,
-        Duration: 1800,
-        DurationFriendly: "30 min",
-        Event: 0,
-        Title: title,
-        Slug: "test-episode",
-        Description: ["Test description"],
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: new Uri("http://ruv.is/image.jpg"),
-        ImageOg: new Uri("http://ruv.is/image-og.jpg"),
-        Scope: "ruv",
-        SubtitlesUrl: new Uri("http://ruv.is/subs.vtt"),
-        Subtitles: new RuvSubtitles(new Uri("http://ruv.is/subs-is.vtt")),
-        OpenSubtitles: false,
-        ClosedSubtitles: false,
-        AutoSubtitles: false,
-        File: new Uri("http://ruv.is/stream.m3u8"),
-        Temp: new RuvTemp("file.mp4", "folder"),
-        Clips: [],
-        Files: new RuvFiles(new RuvVodmp4("file.mp4", "folder", "file", false, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), 0, "0", "mp4", "ruv")),
-        CreditPoint: 0);
-
-    private static RuvTvProgram CreateRuvTvProgram(int id, IReadOnlyList<RuvTvEpisode> episodes) => new(
-        LastUpdated: DateTimeOffset.UtcNow,
-        Id: id,
-        Title: "Test Program",
-        ForeignTitle: "Test",
-        Slug: "test-program",
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: null,
-        ImageOg: new Uri("http://ruv.is/og.jpg"),
-        PortraitImageRenditions: new RuvPortraitImageRenditions([]),
-        PortraitImage: new Uri("http://ruv.is/portrait.jpg"),
-        Description: ["Test description"],
-        Format: "tv",
-        Categories: [],
-        Division: "test",
-        MultipleEpisodes: true,
-        Episodes: episodes,
-        ReverseEpisodeOrder: false,
-        WebAvailableEpisodes: episodes.Count,
-        VodAvailableEpisodes: episodes.Count,
-        PodcastVailableEpisodes: 0,
-        WebLatestDate: DateTime.UtcNow,
-        Channel: "ruv",
-        WebPlayerUrl: new Uri("http://ruv.is/player"));
 }
