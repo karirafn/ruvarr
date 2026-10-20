@@ -80,7 +80,7 @@ else
             </span>
         </div>
 
-        <div class="card-fail-alert" role="alert">
+        <div class="card-fail-alert @(_data.ProgramRefresh.Failure is { ConsecutiveFailures: > 0 } ? "card-fail-alert--active" : "")" role="status">
             @if (_data.ProgramRefresh.Failure is { ConsecutiveFailures: > 0 } refreshFailure)
             {
                 <div class="card-fail-alert__headline">
@@ -140,7 +140,7 @@ else
             </span>
         </div>
 
-        <div class="card-fail-alert" role="alert">
+        <div class="card-fail-alert @(_data.EpisodeSync.Failure is { ConsecutiveFailures: > 0 } ? "card-fail-alert--active" : "")" role="status">
             @if (_data.EpisodeSync.Failure is { ConsecutiveFailures: > 0 } syncFailure)
             {
                 <div class="card-fail-alert__headline">
@@ -164,7 +164,7 @@ else
                     <span class="episode-sync-card__stall-text">
                         @if (_data.EpisodeSync.Reason == StallReason.UpstreamRefreshFailing)
                         {
-                            @:Stalled &mdash; program refresh failing (@(_data.ProgramRefresh.Failure?.ConsecutiveFailures ?? 0) runs)
+                            @:Stalled &mdash; program refresh failing (@(_data.EpisodeSync.UpstreamRefreshFailureCount) @(_data.EpisodeSync.UpstreamRefreshFailureCount == 1 ? "run" : "runs"))
                         }
                         else
                         {
@@ -251,7 +251,7 @@ else
             </span>
         </div>
 
-        <div class="card-fail-alert" role="alert">
+        <div class="card-fail-alert @(_data.TvdbSeriesLookup.Failure is { ConsecutiveFailures: > 0 } ? "card-fail-alert--active" : "")" role="status">
             @if (_data.TvdbSeriesLookup.Failure is { ConsecutiveFailures: > 0 } tvdbSeriesFailure)
             {
                 <div class="card-fail-alert__headline">
@@ -329,7 +329,7 @@ else
             </span>
         </div>
 
-        <div class="card-fail-alert" role="alert">
+        <div class="card-fail-alert @(_data.TvdbEpisodeLookup.Failure is { ConsecutiveFailures: > 0 } ? "card-fail-alert--active" : "")" role="status">
             @if (_data.TvdbEpisodeLookup.Failure is { ConsecutiveFailures: > 0 } tvdbEpisodeFailure)
             {
                 <div class="card-fail-alert__headline">
@@ -407,7 +407,7 @@ else
             </span>
         </div>
 
-        <div class="card-fail-alert" role="alert">
+        <div class="card-fail-alert @(_data.Download.Failure is { ConsecutiveFailures: > 0 } ? "card-fail-alert--active" : "")" role="status">
             @if (_data.Download.Failure is { ConsecutiveFailures: > 0 } downloadFailure)
             {
                 <div class="card-fail-alert__headline">

@@ -79,7 +79,8 @@ internal sealed record EpisodeSyncCardInfo(
     DateTimeOffset? NextFireTimeUtc,
     TimeSpan? StalledFor,
     StallReason Reason,
-    JobFailureInfo? Failure);
+    JobFailureInfo? Failure,
+    int UpstreamRefreshFailureCount = 0);
 
 internal sealed record DownloadCardInfo(
     bool IsDownloading,

@@ -1,6 +1,6 @@
 namespace Ruvarr.Jobs.Monitoring;
 
-public sealed class JobOutcomeNotifier(TimeProvider timeProvider)
+internal sealed class JobOutcomeNotifier(TimeProvider timeProvider)
 {
     private const int MaxErrorLength = 200;
 

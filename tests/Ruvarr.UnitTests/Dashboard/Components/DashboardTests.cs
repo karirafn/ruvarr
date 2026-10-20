@@ -1108,7 +1108,7 @@ public sealed class DashboardTests : BunitContext
         IElement section = cut.Find("section[aria-label='Program Refresh']");
         IElement badge = section.QuerySelector(".card-fail-badge").ShouldNotBeNull();
         badge.TextContent.ShouldContain("Failing");
-        IElement alertRegion = section.QuerySelector(".card-fail-alert[role='alert']").ShouldNotBeNull();
+        IElement alertRegion = section.QuerySelector(".card-fail-alert[role='status']").ShouldNotBeNull();
         IElement alertText = alertRegion.QuerySelector(".card-fail-alert__text").ShouldNotBeNull();
         alertText.TextContent.ShouldContain("Failing");
         alertText.TextContent.ShouldContain("consecutive");
@@ -1163,7 +1163,8 @@ public sealed class DashboardTests : BunitContext
                 NextFireTimeUtc: null,
                 StalledFor: TimeSpan.FromHours(2),
                 Reason: StallReason.UpstreamRefreshFailing,
-                Failure: null));
+                Failure: null,
+                UpstreamRefreshFailureCount: 7));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -1199,6 +1200,73 @@ public sealed class DashboardTests : BunitContext
         section.QuerySelectorAll(".card-fail-badge").ShouldBeEmpty();
         IElement? alertText = section.QuerySelector(".card-fail-alert__text");
         alertText.ShouldBeNull();
+    }
+
+    [Fact]
+    public void WhenProgramRefreshFailing_FailAlertRegion_HasActiveModifierClass()
+    {
+        // Arrange
+        JobFailureInfo failure = new(ConsecutiveFailures: 2, LastError: "Timeout", LastFailureAt: null);
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null,
+                Failure: failure));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        IElement alertRegion = section.QuerySelector(".card-fail-alert").ShouldNotBeNull();
+        alertRegion.ClassList.ShouldContain("card-fail-alert--active");
+    }
+
+    [Fact]
+    public void WhenProgramRefreshHealthy_FailAlertRegion_LacksActiveModifierClass()
+    {
+        // Arrange
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null,
+                Failure: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        IElement alertRegion = section.QuerySelector(".card-fail-alert").ShouldNotBeNull();
+        alertRegion.ClassList.ShouldNotContain("card-fail-alert--active");
+    }
+
+    [Fact]
+    public void FailAlertRegions_UseRoleStatus_NotRoleAlert()
+    {
+        // Arrange — polite live regions on a polling dashboard; assertive would re-announce on every poll
+        JobFailureInfo failure = new(ConsecutiveFailures: 1, LastError: "err", LastFailureAt: null);
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null,
+                Failure: failure));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert — all .card-fail-alert regions use role="status", none use role="alert"
+        IReadOnlyList<IElement> failAlerts = cut.FindAll(".card-fail-alert");
+        failAlerts.ShouldAllBe(el => el.GetAttribute("role") == "status");
     }
 
     private void RegisterHandler(DashboardData data)

@@ -347,7 +347,7 @@
     background: rgba(255, 255, 255, 0.06);
 }
 
-/* Failing state — shared across all job-mapped cards (#430).
+/* Failing state — shared across all job-mapped cards.
    Amber palette reused verbatim from the episode-sync stall banner so a
    failing job reads at the same severity as a stall. */
 .card-header__badges {
@@ -371,10 +371,10 @@
 }
 
 .card-fail-alert {
-    /* empty when the card is healthy — no box drawn until content exists */
+    display: block;
 }
 
-.card-fail-alert:not(:empty) {
+.card-fail-alert--active {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
