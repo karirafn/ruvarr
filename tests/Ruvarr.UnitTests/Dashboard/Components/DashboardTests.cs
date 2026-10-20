@@ -804,7 +804,7 @@ public sealed class DashboardTests : BunitContext
 
         // Assert — live region container must be present; inner content shows stall text + icon
         IElement section = cut.Find("section[aria-label='Episode Sync']");
-        IElement alertContainer = section.QuerySelector("[role='alert']").ShouldNotBeNull();
+        IElement alertContainer = section.QuerySelector(".episode-sync-card__stall-alert[role='alert']").ShouldNotBeNull();
         alertContainer.QuerySelector(".episode-sync-card__stall-text").ShouldNotBeNull();
         IElement stallText = alertContainer.QuerySelector(".episode-sync-card__stall-text")!;
         stallText.TextContent.ShouldContain("Stalled");
@@ -839,7 +839,7 @@ public sealed class DashboardTests : BunitContext
 
         // Assert — live region container is permanently mounted (always in DOM for screen readers)
         IElement section = cut.Find("section[aria-label='Episode Sync']");
-        IElement alertContainer = section.QuerySelector("[role='alert']").ShouldNotBeNull();
+        IElement alertContainer = section.QuerySelector(".episode-sync-card__stall-alert[role='alert']").ShouldNotBeNull();
         // Inner content absent: no stall text or warning icon
         alertContainer.QuerySelector(".episode-sync-card__stall-text").ShouldBeNull();
         alertContainer.QuerySelector("svg").ShouldBeNull();
@@ -1083,6 +1083,122 @@ public sealed class DashboardTests : BunitContext
 
         // Assert
         cut.Find("h1").TextContent.ShouldBe("Dashboard");
+    }
+
+    // ── Failing state ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public void WhenProgramRefreshFailing_RendersFailingBadgeAndAlertRegion()
+    {
+        // Arrange
+        JobFailureInfo failure = new(ConsecutiveFailures: 3, LastError: "Connection refused", LastFailureAt: null);
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null,
+                Failure: failure));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        IElement badge = section.QuerySelector(".card-fail-badge").ShouldNotBeNull();
+        badge.TextContent.ShouldContain("Failing");
+        IElement alertRegion = section.QuerySelector(".card-fail-alert[role='alert']").ShouldNotBeNull();
+        IElement alertText = alertRegion.QuerySelector(".card-fail-alert__text").ShouldNotBeNull();
+        alertText.TextContent.ShouldContain("Failing");
+        alertText.TextContent.ShouldContain("consecutive");
+        alertText.TextContent.ShouldContain("3");
+        IElement errorEl = alertRegion.QuerySelector(".card-fail-alert__error").ShouldNotBeNull();
+        errorEl.TextContent.ShouldBe("Connection refused");
+        errorEl.GetAttribute("title").ShouldBe("Connection refused");
+    }
+
+    [Fact]
+    public void WhenProgramRefreshFailing_FailingStateConveyedByText_NotColorAlone()
+    {
+        // Arrange — AC#7: failing state must be conveyed by text, not colour alone
+        JobFailureInfo failure = new(ConsecutiveFailures: 5, LastError: "Timeout", LastFailureAt: null);
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null,
+                Failure: failure));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert — text node exists and contains "Failing" (proves a non-colour channel)
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        IElement alertText = section.QuerySelector(".card-fail-alert__text").ShouldNotBeNull();
+        alertText.TextContent.ShouldContain("Failing");
+    }
+
+    [Fact]
+    public void WhenEpisodeSyncStalledWithUpstreamRefreshFailing_StallBannerShowsUpstreamCause()
+    {
+        // Arrange — AC#4: stall banner names the upstream program-refresh failure
+        JobFailureInfo programRefreshFailure = new(ConsecutiveFailures: 7, LastError: "API error", LastFailureAt: null);
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null,
+                Failure: programRefreshFailure),
+            episodeSync: new EpisodeSyncCardInfo(
+                IsRunning: false,
+                Depth: 0,
+                CompletedCount: 0,
+                CurrentProgram: null,
+                LastCompletedAt: null,
+                LastRunDuration: null,
+                LastRunTotal: null,
+                NextFireTimeUtc: null,
+                StalledFor: TimeSpan.FromHours(2),
+                Reason: StallReason.UpstreamRefreshFailing,
+                Failure: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Episode Sync']");
+        IElement stallText = section.QuerySelector(".episode-sync-card__stall-text").ShouldNotBeNull();
+        stallText.TextContent.ShouldContain("program refresh failing");
+        stallText.TextContent.ShouldContain("(7 runs)");
+        stallText.TextContent.ShouldNotContain("no completion for");
+    }
+
+    [Fact]
+    public void WhenProgramRefreshHealthy_NoFailingMarkup()
+    {
+        // Arrange — healthy card must not render failing markup (AC edge)
+        DashboardData data = CreateDashboardData(
+            programRefresh: new ProgramRefreshCardInfo(
+                LastEnqueuedAt: null,
+                LastEnqueuedCount: null,
+                NextFireTimeUtc: null,
+                Failure: null));
+        RegisterHandler(data);
+        RegisterBroadcaster();
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        IElement section = cut.Find("section[aria-label='Program Refresh']");
+        section.QuerySelectorAll(".card-fail-badge").ShouldBeEmpty();
+        IElement? alertText = section.QuerySelector(".card-fail-alert__text");
+        alertText.ShouldBeNull();
     }
 
     private void RegisterHandler(DashboardData data)

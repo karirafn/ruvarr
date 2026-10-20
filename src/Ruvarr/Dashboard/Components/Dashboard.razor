@@ -65,10 +65,35 @@ else
     <section class="refresh-card" aria-label="Program Refresh">
         <div class="refresh-card__header">
             <h2 class="dashboard-section-title">Program Refresh</h2>
-            <span class="refresh-card__badge refresh-card__badge--idle">
-                <Icon Type="IconType.Refresh" Class="icon" />
-                Scheduled
+            <span class="card-header__badges">
+                <span class="refresh-card__badge refresh-card__badge--idle">
+                    <Icon Type="IconType.Refresh" Class="icon" />
+                    Scheduled
+                </span>
+                @if (_data.ProgramRefresh.Failure is { ConsecutiveFailures: > 0 })
+                {
+                    <span class="card-fail-badge">
+                        <Icon Type="IconType.Warning" Class="icon" />
+                        Failing
+                    </span>
+                }
             </span>
+        </div>
+
+        <div class="card-fail-alert" role="alert">
+            @if (_data.ProgramRefresh.Failure is { ConsecutiveFailures: > 0 } refreshFailure)
+            {
+                <div class="card-fail-alert__headline">
+                    <Icon Type="IconType.Warning" Class="icon card-fail-alert__icon" />
+                    <span class="card-fail-alert__text">
+                        Failing &mdash; @refreshFailure.ConsecutiveFailures consecutive @(refreshFailure.ConsecutiveFailures == 1 ? "run" : "runs")
+                    </span>
+                </div>
+                @if (!string.IsNullOrEmpty(refreshFailure.LastError))
+                {
+                    <p class="card-fail-alert__error" title="@refreshFailure.LastError">@refreshFailure.LastError</p>
+                }
+            }
         </div>
 
         <dl class="refresh-card__details refresh-card__details--compact">
@@ -90,29 +115,61 @@ else
     <section class="episode-sync-card" aria-label="Episode Sync">
         <div class="episode-sync-card__header">
             <h2 class="dashboard-section-title">Episode Sync</h2>
-            @if (_data.EpisodeSync.IsRunning)
+            <span class="card-header__badges">
+                @if (_data.EpisodeSync.IsRunning)
+                {
+                    <span class="episode-sync-card__badge episode-sync-card__badge--running">
+                        <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
+                        Running
+                    </span>
+                }
+                else
+                {
+                    <span class="episode-sync-card__badge episode-sync-card__badge--idle">
+                        <Icon Type="IconType.Clock" Class="icon" />
+                        Idle
+                    </span>
+                }
+                @if (_data.EpisodeSync.Failure is { ConsecutiveFailures: > 0 })
+                {
+                    <span class="card-fail-badge">
+                        <Icon Type="IconType.Warning" Class="icon" />
+                        Failing
+                    </span>
+                }
+            </span>
+        </div>
+
+        <div class="card-fail-alert" role="alert">
+            @if (_data.EpisodeSync.Failure is { ConsecutiveFailures: > 0 } syncFailure)
             {
-                <span class="episode-sync-card__badge episode-sync-card__badge--running">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
-                    Running
-                </span>
-            }
-            else
-            {
-                <span class="episode-sync-card__badge episode-sync-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" />
-                    Idle
-                </span>
+                <div class="card-fail-alert__headline">
+                    <Icon Type="IconType.Warning" Class="icon card-fail-alert__icon" />
+                    <span class="card-fail-alert__text">
+                        Failing &mdash; @syncFailure.ConsecutiveFailures consecutive @(syncFailure.ConsecutiveFailures == 1 ? "run" : "runs")
+                    </span>
+                </div>
+                @if (!string.IsNullOrEmpty(syncFailure.LastError))
+                {
+                    <p class="card-fail-alert__error" title="@syncFailure.LastError">@syncFailure.LastError</p>
+                }
             }
         </div>
 
-        <div role="alert">
+        <div class="episode-sync-card__stall-alert" role="alert">
             @if (_data.EpisodeSync.StalledFor is not null)
             {
                 <div class="episode-sync-card__stall">
                     <Icon Type="IconType.Warning" Class="icon episode-sync-card__stall-icon" />
                     <span class="episode-sync-card__stall-text">
-                        Stalled &mdash; no completion for @FormatDuration(_data.EpisodeSync.StalledFor.Value)
+                        @if (_data.EpisodeSync.Reason == StallReason.UpstreamRefreshFailing)
+                        {
+                            @:Stalled &mdash; program refresh failing (@(_data.ProgramRefresh.Failure?.ConsecutiveFailures ?? 0) runs)
+                        }
+                        else
+                        {
+                            @:Stalled &mdash; no completion for @FormatDuration(_data.EpisodeSync.StalledFor.Value)
+                        }
                     </span>
                 </div>
             }
@@ -169,19 +226,44 @@ else
     <section class="tvdb-lookup-card" aria-label="TVDB Series Lookup">
         <div class="tvdb-lookup-card__header">
             <h2 class="dashboard-section-title">TVDB Series Lookup</h2>
-            @if (_data.TvdbSeriesLookup.IsProcessing)
+            <span class="card-header__badges">
+                @if (_data.TvdbSeriesLookup.IsProcessing)
+                {
+                    <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
+                        <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
+                        Processing
+                    </span>
+                }
+                else
+                {
+                    <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
+                        <Icon Type="IconType.Clock" Class="icon" />
+                        Idle
+                    </span>
+                }
+                @if (_data.TvdbSeriesLookup.Failure is { ConsecutiveFailures: > 0 })
+                {
+                    <span class="card-fail-badge">
+                        <Icon Type="IconType.Warning" Class="icon" />
+                        Failing
+                    </span>
+                }
+            </span>
+        </div>
+
+        <div class="card-fail-alert" role="alert">
+            @if (_data.TvdbSeriesLookup.Failure is { ConsecutiveFailures: > 0 } tvdbSeriesFailure)
             {
-                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
-                    Processing
-                </span>
-            }
-            else
-            {
-                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" />
-                    Idle
-                </span>
+                <div class="card-fail-alert__headline">
+                    <Icon Type="IconType.Warning" Class="icon card-fail-alert__icon" />
+                    <span class="card-fail-alert__text">
+                        Failing &mdash; @tvdbSeriesFailure.ConsecutiveFailures consecutive @(tvdbSeriesFailure.ConsecutiveFailures == 1 ? "run" : "runs")
+                    </span>
+                </div>
+                @if (!string.IsNullOrEmpty(tvdbSeriesFailure.LastError))
+                {
+                    <p class="card-fail-alert__error" title="@tvdbSeriesFailure.LastError">@tvdbSeriesFailure.LastError</p>
+                }
             }
         </div>
 
@@ -222,19 +304,44 @@ else
     <section class="tvdb-lookup-card" aria-label="TVDB Episode Lookup">
         <div class="tvdb-lookup-card__header">
             <h2 class="dashboard-section-title">TVDB Episode Lookup</h2>
-            @if (_data.TvdbEpisodeLookup.IsProcessing)
+            <span class="card-header__badges">
+                @if (_data.TvdbEpisodeLookup.IsProcessing)
+                {
+                    <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
+                        <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
+                        Processing
+                    </span>
+                }
+                else
+                {
+                    <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
+                        <Icon Type="IconType.Clock" Class="icon" />
+                        Idle
+                    </span>
+                }
+                @if (_data.TvdbEpisodeLookup.Failure is { ConsecutiveFailures: > 0 })
+                {
+                    <span class="card-fail-badge">
+                        <Icon Type="IconType.Warning" Class="icon" />
+                        Failing
+                    </span>
+                }
+            </span>
+        </div>
+
+        <div class="card-fail-alert" role="alert">
+            @if (_data.TvdbEpisodeLookup.Failure is { ConsecutiveFailures: > 0 } tvdbEpisodeFailure)
             {
-                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--processing">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
-                    Processing
-                </span>
-            }
-            else
-            {
-                <span class="tvdb-lookup-card__badge tvdb-lookup-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" />
-                    Idle
-                </span>
+                <div class="card-fail-alert__headline">
+                    <Icon Type="IconType.Warning" Class="icon card-fail-alert__icon" />
+                    <span class="card-fail-alert__text">
+                        Failing &mdash; @tvdbEpisodeFailure.ConsecutiveFailures consecutive @(tvdbEpisodeFailure.ConsecutiveFailures == 1 ? "run" : "runs")
+                    </span>
+                </div>
+                @if (!string.IsNullOrEmpty(tvdbEpisodeFailure.LastError))
+                {
+                    <p class="card-fail-alert__error" title="@tvdbEpisodeFailure.LastError">@tvdbEpisodeFailure.LastError</p>
+                }
             }
         </div>
 
@@ -275,19 +382,44 @@ else
     <section class="download-card" aria-label="Active Download">
         <div class="download-card__header">
             <h2 class="dashboard-section-title">Downloads</h2>
-            @if (_data.Download.IsDownloading)
+            <span class="card-header__badges">
+                @if (_data.Download.IsDownloading)
+                {
+                    <span class="download-card__badge download-card__badge--downloading">
+                        <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
+                        Downloading
+                    </span>
+                }
+                else
+                {
+                    <span class="download-card__badge download-card__badge--idle">
+                        <Icon Type="IconType.Clock" Class="icon" />
+                        Idle
+                    </span>
+                }
+                @if (_data.Download.Failure is { ConsecutiveFailures: > 0 })
+                {
+                    <span class="card-fail-badge">
+                        <Icon Type="IconType.Warning" Class="icon" />
+                        Failing
+                    </span>
+                }
+            </span>
+        </div>
+
+        <div class="card-fail-alert" role="alert">
+            @if (_data.Download.Failure is { ConsecutiveFailures: > 0 } downloadFailure)
             {
-                <span class="download-card__badge download-card__badge--downloading">
-                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" />
-                    Downloading
-                </span>
-            }
-            else
-            {
-                <span class="download-card__badge download-card__badge--idle">
-                    <Icon Type="IconType.Clock" Class="icon" />
-                    Idle
-                </span>
+                <div class="card-fail-alert__headline">
+                    <Icon Type="IconType.Warning" Class="icon card-fail-alert__icon" />
+                    <span class="card-fail-alert__text">
+                        Failing &mdash; @downloadFailure.ConsecutiveFailures consecutive @(downloadFailure.ConsecutiveFailures == 1 ? "run" : "runs")
+                    </span>
+                </div>
+                @if (!string.IsNullOrEmpty(downloadFailure.LastError))
+                {
+                    <p class="card-fail-alert__error" title="@downloadFailure.LastError">@downloadFailure.LastError</p>
+                }
             }
         </div>
 
