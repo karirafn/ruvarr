@@ -7,10 +7,14 @@ using Ruvarr.Abstractions;
 using Ruvarr.Dashboard;
 using Ruvarr.Dashboard.Queries.GetDashboard;
 using Ruvarr.Downloads.Domain;
+using Ruvarr.Jobs;
+using Ruvarr.Jobs.Monitoring;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 using Ruvarr.Testing.Time;
+using Ruvarr.TvdbEpisodeLookup.Jobs;
+using Ruvarr.TvdbSeriesLookup.Jobs;
 
 using Shouldly;
 
@@ -1179,6 +1183,277 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         // Assert
         TimeSpan stalledFor = result.EpisodeSync.StalledFor.ShouldNotBeNull();
         stalledFor.ShouldBe(now - lastCompleted);
+    }
+
+    [Fact]
+    public async Task WhenProgramRefreshJobFailing_ProgramRefreshCardHasFailureInfo()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .WithFailingJob(nameof(RuvProgramRefreshJob), failureCount: 3, error: "RÚV API timeout")
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        JobFailureInfo failure = result.ProgramRefresh.Failure.ShouldNotBeNull();
+        failure.ShouldSatisfyAllConditions(
+            () => failure.ConsecutiveFailures.ShouldBe(3),
+            () => failure.LastError.ShouldBe("RÚV API timeout"));
+    }
+
+    [Fact]
+    public async Task WhenStalledAndProgramRefreshFailing_EpisodeSyncReasonIsUpstreamRefreshFailing()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset lastCompleted = new(2026, 9, 21, 8, 0, 0, TimeSpan.Zero);
+        DateTimeOffset now = lastCompleted.AddHours(2).AddSeconds(1);
+        FixedTimeProvider timeProvider = new(lastCompleted);
+        ProgramRefreshNotifier programRefreshNotifier = new(timeProvider);
+        programRefreshNotifier.Enqueue(1, "Program A");
+        programRefreshNotifier.MarkComplete(1);
+
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .WithFailingJob(nameof(RuvProgramRefreshJob), failureCount: 2, error: "RÚV fetch failed")
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+                services.RemoveAll<ProgramRefreshNotifier>();
+                services.AddSingleton(programRefreshNotifier);
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.StalledFor.ShouldNotBeNull();
+        result.EpisodeSync.Reason.ShouldBe(StallReason.UpstreamRefreshFailing);
+    }
+
+    [Fact]
+    public async Task WhenStalledAndProgramRefreshNotFailing_EpisodeSyncReasonIsUnknown()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset lastCompleted = new(2026, 9, 21, 8, 0, 0, TimeSpan.Zero);
+        DateTimeOffset now = lastCompleted.AddHours(2).AddSeconds(1);
+        FixedTimeProvider timeProvider = new(lastCompleted);
+        ProgramRefreshNotifier programRefreshNotifier = new(timeProvider);
+        programRefreshNotifier.Enqueue(1, "Program A");
+        programRefreshNotifier.MarkComplete(1);
+
+        // No program refresh failures — notifier is fresh (no outcome recorded)
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+                services.RemoveAll<ProgramRefreshNotifier>();
+                services.AddSingleton(programRefreshNotifier);
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.StalledFor.ShouldNotBeNull();
+        result.EpisodeSync.Reason.ShouldBe(StallReason.Unknown);
+    }
+
+    [Fact]
+    public async Task WhenStalledAndProgramRefreshSucceededAfterFailures_EpisodeSyncReasonIsUnknown()
+    {
+        // Arrange — program refresh had failures but then succeeded (count reset to 0)
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        DateTimeOffset lastCompleted = new(2026, 9, 21, 8, 0, 0, TimeSpan.Zero);
+        DateTimeOffset now = lastCompleted.AddHours(2).AddSeconds(1);
+        FixedTimeProvider timeProvider = new(lastCompleted);
+        ProgramRefreshNotifier programRefreshNotifier = new(timeProvider);
+        programRefreshNotifier.Enqueue(1, "Program A");
+        programRefreshNotifier.MarkComplete(1);
+
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .WithFailingJob(nameof(RuvProgramRefreshJob), failureCount: 3, error: "error")
+            .WithSucceededJob(nameof(RuvProgramRefreshJob))
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(now));
+                services.RemoveAll<ProgramRefreshNotifier>();
+                services.AddSingleton(programRefreshNotifier);
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.EpisodeSync.StalledFor.ShouldNotBeNull();
+        result.EpisodeSync.Reason.ShouldBe(StallReason.Unknown);
+    }
+
+    [Fact]
+    public async Task WhenJobsNeverRun_AllCardFailuresAreNull()
+    {
+        // Arrange — fresh notifier, no outcomes recorded for any job
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        result.ShouldSatisfyAllConditions(
+            () => result.ProgramRefresh.Failure.ShouldBeNull(),
+            () => result.EpisodeSync.Failure.ShouldBeNull(),
+            () => result.TvdbSeriesLookup.Failure.ShouldBeNull(),
+            () => result.TvdbEpisodeLookup.Failure.ShouldBeNull(),
+            () => result.Download.Failure.ShouldBeNull());
+    }
+
+    [Fact]
+    public async Task WhenTvdbSeriesLookupJobFailing_TvdbSeriesLookupCardHasFailureInfo()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .WithFailingJob(nameof(TvdbSeriesLookupJob), failureCount: 1, error: "TVDB series API error")
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        JobFailureInfo failure = result.TvdbSeriesLookup.Failure.ShouldNotBeNull();
+        failure.ConsecutiveFailures.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task WhenTvdbEpisodeLookupJobFailing_TvdbEpisodeLookupCardHasFailureInfo()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .WithFailingJob(nameof(TvdbEpisodeLookupJob), failureCount: 2, error: "TVDB episode API error")
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        JobFailureInfo failure = result.TvdbEpisodeLookup.Failure.ShouldNotBeNull();
+        failure.ConsecutiveFailures.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task WhenDownloadJobFailing_DownloadCardHasFailureInfo()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        JobOutcomeNotifier jobOutcomeNotifier = new JobOutcomeNotifierBuilder()
+            .WithFailingJob(nameof(DownloadQueueProcessor), failureCount: 5, error: "download error")
+            .Build();
+
+        await using WebApplicationFactory<Program> customFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<JobOutcomeNotifier>();
+                services.AddSingleton(jobOutcomeNotifier);
+            }));
+
+        await using AsyncServiceScope scope = customFactory.Services.CreateAsyncScope();
+        IRequestHandler<GetDashboardQuery, DashboardData> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetDashboardQuery, DashboardData>>();
+
+        // Act
+        DashboardData result = await handler.Handle(new GetDashboardQuery(), cancellationToken);
+
+        // Assert
+        JobFailureInfo failure = result.Download.Failure.ShouldNotBeNull();
+        failure.ConsecutiveFailures.ShouldBe(5);
     }
 
 }

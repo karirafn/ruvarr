@@ -7,9 +7,12 @@ using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Downloads.Notifiers;
 using Ruvarr.Jobs;
+using Ruvarr.Jobs.Monitoring;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
+using Ruvarr.TvdbSeriesLookup.Jobs;
 using Ruvarr.TvdbSeriesLookup.Notifiers;
 
 namespace Ruvarr.Dashboard.Queries.GetDashboard;
@@ -21,7 +24,8 @@ internal sealed class GetDashboardHandler(
     ProgramRefreshNotifier programRefreshNotifier,
     DownloadProgressNotifier downloadProgressNotifier,
     ISchedulerFactory schedulerFactory,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    JobOutcomeNotifier jobOutcomeNotifier)
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int EpisodeTableLimit = 10;
@@ -233,7 +237,7 @@ internal sealed class GetDashboardHandler(
             downloadProgressNotifier.CompletedLast7Days,
             downloadProgressNotifier.FailedCount,
             queueDepth,
-            Failure: null);
+            Failure: ToFailureInfo(jobOutcomeNotifier.GetOutcome(nameof(DownloadQueueProcessor))));
     }
 
     private async Task<DashboardQueueStatus> GetQueueStatusAsync(CancellationToken cancellationToken)
@@ -264,7 +268,7 @@ internal sealed class GetDashboardHandler(
             programRefreshNotifier.LastEnqueuedAt,
             programRefreshNotifier.LastEnqueuedCount,
             nextFireTimeUtc,
-            Failure: null);
+            Failure: ToFailureInfo(jobOutcomeNotifier.GetOutcome(nameof(RuvProgramRefreshJob))));
     }
 
     private async Task<EpisodeSyncCardInfo> GetEpisodeSyncCardInfoAsync(CancellationToken cancellationToken)
@@ -296,6 +300,9 @@ internal sealed class GetDashboardHandler(
         // that threshold → no stall warning), so the boundary itself must not stall.
         TimeSpan? stalledFor = elapsed > threshold ? elapsed : null;
 
+        JobOutcome? programRefreshOutcome = jobOutcomeNotifier.GetOutcome(nameof(RuvProgramRefreshJob));
+        JobOutcome? episodeSyncOutcome = jobOutcomeNotifier.GetOutcome(nameof(RuvEpisodesSyncJob));
+
         return new EpisodeSyncCardInfo(
             isRunning,
             depth,
@@ -306,8 +313,8 @@ internal sealed class GetDashboardHandler(
             programRefreshNotifier.LastRunTotal,
             nextFireTimeUtc,
             stalledFor,
-            Reason: StallReason.Unknown,
-            Failure: null);
+            Reason: ComputeStallReason(stalledFor, programRefreshOutcome),
+            Failure: ToFailureInfo(episodeSyncOutcome));
     }
 
     private async Task<TvdbSeriesLookupCardInfo> GetTvdbSeriesLookupCardInfoAsync(CancellationToken cancellationToken)
@@ -328,7 +335,7 @@ internal sealed class GetDashboardHandler(
             pendingCount,
             tvdbSeriesLookupNotifier.LastLookedUpAt,
             retryCount,
-            Failure: null);
+            Failure: ToFailureInfo(jobOutcomeNotifier.GetOutcome(nameof(TvdbSeriesLookupJob))));
     }
 
     private async Task<TvdbEpisodeLookupCardInfo> GetTvdbEpisodeLookupCardInfoAsync(CancellationToken cancellationToken)
@@ -349,7 +356,27 @@ internal sealed class GetDashboardHandler(
             pendingCount,
             tvdbEpisodeLookupNotifier.LastLookedUpAt,
             retryCount,
-            Failure: null);
+            Failure: ToFailureInfo(jobOutcomeNotifier.GetOutcome(nameof(TvdbEpisodeLookupJob))));
+    }
+
+    internal static StallReason ComputeStallReason(TimeSpan? stalledFor, JobOutcome? programRefreshOutcome)
+    {
+        if (stalledFor is not null && programRefreshOutcome is { ConsecutiveFailures: > 0 })
+        {
+            return StallReason.UpstreamRefreshFailing;
+        }
+
+        return StallReason.Unknown;
+    }
+
+    private static JobFailureInfo? ToFailureInfo(JobOutcome? outcome)
+    {
+        if (outcome is null or { ConsecutiveFailures: 0 })
+        {
+            return null;
+        }
+
+        return new JobFailureInfo(outcome.ConsecutiveFailures, outcome.LastError, outcome.LastFailureAt);
     }
 
     private static DashboardQueueInfo ToQueueInfo<T>(IReadOnlyList<T> items) where T : IQueueItemSummary
