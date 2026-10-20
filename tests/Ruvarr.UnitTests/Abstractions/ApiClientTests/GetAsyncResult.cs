@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -105,6 +106,25 @@ public sealed class GetAsyncResult
         result.Error.Code.ShouldBe(ApiClientErrors.RequestFailedCode);
     }
 
+    [Fact]
+    public async Task WhenExplicitOptionsProvided_DeserializesUsingThoseOptions()
+    {
+        // Arrange
+        string body = """{"value":"hello"}""";
+        using HttpClient httpClient = CreateHttpClient(HttpStatusCode.OK, body);
+        TestableApiClient sut = new(NullLogger.Instance, httpClient);
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+        options.MakeReadOnly(populateMissingResolver: true);
+
+        // Act
+        Result<TestResponse> result = await sut.TestGetAsync<TestResponse>("/test", options, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        TestResponse value = result.FromResult();
+        value.Value.ShouldBe("hello");
+    }
+
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "Handler is disposed by HttpClient via disposeHandler: true")]
     private static HttpClient CreateHttpClient(HttpStatusCode statusCode, string content) =>
         new(new StaticHandler(statusCode, content), disposeHandler: true)
@@ -125,6 +145,10 @@ public sealed class GetAsyncResult
         public Task<Result<TResponse>> TestGetAsync<TResponse>(string path, CancellationToken cancellationToken)
             where TResponse : notnull =>
             GetAsync<TResponse>(path, cancellationToken);
+
+        public Task<Result<TResponse>> TestGetAsync<TResponse>(string path, JsonSerializerOptions options, CancellationToken cancellationToken)
+            where TResponse : notnull =>
+            GetAsync<TResponse>(path, options, cancellationToken);
 
         public Task<Result<IReadOnlyList<TResponse>>> TestGetMany<TResponse>(string path, CancellationToken cancellationToken)
             where TResponse : notnull =>

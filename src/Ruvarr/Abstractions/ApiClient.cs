@@ -1,8 +1,19 @@
+using System.Text.Json;
+
 namespace Ruvarr.Abstractions;
 
 internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
 {
-    protected async Task<Result<TResponse>> GetAsync<TResponse>(string path, CancellationToken cancellationToken)
+    protected async Task<Result<TResponse>> GetAsync<TResponse>(
+        string path,
+        CancellationToken cancellationToken)
+        where TResponse : notnull =>
+        await GetAsync<TResponse>(path, options: null, cancellationToken);
+
+    protected async Task<Result<TResponse>> GetAsync<TResponse>(
+        string path,
+        JsonSerializerOptions? options,
+        CancellationToken cancellationToken)
         where TResponse : notnull
     {
         try
@@ -23,7 +34,8 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
                 return ApiClientErrors.RequestFailed;
             }
 
-            TResponse? response = await message.Content.ReadFromRuvarrJsonAsync<TResponse>(cancellationToken);
+            JsonSerializerOptions resolvedOptions = options ?? RuvarrJson.Default;
+            TResponse? response = await message.Content.ReadFromRuvarrJsonAsync<TResponse>(resolvedOptions, cancellationToken);
 
             if (response is null)
             {
