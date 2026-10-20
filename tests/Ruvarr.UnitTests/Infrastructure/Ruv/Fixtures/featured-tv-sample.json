@@ -1,0 +1,80 @@
+{
+  "panels": [
+    {
+      "last_updated": "2024-01-01T12:00:00Z",
+      "title": "Featured",
+      "slug": "featured",
+      "type": "program",
+      "display_style": "grid",
+      "programs": [
+        {
+          "last_updated": "2024-01-01T12:00:00Z",
+          "id": 30688,
+          "title": "Kastljós",
+          "foreign_title": null,
+          "slug": "kastljos",
+          "image_renditions": { "web_images": [] },
+          "image": "https://myndir.ruv.is/images/kastljos.jpg",
+          "image_og": "https://myndir.ruv.is/images/kastljos-og.jpg",
+          "portrait_image_renditions": { "web_images": [] },
+          "portrait_image": "https://myndir.ruv.is/images/kastljos-portrait.jpg",
+          "description": ["Dagleg fréttasending."],
+          "format": "tv",
+          "categories": [],
+          "division": "frétt",
+          "multiple_episodes": true,
+          "episodes": [
+            {
+              "id": "30688-20240101",
+              "number": 1,
+              "series_id": 30688,
+              "firstrun": "2024-01-01T20:00:00",
+              "file_expires": "2024-02-01",
+              "rating": null,
+              "duration": 1800,
+              "duration_friendly": "30 min",
+              "event": 0,
+              "title": "Kastljós 1. janúar",
+              "slug": "kastljos-20240101",
+              "description": ["Fréttir dagsins."],
+              "image_renditions": { "web_images": [] },
+              "image": "https://myndir.ruv.is/images/kastljos-ep.jpg",
+              "image_og": "https://myndir.ruv.is/images/kastljos-ep-og.jpg",
+              "scope": "ruv",
+              "subtitles_url": "https://ruv.is/subs.vtt",
+              "subtitles": { "is": "https://ruv.is/subs-is.vtt" },
+              "open_subtitles": false,
+              "closed_subtitles": false,
+              "auto_subtitles": false,
+              "file": "https://ruv.is/stream.m3u8",
+              "temp": { "filename": "kastljos.mp4", "folder": "kastljos" },
+              "clips": [],
+              "files": {
+                "vodmp4": {
+                  "filename": "kastljos.mp4",
+                  "folder": "kastljos",
+                  "file": "kastljos",
+                  "multi_bitrate": false,
+                  "expires": "2024-02-01",
+                  "quality": 0,
+                  "event": "0",
+                  "format": "mp4",
+                  "scope": "ruv"
+                }
+              },
+              "credit_point": 0
+            }
+          ],
+          "reverse_episode_order": false,
+          "web_available_episodes": 5,
+          "vod_avilable_episodes": 0,
+          "podcast_available_episodes": 0,
+          "web_latest_date": "2024-01-01T20:00:00",
+          "channel": "ruv",
+          "web_player_url": "https://ruv.is/sjonvarp/kastljos"
+        }
+      ]
+    }
+  ],
+  "last_updated": "2024-01-01T12:00:00Z"
+}

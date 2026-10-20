@@ -20,6 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Infrastructure\Ruv\Fixtures\featured-tv-sample.json" />
+    <EmbeddedResource Include="Infrastructure\Ruv\Fixtures\featured-tv-firstrun-null.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Ruvarr\Ruvarr.csproj" />
     <ProjectReference Include="..\Ruvarr.Testing\Ruvarr.Testing.csproj" />
   </ItemGroup>

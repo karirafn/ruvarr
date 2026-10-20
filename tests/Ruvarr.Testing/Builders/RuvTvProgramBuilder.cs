@@ -78,27 +78,14 @@ internal sealed class RuvTvProgramBuilder
     }
 
     public RuvTvProgram Build() => new(
-        LastUpdated: DateTimeOffset.UtcNow,
         Id: _id,
         Title: _title,
-        ForeignTitle: _foreignTitle!,
-        Slug: _slug!,
-        ImageRenditions: new RuvImageRenditions([]),
+        ForeignTitle: _foreignTitle,
+        Slug: _slug,
         Image: _image,
-        ImageOg: new Uri("https://ruv.is/og.jpg"),
-        PortraitImageRenditions: new RuvPortraitImageRenditions([]),
-        PortraitImage: new Uri("https://ruv.is/portrait.jpg"),
         Description: _description,
-        Format: "tv",
-        Categories: [],
-        Division: "test",
         MultipleEpisodes: _multipleEpisodes,
         Episodes: _episodes,
-        ReverseEpisodeOrder: false,
         WebAvailableEpisodes: _webAvailableEpisodes,
-        VodAvailableEpisodes: 0,
-        PodcastVailableEpisodes: 0,
-        WebLatestDate: DateTime.UtcNow,
-        Channel: _channel,
-        WebPlayerUrl: new Uri("https://ruv.is/player"));
+        Channel: _channel);
 }

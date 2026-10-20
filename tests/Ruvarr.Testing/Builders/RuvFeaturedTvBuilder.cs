@@ -13,15 +13,5 @@ internal sealed class RuvFeaturedTvBuilder
     }
 
     public RuvFeaturedTv Build() => new(
-        LastUpdated: DateTimeOffset.UtcNow,
-        Panels:
-        [
-            new RuvPanel(
-                LastUpdated: DateTimeOffset.UtcNow,
-                Title: "Panel",
-                Slug: "panel",
-                Type: "type",
-                DisplayStyle: "style",
-                Programs: _programs)
-        ]);
+        Panels: [new RuvPanel(Programs: _programs)]);
 }
