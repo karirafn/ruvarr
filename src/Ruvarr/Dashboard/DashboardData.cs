@@ -12,6 +12,17 @@ internal sealed record DashboardData(
     TvdbEpisodeLookupCardInfo TvdbEpisodeLookup,
     DownloadCardInfo Download);
 
+internal sealed record JobFailureInfo(
+    int ConsecutiveFailures,
+    string? LastError,
+    DateTimeOffset? LastFailureAt);
+
+internal enum StallReason
+{
+    Unknown,
+    UpstreamRefreshFailing,
+}
+
 internal sealed record DashboardRecentlyAddedItem(
     string ProgramName,
     int ProgramRuvId,
@@ -54,7 +65,8 @@ internal sealed record DashboardQueueInfo(
 internal sealed record ProgramRefreshCardInfo(
     DateTimeOffset? LastEnqueuedAt,
     int? LastEnqueuedCount,
-    DateTimeOffset? NextFireTimeUtc);
+    DateTimeOffset? NextFireTimeUtc,
+    JobFailureInfo? Failure);
 
 internal sealed record EpisodeSyncCardInfo(
     bool IsRunning,
@@ -65,7 +77,9 @@ internal sealed record EpisodeSyncCardInfo(
     TimeSpan? LastRunDuration,
     int? LastRunTotal,
     DateTimeOffset? NextFireTimeUtc,
-    TimeSpan? StalledFor);
+    TimeSpan? StalledFor,
+    StallReason Reason,
+    JobFailureInfo? Failure);
 
 internal sealed record DownloadCardInfo(
     bool IsDownloading,
@@ -81,20 +95,23 @@ internal sealed record DownloadCardInfo(
     DateTimeOffset? LastDownloadedAt,
     int CompletedLast7Days,
     int FailedCount,
-    int QueueDepth);
+    int QueueDepth,
+    JobFailureInfo? Failure);
 
 internal sealed record TvdbSeriesLookupCardInfo(
     bool IsProcessing,
     string? CurrentProgram,
     int PendingCount,
     DateTimeOffset? LastLookedUpAt,
-    int RetryCount);
+    int RetryCount,
+    JobFailureInfo? Failure);
 
 internal sealed record TvdbEpisodeLookupCardInfo(
     bool IsProcessing,
     string? CurrentProgram,
     int PendingCount,
     DateTimeOffset? LastLookedUpAt,
-    int RetryCount);
+    int RetryCount,
+    JobFailureInfo? Failure);
 
 internal sealed record DownloadCardPendingItem(string ProgramName, string EpisodeTitle);

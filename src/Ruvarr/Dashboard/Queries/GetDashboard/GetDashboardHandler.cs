@@ -232,7 +232,8 @@ internal sealed class GetDashboardHandler(
             downloadProgressNotifier.LastDownloadedAt,
             downloadProgressNotifier.CompletedLast7Days,
             downloadProgressNotifier.FailedCount,
-            queueDepth);
+            queueDepth,
+            Failure: null);
     }
 
     private async Task<DashboardQueueStatus> GetQueueStatusAsync(CancellationToken cancellationToken)
@@ -262,7 +263,8 @@ internal sealed class GetDashboardHandler(
         return new ProgramRefreshCardInfo(
             programRefreshNotifier.LastEnqueuedAt,
             programRefreshNotifier.LastEnqueuedCount,
-            nextFireTimeUtc);
+            nextFireTimeUtc,
+            Failure: null);
     }
 
     private async Task<EpisodeSyncCardInfo> GetEpisodeSyncCardInfoAsync(CancellationToken cancellationToken)
@@ -303,7 +305,9 @@ internal sealed class GetDashboardHandler(
             programRefreshNotifier.LastRunDuration,
             programRefreshNotifier.LastRunTotal,
             nextFireTimeUtc,
-            stalledFor);
+            stalledFor,
+            Reason: StallReason.Unknown,
+            Failure: null);
     }
 
     private async Task<TvdbSeriesLookupCardInfo> GetTvdbSeriesLookupCardInfoAsync(CancellationToken cancellationToken)
@@ -323,7 +327,8 @@ internal sealed class GetDashboardHandler(
             tvdbSeriesLookupNotifier.CurrentProgram,
             pendingCount,
             tvdbSeriesLookupNotifier.LastLookedUpAt,
-            retryCount);
+            retryCount,
+            Failure: null);
     }
 
     private async Task<TvdbEpisodeLookupCardInfo> GetTvdbEpisodeLookupCardInfoAsync(CancellationToken cancellationToken)
@@ -343,7 +348,8 @@ internal sealed class GetDashboardHandler(
             tvdbEpisodeLookupNotifier.CurrentProgram,
             pendingCount,
             tvdbEpisodeLookupNotifier.LastLookedUpAt,
-            retryCount);
+            retryCount,
+            Failure: null);
     }
 
     private static DashboardQueueInfo ToQueueInfo<T>(IReadOnlyList<T> items) where T : IQueueItemSummary

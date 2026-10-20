@@ -115,7 +115,8 @@ public sealed class DashboardTests : BunitContext
             LastDownloadedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
             CompletedLast7Days: 5,
             FailedCount: 2,
-            QueueDepth: 3);
+            QueueDepth: 3,
+            Failure: null);
         DashboardData data = CreateDashboardData(download: download);
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -152,7 +153,8 @@ public sealed class DashboardTests : BunitContext
             LastDownloadedAt: null,
             CompletedLast7Days: 0,
             FailedCount: 0,
-            QueueDepth: 3);
+            QueueDepth: 3,
+            Failure: null);
         DashboardData data = CreateDashboardData(download: download);
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -185,7 +187,8 @@ public sealed class DashboardTests : BunitContext
             LastDownloadedAt: null,
             CompletedLast7Days: 0,
             FailedCount: 0,
-            QueueDepth: 1);
+            QueueDepth: 1,
+            Failure: null);
         DashboardData data = CreateDashboardData(download: download);
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -217,7 +220,8 @@ public sealed class DashboardTests : BunitContext
             LastDownloadedAt: null,
             CompletedLast7Days: 0,
             FailedCount: 0,
-            QueueDepth: 0);
+            QueueDepth: 0,
+            Failure: null);
         DashboardData data = CreateDashboardData(download: download);
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -539,7 +543,8 @@ public sealed class DashboardTests : BunitContext
             programRefresh: new ProgramRefreshCardInfo(
                 LastEnqueuedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
                 LastEnqueuedCount: 42,
-                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero)));
+                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero),
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -561,7 +566,8 @@ public sealed class DashboardTests : BunitContext
             programRefresh: new ProgramRefreshCardInfo(
                 LastEnqueuedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
                 LastEnqueuedCount: 7,
-                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero)));
+                NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero),
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -585,7 +591,8 @@ public sealed class DashboardTests : BunitContext
             programRefresh: new ProgramRefreshCardInfo(
                 LastEnqueuedAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
                 LastEnqueuedCount: 12,
-                NextFireTimeUtc: null));
+                NextFireTimeUtc: null,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -608,7 +615,8 @@ public sealed class DashboardTests : BunitContext
             programRefresh: new ProgramRefreshCardInfo(
                 LastEnqueuedAt: null,
                 LastEnqueuedCount: null,
-                NextFireTimeUtc: null));
+                NextFireTimeUtc: null,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -654,7 +662,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: TimeSpan.FromMinutes(4),
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: null));
+                StalledFor: null,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -688,7 +698,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: null));
+                StalledFor: null,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -714,7 +726,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: TimeSpan.FromSeconds(45),
                 LastRunTotal: 40,
                 NextFireTimeUtc: new DateTimeOffset(2026, 3, 29, 11, 0, 0, TimeSpan.Zero),
-                StalledFor: null));
+                StalledFor: null,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -749,7 +763,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: null));
+                StalledFor: null,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -777,7 +793,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: stalledFor));
+                StalledFor: stalledFor,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -810,7 +828,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: null));
+                StalledFor: null,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -839,7 +859,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: null));
+                StalledFor: null,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -866,7 +888,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: TimeSpan.FromHours(2)));
+                StalledFor: TimeSpan.FromHours(2),
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -893,7 +917,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: TimeSpan.FromHours(2)));
+                StalledFor: TimeSpan.FromHours(2),
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -920,7 +946,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: null,
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: null));
+                StalledFor: null,
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -947,7 +975,9 @@ public sealed class DashboardTests : BunitContext
                 LastRunDuration: TimeSpan.FromMinutes(10),
                 LastRunTotal: null,
                 NextFireTimeUtc: null,
-                StalledFor: TimeSpan.FromHours(3)));
+                StalledFor: TimeSpan.FromHours(3),
+                Reason: StallReason.Unknown,
+                Failure: null));
         RegisterHandler(data);
         RegisterBroadcaster();
 
@@ -971,7 +1001,8 @@ public sealed class DashboardTests : BunitContext
             CurrentProgram: null,
             PendingCount: 3,
             LastLookedUpAt: new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero),
-            RetryCount: 5);
+            RetryCount: 5,
+            Failure: null);
         DashboardData data = CreateDashboardData(tvdbSeriesLookup: tvdbSeriesLookup);
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -998,7 +1029,8 @@ public sealed class DashboardTests : BunitContext
             CurrentProgram: "Kastljos",
             PendingCount: 2,
             LastLookedUpAt: null,
-            RetryCount: 0);
+            RetryCount: 0,
+            Failure: null);
         DashboardData data = CreateDashboardData(tvdbSeriesLookup: tvdbSeriesLookup);
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -1022,7 +1054,8 @@ public sealed class DashboardTests : BunitContext
             CurrentProgram: null,
             PendingCount: 0,
             LastLookedUpAt: null,
-            RetryCount: 0);
+            RetryCount: 0,
+            Failure: null);
         DashboardData data = CreateDashboardData(tvdbSeriesLookup: tvdbSeriesLookup);
         RegisterHandler(data);
         RegisterBroadcaster();
@@ -1100,7 +1133,8 @@ public sealed class DashboardTests : BunitContext
     private static readonly ProgramRefreshCardInfo DefaultProgramRefreshCard = new(
         LastEnqueuedAt: null,
         LastEnqueuedCount: null,
-        NextFireTimeUtc: null);
+        NextFireTimeUtc: null,
+        Failure: null);
 
     private static readonly EpisodeSyncCardInfo DefaultEpisodeSyncCard = new(
         IsRunning: false,
@@ -1111,21 +1145,25 @@ public sealed class DashboardTests : BunitContext
         LastRunDuration: null,
         LastRunTotal: null,
         NextFireTimeUtc: null,
-        StalledFor: null);
+        StalledFor: null,
+        Reason: StallReason.Unknown,
+        Failure: null);
 
     private static readonly TvdbSeriesLookupCardInfo DefaultTvdbSeriesLookupCard = new(
         IsProcessing: false,
         CurrentProgram: null,
         PendingCount: 0,
         LastLookedUpAt: null,
-        RetryCount: 0);
+        RetryCount: 0,
+        Failure: null);
 
     private static readonly TvdbEpisodeLookupCardInfo DefaultTvdbEpisodeLookupCard = new(
         IsProcessing: false,
         CurrentProgram: null,
         PendingCount: 0,
         LastLookedUpAt: null,
-        RetryCount: 0);
+        RetryCount: 0,
+        Failure: null);
 
     private static readonly DownloadCardInfo DefaultDownloadCard = new(
         IsDownloading: false,
@@ -1141,5 +1179,6 @@ public sealed class DashboardTests : BunitContext
         LastDownloadedAt: null,
         CompletedLast7Days: 0,
         FailedCount: 0,
-        QueueDepth: 0);
+        QueueDepth: 0,
+        Failure: null);
 }
