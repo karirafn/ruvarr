@@ -12,6 +12,7 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tmdb;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Jobs;
+using Ruvarr.Jobs.Monitoring;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Settings;
 using Ruvarr.TvdbEpisodeLookup;
@@ -30,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddSettings(settingsFilePath);
         services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<IDomainEventBroadcaster, DomainEventBroadcaster>();
+        services.AddSingleton<JobOutcomeNotifier>();
         services.AddSingleton<ProgramRefreshNotifier>();
         services.AddSingleton<TvdbSeriesLookupNotifier>();
         services.AddSingleton<TvdbEpisodeLookupNotifier>();
@@ -120,6 +122,8 @@ public static class ServiceCollectionExtensions
                 .AddTrigger(trigger => trigger
                     .ForJob(tvdbIslTranslationBackfill)
                     .StartNow());
+
+            options.AddJobListener<JobExecutionListener>();
         });
         services.AddQuartzHostedService(x => x.WaitForJobsToComplete = true);
 
