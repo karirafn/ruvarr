@@ -75,4 +75,20 @@ public sealed class JobWasExecuted
         // Assert
         _notifier.GetOutcome("SomeJob").ShouldBeNull();
     }
+
+    [Fact]
+    public async Task WhenJobExceptionWrapsOceAtDepthTwo_RecordsNothing()
+    {
+        // Arrange — depth-2 chain: JobExecutionException → InvalidOperationException → OperationCanceledException
+        JobExecutionListener sut = CreateSut();
+        OperationCanceledException innermost = new("cancelled");
+        InvalidOperationException wrapper = new("wrapper", innermost);
+        JobExecutionException jobException = new(wrapper);
+
+        // Act
+        await sut.JobWasExecuted(_context, jobException, CancellationToken.None);
+
+        // Assert
+        _notifier.GetOutcome("SomeJob").ShouldBeNull();
+    }
 }

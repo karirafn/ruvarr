@@ -302,6 +302,10 @@ internal sealed class GetDashboardHandler(
 
         JobOutcome? programRefreshOutcome = jobOutcomeNotifier.GetOutcome(nameof(RuvProgramRefreshJob));
         JobOutcome? episodeSyncOutcome = jobOutcomeNotifier.GetOutcome(nameof(RuvEpisodesSyncJob));
+        StallReason stallReason = ComputeStallReason(stalledFor, programRefreshOutcome);
+        int upstreamRefreshFailureCount = stallReason == StallReason.UpstreamRefreshFailing
+            ? programRefreshOutcome!.ConsecutiveFailures
+            : 0;
 
         return new EpisodeSyncCardInfo(
             isRunning,
@@ -313,8 +317,9 @@ internal sealed class GetDashboardHandler(
             programRefreshNotifier.LastRunTotal,
             nextFireTimeUtc,
             stalledFor,
-            Reason: ComputeStallReason(stalledFor, programRefreshOutcome),
-            Failure: ToFailureInfo(episodeSyncOutcome));
+            Reason: stallReason,
+            Failure: ToFailureInfo(episodeSyncOutcome),
+            UpstreamRefreshFailureCount: upstreamRefreshFailureCount);
     }
 
     private async Task<TvdbSeriesLookupCardInfo> GetTvdbSeriesLookupCardInfoAsync(CancellationToken cancellationToken)
