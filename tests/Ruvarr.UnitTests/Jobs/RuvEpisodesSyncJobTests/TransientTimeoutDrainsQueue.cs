@@ -98,8 +98,17 @@ public sealed class TransientTimeoutDrainsQueue
             .ThrowsAsync(new TaskCanceledException("timeout", new TimeoutException()));
 
         // Program2: returns success so we can prove it still ran.
-        RuvTvEpisode program2Episode = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, "Episode 1");
-        RuvTvProgram program2Response = CreateRuvTvProgram(Program2RuvId, Program2Name, [program2Episode]);
+        RuvTvEpisode program2Episode = new RuvTvEpisodeBuilder()
+            .WithId(Program2EpisodeId)
+            .WithTitle("Episode 1")
+            .Build();
+
+        RuvTvProgram program2Response = new RuvTvProgramBuilder()
+            .WithId(Program2RuvId)
+            .WithTitle(Program2Name)
+            .WithEpisodes([program2Episode])
+            .Build();
+
         _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
             .Returns(new Result<RuvTvProgram>(program2Response));
 
@@ -155,8 +164,17 @@ public sealed class TransientTimeoutDrainsQueue
             .Returns(new Result<RuvTvProgram>(ApiClientErrors.RequestFailed));
 
         // Program2: returns success so we can prove it still ran.
-        RuvTvEpisode program2Episode = CreateRuvTvEpisode(Program2RuvId, Program2EpisodeId, "Episode 1");
-        RuvTvProgram program2Response = CreateRuvTvProgram(Program2RuvId, Program2Name, [program2Episode]);
+        RuvTvEpisode program2Episode = new RuvTvEpisodeBuilder()
+            .WithId(Program2EpisodeId)
+            .WithTitle("Episode 1")
+            .Build();
+
+        RuvTvProgram program2Response = new RuvTvProgramBuilder()
+            .WithId(Program2RuvId)
+            .WithTitle(Program2Name)
+            .WithEpisodes([program2Episode])
+            .Build();
+
         _ruv.GetProgramAsync(Program2RuvId, Arg.Any<CancellationToken>())
             .Returns(new Result<RuvTvProgram>(program2Response));
 
@@ -182,57 +200,4 @@ public sealed class TransientTimeoutDrainsQueue
         // Assert — program1 was left intact (skipped, not deleted)
         programs.ShouldContain(p => p.RuvId == Program1RuvId);
     }
-
-    private static RuvTvEpisode CreateRuvTvEpisode(int seriesId, string id, string title) => new(
-        Id: id,
-        Number: 1,
-        SeriesId: seriesId,
-        FirstRun: DateTime.UtcNow,
-        FileExpires: DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
-        Rating: 0,
-        Duration: 1800,
-        DurationFriendly: "30 min",
-        Event: 0,
-        Title: title,
-        Slug: "test-episode",
-        Description: ["Test description"],
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: new Uri("http://ruv.is/image.jpg"),
-        ImageOg: new Uri("http://ruv.is/image-og.jpg"),
-        Scope: "ruv",
-        SubtitlesUrl: new Uri("http://ruv.is/subs.vtt"),
-        Subtitles: new RuvSubtitles(new Uri("http://ruv.is/subs-is.vtt")),
-        OpenSubtitles: false,
-        ClosedSubtitles: false,
-        AutoSubtitles: false,
-        File: new Uri("http://ruv.is/stream.m3u8"),
-        Temp: new RuvTemp("file.mp4", "folder"),
-        Clips: [],
-        Files: new RuvFiles(new RuvVodmp4("file.mp4", "folder", "file", false, DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), 0, "0", "mp4", "ruv")),
-        CreditPoint: 0);
-
-    private static RuvTvProgram CreateRuvTvProgram(int id, string name, IReadOnlyList<RuvTvEpisode> episodes) => new(
-        LastUpdated: DateTimeOffset.UtcNow,
-        Id: id,
-        Title: name,
-        ForeignTitle: "Test",
-        Slug: "test-program",
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: null,
-        ImageOg: new Uri("http://ruv.is/og.jpg"),
-        PortraitImageRenditions: new RuvPortraitImageRenditions([]),
-        PortraitImage: new Uri("http://ruv.is/portrait.jpg"),
-        Description: ["Test description"],
-        Format: "tv",
-        Categories: [],
-        Division: "test",
-        MultipleEpisodes: true,
-        Episodes: episodes,
-        ReverseEpisodeOrder: false,
-        WebAvailableEpisodes: episodes.Count,
-        VodAvailableEpisodes: episodes.Count,
-        PodcastVailableEpisodes: 0,
-        WebLatestDate: DateTime.UtcNow,
-        Channel: "ruv",
-        WebPlayerUrl: new Uri("http://ruv.is/player"));
 }

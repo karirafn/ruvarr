@@ -54,38 +54,15 @@ public sealed class RecordsEnqueueBatch
         _tvdbLookupQueue,
         Substitute.For<IDomainEventBroadcaster>());
 
-    private static RuvTvProgram CreateRuvTvProgram(int id, bool multipleEpisodes = true) => new(
-        LastUpdated: DateTimeOffset.UtcNow,
-        Id: id,
-        Title: $"Program {id}",
-        ForeignTitle: $"Foreign Program {id}",
-        Slug: $"program-{id}",
-        ImageRenditions: new RuvImageRenditions([]),
-        Image: new Uri("http://example.com/image.jpg"),
-        ImageOg: new Uri("http://example.com/image-og.jpg"),
-        PortraitImageRenditions: new RuvPortraitImageRenditions([]),
-        PortraitImage: new Uri("http://example.com/portrait.jpg"),
-        Description: [],
-        Format: "format",
-        Categories: [],
-        Division: "division",
-        MultipleEpisodes: multipleEpisodes,
-        Episodes: [],
-        ReverseEpisodeOrder: false,
-        WebAvailableEpisodes: 1,
-        VodAvailableEpisodes: 0,
-        PodcastVailableEpisodes: 0,
-        WebLatestDate: DateTime.UtcNow,
-        Channel: "ruv",
-        WebPlayerUrl: new Uri("http://example.com/player"));
-
     [Fact]
     public async Task WhenProgramsEnqueued_SetsLastEnqueuedCount()
     {
         // Arrange
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1), CreateRuvTvProgram(2)])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(
+                new RuvTvProgramBuilder().WithId(1).Build(),
+                new RuvTvProgramBuilder().WithId(2).Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -105,9 +82,9 @@ public sealed class RecordsEnqueueBatch
         DateTimeOffset fixedNow = new(2026, 9, 21, 12, 0, 0, TimeSpan.Zero);
         ProgramRefreshNotifier syncQueue = new(new FixedTimeProvider(fixedNow));
 
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1)])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(new RuvTvProgramBuilder().WithId(1).Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -132,9 +109,11 @@ public sealed class RecordsEnqueueBatch
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Two programs from the API
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1), CreateRuvTvProgram(2)])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(
+                new RuvTvProgramBuilder().WithId(1).Build(),
+                new RuvTvProgramBuilder().WithId(2).Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         RuvProgramRefreshJob sut = CreateJob(dbContext);
@@ -160,9 +139,9 @@ public sealed class RecordsEnqueueBatch
         dbContext.Set<RuvProgram>().Add(knownProgram);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1)])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(new RuvTvProgramBuilder().WithId(1).Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         RuvProgramRefreshJob sut = CreateJob(dbContext);
@@ -178,9 +157,9 @@ public sealed class RecordsEnqueueBatch
     public async Task WhenNoMultiEpisodePrograms_SetsCountToZero()
     {
         // Arrange
-        RuvFeaturedTv featured = new(DateTimeOffset.UtcNow,
-            [new RuvPanel(DateTimeOffset.UtcNow, "Panel", "panel", "type", "style",
-                [CreateRuvTvProgram(1, multipleEpisodes: false)])]);
+        RuvFeaturedTv featured = new RuvFeaturedTvBuilder()
+            .WithPrograms(new RuvTvProgramBuilder().WithId(1).WithMultipleEpisodes(false).Build())
+            .Build();
         _ruv.GetFeaturedTv(Arg.Any<CancellationToken>()).Returns(featured);
 
         using RuvarrDbContext dbContext = CreateDbContext();
