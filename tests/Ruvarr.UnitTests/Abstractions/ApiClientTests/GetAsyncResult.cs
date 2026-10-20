@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Infrastructure.Ruv;
 
 using Shouldly;
 
@@ -109,20 +110,16 @@ public sealed class GetAsyncResult
     [Fact]
     public async Task WhenExplicitOptionsProvided_DeserializesUsingThoseOptions()
     {
-        // Arrange
-        string body = """{"value":"hello"}""";
+        // Arrange — RuvJson.Default has RespectNullableAnnotations=true; a null value for a
+        // non-nullable property throws JsonException. Under the lenient default it would not,
+        // so this test fails if the explicit options are not threaded through to deserialization.
+        string body = """{"value":null}""";
         using HttpClient httpClient = CreateHttpClient(HttpStatusCode.OK, body);
         TestableApiClient sut = new(NullLogger.Instance, httpClient);
-        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
-        options.MakeReadOnly(populateMissingResolver: true);
 
-        // Act
-        Result<TestResponse> result = await sut.TestGetAsync<TestResponse>("/test", options, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-        TestResponse value = result.FromResult();
-        value.Value.ShouldBe("hello");
+        // Act & Assert
+        await Should.ThrowAsync<JsonException>(
+            async () => await sut.TestGetAsync<TestResponse>("/test", RuvJson.Default, TestContext.Current.CancellationToken));
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "Handler is disposed by HttpClient via disposeHandler: true")]

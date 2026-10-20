@@ -61,6 +61,8 @@ public sealed class GetFeaturedTv
         JsonException ex = await Should.ThrowAsync<JsonException>(
             async () => await sut.GetFeaturedTv(TestContext.Current.CancellationToken));
         ex.Message.ShouldContain("firstrun");
+        string path = ex.Path.ShouldNotBeNull();
+        path.ShouldContain("firstrun");
     }
 
     private static string LoadFixture(string filename)

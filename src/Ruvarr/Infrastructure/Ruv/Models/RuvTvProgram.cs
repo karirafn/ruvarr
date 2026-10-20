@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Ruvarr.Infrastructure.Ruv.Models;
 
-public sealed record class RuvTvProgram(
+internal sealed record class RuvTvProgram(
     [property: JsonPropertyName("id")] int Id,
     [property: JsonPropertyName("title")] string Title,
     [property: JsonPropertyName("foreign_title")] string? ForeignTitle,

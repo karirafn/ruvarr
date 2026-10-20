@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Ruvarr.Infrastructure.Ruv.Models;
 
-public sealed record class RuvTvEpisode(
+internal sealed record class RuvTvEpisode(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("firstrun")] DateTime FirstRun,
     [property: JsonPropertyName("duration")] int Duration,

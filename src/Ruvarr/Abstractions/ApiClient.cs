@@ -4,11 +4,11 @@ namespace Ruvarr.Abstractions;
 
 internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
 {
-    protected async Task<Result<TResponse>> GetAsync<TResponse>(
+    protected Task<Result<TResponse>> GetAsync<TResponse>(
         string path,
         CancellationToken cancellationToken)
         where TResponse : notnull =>
-        await GetAsync<TResponse>(path, options: null, cancellationToken);
+        GetAsync<TResponse>(path, options: null, cancellationToken);
 
     protected async Task<Result<TResponse>> GetAsync<TResponse>(
         string path,
