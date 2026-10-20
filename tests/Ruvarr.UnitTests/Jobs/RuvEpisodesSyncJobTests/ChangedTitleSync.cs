@@ -22,10 +22,10 @@ namespace Ruvarr.UnitTests.Jobs.RuvEpisodesSyncJobTests;
 
 public sealed class ChangedTitleSync
 {
-    // "Skjaldbökustrákur" is "Skjaldbokustrakur" in NFD form:
+    // "Skjaldbo\u0308kustra\u0301kur" is "Skjaldbokustrakur" in NFD form:
     // o+U+0308 (combining diaeresis) = NFD-o-umlaut, a+U+0301 (combining acute) = NFD-a-acute.
     // \uXXXX escapes are used so raw NFD bytes never appear in source files.
-    private const string NfdCorrectedTitle = "Skjaldbökustrákur";
+    private const string NfdCorrectedTitle = "Skjaldbo\u0308kustra\u0301kur";
     private const string LegacyStoredTitle = "Skjaldbokustrakur";
 
     private const int RuvProgramId = 55;
