@@ -4,6 +4,8 @@ using Ruvarr.Infrastructure.Tmdb;
 
 using Shouldly;
 
+using TMDbLib.Objects.Movies;
+
 namespace Ruvarr.UnitTests.Infrastructure.Tmdb.NfcTmdbSerializerTests;
 
 public sealed class Serialize
@@ -20,17 +22,11 @@ public sealed class Serialize
         using MemoryStream target = new();
 
         // Act
-        _sut.Serialize(target, nfdValue, typeof(string));
+        _sut.Serialize(target, new Movie { Title = nfdValue }, typeof(Movie));
 
-        // Assert -- the output bytes contain the raw UTF-8 NFD sequence for
-        // e (0x65) + COMBINING ACUTE ACCENT (0xCC 0x81), not the NFC precomposed
-        // U+00E9 (0xC3 0xA9), proving Serialize did not normalize.
-        byte[] bytes = target.ToArray();
-        bytes.ShouldContain((byte)0x65); // e
-        bytes.ShouldContain((byte)0xCC); // first byte of U+0301 in UTF-8
-        bytes.ShouldContain((byte)0x81); // second byte of U+0301 in UTF-8
-        // 0xC3 0xA9 is NFC U+00E9 (é); if these appeared back-to-back the output was normalized
-        string output = Encoding.UTF8.GetString(bytes);
-        output.IsNormalized(NormalizationForm.FormC).ShouldBeFalse();
+        // Assert -- TMDbLib's JSON encoder escapes non-ASCII as \uXXXX, so the output keeps the
+        // NFD pair "e" + \u0301 and never the NFC precomposed \u00e9, proving Serialize did not normalize.
+        string output = Encoding.UTF8.GetString(target.ToArray());
+        output.ShouldContain("\"title\":\"e\\u0301\"");
     }
 }

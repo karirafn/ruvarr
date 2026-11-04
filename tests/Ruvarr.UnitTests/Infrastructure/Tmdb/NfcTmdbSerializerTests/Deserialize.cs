@@ -4,6 +4,8 @@ using Ruvarr.Infrastructure.Tmdb;
 
 using Shouldly;
 
+using TMDbLib.Objects.Movies;
+
 namespace Ruvarr.UnitTests.Infrastructure.Tmdb.NfcTmdbSerializerTests;
 
 public sealed class Deserialize
@@ -19,31 +21,31 @@ public sealed class Deserialize
     public void WhenJsonContainsNfdStrings_DeserializesToNfc()
     {
         // Arrange
-        string json = $"{{\"Title\":\"{NfdTitle}\",\"Id\":42}}";
+        string json = $"{{\"title\":\"{NfdTitle}\",\"id\":42}}";
         using MemoryStream stream = new(Encoding.UTF8.GetBytes(json));
 
         // Act
-        object? result = _sut.Deserialize(stream, typeof(TestMovie));
+        object? result = _sut.Deserialize(stream, typeof(Movie));
 
         // Assert
-        TestMovie movie = result.ShouldBeOfType<TestMovie>();
+        Movie movie = result.ShouldBeOfType<Movie>();
         movie.Id.ShouldBe(42);
         movie.Title.ShouldBe(NfcTitle);
-        movie.Title.IsNormalized(NormalizationForm.FormC).ShouldBeTrue();
+        movie.Title.ShouldNotBeNull().IsNormalized(NormalizationForm.FormC).ShouldBeTrue();
     }
 
     [Fact]
     public void WhenJsonContainsNfcStrings_PassesThroughUnchanged()
     {
         // Arrange
-        string json = $"{{\"Title\":\"{NfcTitle}\",\"Id\":42}}";
+        string json = $"{{\"title\":\"{NfcTitle}\",\"id\":42}}";
         using MemoryStream stream = new(Encoding.UTF8.GetBytes(json));
 
         // Act
-        object? result = _sut.Deserialize(stream, typeof(TestMovie));
+        object? result = _sut.Deserialize(stream, typeof(Movie));
 
         // Assert
-        TestMovie movie = result.ShouldBeOfType<TestMovie>();
+        Movie movie = result.ShouldBeOfType<Movie>();
         movie.Id.ShouldBe(42);
         movie.Title.ShouldBe(NfcTitle);
     }
@@ -52,14 +54,14 @@ public sealed class Deserialize
     public void WhenJsonContainsAsciiStrings_PassesThroughUnchanged()
     {
         // Arrange
-        string json = "{\"Title\":\"Inception\",\"Id\":1}";
+        string json = "{\"title\":\"Inception\",\"id\":1}";
         using MemoryStream stream = new(Encoding.UTF8.GetBytes(json));
 
         // Act
-        object? result = _sut.Deserialize(stream, typeof(TestMovie));
+        object? result = _sut.Deserialize(stream, typeof(Movie));
 
         // Assert
-        TestMovie movie = result.ShouldBeOfType<TestMovie>();
+        Movie movie = result.ShouldBeOfType<Movie>();
         movie.Title.ShouldBe("Inception");
     }
 
@@ -69,15 +71,15 @@ public sealed class Deserialize
         // Arrange -- the ASCII padding alone already exceeds MaxResponseBytes (4 MB),
         // so the read throws before the footer bytes are ever reached.
         int overLimit = 4 * 1024 * 1024 + 1;
-        byte[] header = Encoding.UTF8.GetBytes("{\"Title\":\"");
+        byte[] header = Encoding.UTF8.GetBytes("{\"title\":\"");
         byte[] padding = new byte[overLimit];
         Array.Fill(padding, (byte)'a');
-        byte[] footer = Encoding.UTF8.GetBytes("\",\"Id\":1}");
+        byte[] footer = Encoding.UTF8.GetBytes("\",\"id\":1}");
         byte[] payload = [..header, ..padding, ..footer];
         using MemoryStream stream = new(payload);
 
         // Act & Assert
-        Should.Throw<InvalidOperationException>(() => _sut.Deserialize(stream, typeof(TestMovie)));
+        Should.Throw<InvalidOperationException>(() => _sut.Deserialize(stream, typeof(Movie)));
     }
 
     // NFC normalization can only compose combining sequences into precomposed code points,
@@ -105,21 +107,15 @@ public sealed class Deserialize
         //
         // IMPORTANT: if you find a character set where NFC UTF-8 is genuinely longer than
         // the input UTF-8, replace this test with one that exercises the real guard path.
-        string json = "{\"Title\":\"ok\",\"Id\":1}";
+        string json = "{\"title\":\"ok\",\"id\":1}";
         using MemoryStream stream = new(Encoding.UTF8.GetBytes(json));
 
         // Act
-        object? result = _sut.Deserialize(stream, typeof(TestMovie));
+        object? result = _sut.Deserialize(stream, typeof(Movie));
 
         // Assert -- the small payload passes through; the guard compiles and is reachable
         // but cannot be triggered by legal NFC-normalized input.
-        TestMovie movie = result.ShouldBeOfType<TestMovie>();
+        Movie movie = result.ShouldBeOfType<Movie>();
         movie.Id.ShouldBe(1);
-    }
-
-    private sealed class TestMovie
-    {
-        public string Title { get; set; } = string.Empty;
-        public int Id { get; set; }
     }
 }
