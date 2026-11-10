@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
+using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 
@@ -33,6 +33,12 @@ public sealed class GetMissingEpisodesAsync
             UnverifiedSceneNumbering: false,
             LastSearchTime: DateTime.UtcNow);
 
+    private static Result<IReadOnlyCollection<MissingEpisode>> Success(params MissingEpisode[] episodes) =>
+        new(episodes);
+
+    private static Result<IReadOnlyCollection<MissingEpisode>> Failure() =>
+        new(ApiClientErrors.RequestFailed);
+
     [Fact]
     public async Task CacheMiss_CallsInnerClientAndCachesResult()
     {
@@ -40,18 +46,17 @@ public sealed class GetMissingEpisodesAsync
         ISonarrClient innerClient = Substitute.For<ISonarrClient>();
         using MemoryCache cache = new(new MemoryCacheOptions());
 
-        IReadOnlyCollection<MissingEpisode> expected = [CreateMissingEpisode()];
+        MissingEpisode[] expected = [CreateMissingEpisode()];
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(expected);
+            .Returns(Success(expected));
 
-        using CachingSonarrClient sut = new(
-            () => innerClient, cache, NullLogger<CachingSonarrClient>.Instance);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
         // Act
-        IReadOnlyCollection<MissingEpisode> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        Result<IReadOnlyCollection<MissingEpisode>> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
         // Assert
-        result.ShouldBe(expected);
+        result.FromResult().ShouldBe(expected);
         await innerClient.Received(1).GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
@@ -62,21 +67,20 @@ public sealed class GetMissingEpisodesAsync
         ISonarrClient innerClient = Substitute.For<ISonarrClient>();
         using MemoryCache cache = new(new MemoryCacheOptions());
 
-        IReadOnlyCollection<MissingEpisode> expected = [CreateMissingEpisode()];
+        MissingEpisode[] expected = [CreateMissingEpisode()];
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(expected);
+            .Returns(Success(expected));
 
-        using CachingSonarrClient sut = new(
-            () => innerClient, cache, NullLogger<CachingSonarrClient>.Instance);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
         // Populate cache
         await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
         // Act
-        IReadOnlyCollection<MissingEpisode> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        Result<IReadOnlyCollection<MissingEpisode>> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
         // Assert
-        result.ShouldBe(expected);
+        result.FromResult().ShouldBe(expected);
         await innerClient.Received(1).GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
@@ -87,81 +91,102 @@ public sealed class GetMissingEpisodesAsync
         ISonarrClient innerClient = Substitute.For<ISonarrClient>();
         using MemoryCache cache = new(new MemoryCacheOptions());
 
-        IReadOnlyCollection<MissingEpisode> firstResult = [CreateMissingEpisode(1)];
-        IReadOnlyCollection<MissingEpisode> secondResult = [CreateMissingEpisode(2)];
+        MissingEpisode[] secondResult = [CreateMissingEpisode(2)];
 
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(firstResult, secondResult);
+            .Returns(Success(CreateMissingEpisode(1)), Success(secondResult));
 
-        using CachingSonarrClient sut = new(
-            () => innerClient, cache, NullLogger<CachingSonarrClient>.Instance);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
         // Populate cache
         await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
         // Act
         await sut.ManualImportFilesAsync([], CancellationToken.None);
-        IReadOnlyCollection<MissingEpisode> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        Result<IReadOnlyCollection<MissingEpisode>> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
         // Assert
-        result.ShouldBe(secondResult);
+        result.FromResult().ShouldBe(secondResult);
         await innerClient.Received(2).GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task WhenSonarrUnreachable_WithWarmCache_ReturnsStaleCachedData()
+    public async Task WhenSonarrFails_ReturnsFailure()
     {
         // Arrange
         ISonarrClient innerClient = Substitute.For<ISonarrClient>();
         using MemoryCache cache = new(new MemoryCacheOptions());
 
-        IReadOnlyCollection<MissingEpisode> expected = [CreateMissingEpisode()];
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(expected);
+            .Returns(Failure());
 
-        using CachingSonarrClient sut = new(
-            () => innerClient, cache, NullLogger<CachingSonarrClient>.Instance);
-
-        // Populate cache
-        await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
-
-        // Make inner client throw
-        innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Connection refused"));
-
-        // Invalidate to force a fresh fetch attempt
-        await sut.ManualImportFilesAsync([], CancellationToken.None);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
         // Act
-        IReadOnlyCollection<MissingEpisode> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        Result<IReadOnlyCollection<MissingEpisode>> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
         // Assert
-        result.ShouldBe(expected);
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(ApiClientErrors.RequestFailed);
     }
 
     [Fact]
-    public async Task WhenCancelled_WithWarmCache_PropagatesCancellation()
+    public async Task WhenSonarrFails_CachesNothing()
     {
         // Arrange
         ISonarrClient innerClient = Substitute.For<ISonarrClient>();
         using MemoryCache cache = new(new MemoryCacheOptions());
 
-        IReadOnlyCollection<MissingEpisode> initial = [CreateMissingEpisode()];
+        MissingEpisode[] expected = [CreateMissingEpisode()];
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(initial);
+            .Returns(Failure(), Success(expected));
 
-        using CachingSonarrClient sut = new(
-            () => innerClient, cache, NullLogger<CachingSonarrClient>.Instance);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
-        // Populate cache to set stale snapshot
         await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
-        // Make inner client throw OperationCanceledException
+        // Act
+        Result<IReadOnlyCollection<MissingEpisode>> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+
+        // Assert
+        result.FromResult().ShouldBe(expected);
+        await innerClient.Received(2).GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WhenSonarrFails_WithPreviouslyFetchedData_ReturnsFailureNotStaleData()
+    {
+        // Arrange
+        ISonarrClient innerClient = Substitute.For<ISonarrClient>();
+        using MemoryCache cache = new(new MemoryCacheOptions());
+
+        innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(Success(CreateMissingEpisode()), Failure());
+
+        using CachingSonarrClient sut = new(() => innerClient, cache);
+
+        // Populate cache, then invalidate to force a fresh fetch attempt
+        await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        await sut.ManualImportFilesAsync([], CancellationToken.None);
+
+        // Act
+        Result<IReadOnlyCollection<MissingEpisode>> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task WhenCancelled_PropagatesCancellation()
+    {
+        // Arrange
+        ISonarrClient innerClient = Substitute.For<ISonarrClient>();
+        using MemoryCache cache = new(new MemoryCacheOptions());
+
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new OperationCanceledException());
 
-        // Invalidate to force a fresh fetch attempt
-        await sut.ManualImportFilesAsync([], CancellationToken.None);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
         // Act & Assert
         await Should.ThrowAsync<OperationCanceledException>(
@@ -175,16 +200,14 @@ public sealed class GetMissingEpisodesAsync
         ISonarrClient innerClient = Substitute.For<ISonarrClient>();
         using MemoryCache cache = new(new MemoryCacheOptions());
 
-        IReadOnlyCollection<MissingEpisode> expected = [CreateMissingEpisode()];
-        TaskCompletionSource<IReadOnlyCollection<MissingEpisode>> tcs = new();
+        TaskCompletionSource<Result<IReadOnlyCollection<MissingEpisode>>> tcs = new();
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(tcs.Task);
 
-        using CachingSonarrClient sut = new(
-            () => innerClient, cache, NullLogger<CachingSonarrClient>.Instance);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
         // Hold the semaphore by starting a call that blocks on the inner client
-        Task<IReadOnlyCollection<MissingEpisode>> holdingCall = sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        Task<Result<IReadOnlyCollection<MissingEpisode>>> holdingCall = sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
         // A second caller cancels while waiting on the semaphore
         using CancellationTokenSource cts = new();
@@ -198,18 +221,16 @@ public sealed class GetMissingEpisodesAsync
         await Should.ThrowAsync<OperationCanceledException>(() => waitingCall);
 
         // Release the first call so the semaphore is freed normally
-        tcs.SetResult(expected);
+        tcs.SetResult(Success(CreateMissingEpisode()));
         await holdingCall;
 
-        // Assert — if the semaphore was over-released, this second call would
-        // enter concurrently with a future caller, but more directly: a subsequent
-        // normal call should still succeed (semaphore count is exactly 1).
+        // Assert — a subsequent normal call should still succeed (semaphore count is exactly 1).
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([CreateMissingEpisode(2)]);
+            .Returns(Success(CreateMissingEpisode(2)));
         cache.Remove("sonarr-missing-episodes");
 
-        IReadOnlyCollection<MissingEpisode> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
-        result.Count.ShouldBe(1);
+        Result<IReadOnlyCollection<MissingEpisode>> result = await sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        result.FromResult().Count.ShouldBe(1);
     }
 
     [Fact]
@@ -219,26 +240,25 @@ public sealed class GetMissingEpisodesAsync
         ISonarrClient innerClient = Substitute.For<ISonarrClient>();
         using MemoryCache cache = new(new MemoryCacheOptions());
 
-        IReadOnlyCollection<MissingEpisode> expected = [CreateMissingEpisode()];
-        TaskCompletionSource<IReadOnlyCollection<MissingEpisode>> tcs = new();
+        MissingEpisode[] expected = [CreateMissingEpisode()];
+        TaskCompletionSource<Result<IReadOnlyCollection<MissingEpisode>>> tcs = new();
 
         innerClient.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(tcs.Task);
 
-        using CachingSonarrClient sut = new(
-            () => innerClient, cache, NullLogger<CachingSonarrClient>.Instance);
+        using CachingSonarrClient sut = new(() => innerClient, cache);
 
         // Act
-        Task<IReadOnlyCollection<MissingEpisode>> call1 = sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
-        Task<IReadOnlyCollection<MissingEpisode>> call2 = sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        Task<Result<IReadOnlyCollection<MissingEpisode>>> call1 = sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
+        Task<Result<IReadOnlyCollection<MissingEpisode>>> call2 = sut.GetMissingEpisodesAsync(cancellationToken: CancellationToken.None);
 
-        tcs.SetResult(expected);
+        tcs.SetResult(Success(expected));
 
-        IReadOnlyCollection<MissingEpisode>[] results = await Task.WhenAll(call1, call2);
+        Result<IReadOnlyCollection<MissingEpisode>>[] results = await Task.WhenAll(call1, call2);
 
         // Assert
-        results[0].ShouldBe(expected);
-        results[1].ShouldBe(expected);
+        results[0].FromResult().ShouldBe(expected);
+        results[1].FromResult().ShouldBe(expected);
         await innerClient.Received(1).GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 }

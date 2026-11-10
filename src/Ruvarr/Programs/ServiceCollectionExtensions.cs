@@ -40,8 +40,8 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IRequestHandler<MatchProgramEpisodesCommand>, MatchProgramEpisodesHandler>();
         services.AddTransient<IRequestHandler<RefreshProgramCommand>, RefreshProgramHandler>();
         services.AddTransient<IRequestHandler<AddProgramToSonarrCommand>, AddProgramToSonarrHandler>();
-        services.AddTransient<IRequestHandler<GetSonarrRootFoldersQuery, IReadOnlyList<RootFolder>>, GetSonarrRootFoldersHandler>();
-        services.AddTransient<IRequestHandler<GetSonarrQualityProfilesQuery, IReadOnlyList<QualityProfile>>, GetSonarrQualityProfilesHandler>();
+        services.AddTransient<IRequestHandler<GetSonarrRootFoldersQuery, Result<IReadOnlyList<RootFolder>>>, GetSonarrRootFoldersHandler>();
+        services.AddTransient<IRequestHandler<GetSonarrQualityProfilesQuery, Result<IReadOnlyList<QualityProfile>>>, GetSonarrQualityProfilesHandler>();
         services.AddScoped<ProgramsFilterState>();
 
         return services;

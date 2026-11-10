@@ -51,12 +51,24 @@ internal sealed class SonarrImporter(
                 .FirstOrDefault(s => s.TvdbId == item.Episode.Program.Series?.TvdbId)
                 ?.Id;
 
-            IReadOnlyList<ManualImportFile> manualImportFiles = await sonarr.GetManualImportsAsync(
+            Result<IReadOnlyList<ManualImportFile>> manualImportResult = await sonarr.GetManualImportsAsync(
                 settings.ResolvedEpisodeDownloadDirectory,
                 seriesId: null,
                 cancellationToken);
 
-            ManualImportFile? file = manualImportFiles
+            if (manualImportResult.IsFailure)
+            {
+                logger.LogError(
+                    "Sonarr manual import scan of {Folder} failed for {Episode} ({ErrorCode}). Marking failed",
+                    settings.ResolvedEpisodeDownloadDirectory,
+                    item.Episode.ToString(),
+                    manualImportResult.Error.Code);
+                item.MarkFailed("Sonarr manual import scan failed");
+                await dbContext.SaveChangesAsync(outcomeWrite);
+                return;
+            }
+
+            ManualImportFile? file = manualImportResult.FromResult()
                 .FirstOrDefault(x => x.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase));
             if (file is null)
             {
@@ -79,11 +91,23 @@ internal sealed class SonarrImporter(
                 return;
             }
 
-            IReadOnlyList<SonarrEpisode> sonarrEpisodes = await sonarr.GetEpisodesAsync(
+            Result<IReadOnlyList<SonarrEpisode>> episodesResult = await sonarr.GetEpisodesAsync(
                 resolvedSeriesId.Value, cancellationToken);
 
+            if (episodesResult.IsFailure)
+            {
+                logger.LogError(
+                    "Sonarr episode lookup for series {SeriesId} failed for {Episode} ({ErrorCode}). Marking failed",
+                    resolvedSeriesId.Value,
+                    item.Episode.ToString(),
+                    episodesResult.Error.Code);
+                item.MarkFailed("Sonarr episode lookup failed");
+                await dbContext.SaveChangesAsync(outcomeWrite);
+                return;
+            }
+
             Dictionary<int, int> tvdbIdToSonarrEpisodeId = [];
-            foreach (SonarrEpisode sonarrEpisode in sonarrEpisodes)
+            foreach (SonarrEpisode sonarrEpisode in episodesResult.FromResult())
             {
                 if (sonarrEpisode.TvdbId != 0)
                 {

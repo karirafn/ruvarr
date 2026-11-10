@@ -1,3 +1,4 @@
+using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Programs.Components;
 
 using Shouldly;
@@ -6,12 +7,16 @@ namespace Ruvarr.UnitTests.Programs.AddToSonarrDialogTests;
 
 public sealed class IsConfirmDisabled
 {
+    private static readonly SonarrConfigLoadState Loaded = new SonarrConfigLoadState.Loaded(
+        [new RootFolder(1, "/tv")],
+        [new QualityProfile(1, "HD-1080p")]);
+
     [Fact]
-    public void ReturnsTrueWhenIsLoadingTrue()
+    public void ReturnsTrueWhenLoading()
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isLoading: true, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
+            new SonarrConfigLoadState.Loading(), isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1);
 
         // Assert
         result.ShouldBeTrue();
@@ -22,18 +27,46 @@ public sealed class IsConfirmDisabled
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isLoading: false, isSubmitting: true, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
+            Loaded, isSubmitting: true, selectedRootFolderId: 1, selectedQualityProfileId: 1);
 
         // Assert
         result.ShouldBeTrue();
     }
 
     [Fact]
-    public void ReturnsTrueWhenLoadErrorMessageIsNotNull()
+    public void ReturnsTrueWhenUnreachable()
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isLoading: false, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: "Error");
+            new SonarrConfigLoadState.Unreachable(), isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ReturnsTrueWhenLoadedWithNoRootFolders()
+    {
+        // Arrange
+        SonarrConfigLoadState state = new SonarrConfigLoadState.Loaded([], [new QualityProfile(1, "HD-1080p")]);
+
+        // Act
+        bool result = AddToSonarrDialog.IsConfirmDisabled(
+            state, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ReturnsTrueWhenLoadedWithNoQualityProfiles()
+    {
+        // Arrange
+        SonarrConfigLoadState state = new SonarrConfigLoadState.Loaded([new RootFolder(1, "/tv")], []);
+
+        // Act
+        bool result = AddToSonarrDialog.IsConfirmDisabled(
+            state, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1);
 
         // Assert
         result.ShouldBeTrue();
@@ -44,7 +77,7 @@ public sealed class IsConfirmDisabled
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isLoading: false, isSubmitting: false, selectedRootFolderId: null, selectedQualityProfileId: 1, loadErrorMessage: null);
+            Loaded, isSubmitting: false, selectedRootFolderId: null, selectedQualityProfileId: 1);
 
         // Assert
         result.ShouldBeTrue();
@@ -55,18 +88,18 @@ public sealed class IsConfirmDisabled
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isLoading: false, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: null, loadErrorMessage: null);
+            Loaded, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: null);
 
         // Assert
         result.ShouldBeTrue();
     }
 
     [Fact]
-    public void ReturnsFalseWhenAllFieldsAreValid()
+    public void ReturnsFalseWhenLoadedAndBothSelected()
     {
         // Act
         bool result = AddToSonarrDialog.IsConfirmDisabled(
-            isLoading: false, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1, loadErrorMessage: null);
+            Loaded, isSubmitting: false, selectedRootFolderId: 1, selectedQualityProfileId: 1);
 
         // Assert
         result.ShouldBeFalse();

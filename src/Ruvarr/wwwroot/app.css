@@ -903,7 +903,7 @@ dialog input[type="number"]:focus {
 }
 
 .dialog-error {
-    color: var(--color-red);
+    color: var(--color-red-light);
     font-size: 0.85rem;
     margin: 0.5rem 0 0;
 }

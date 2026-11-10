@@ -1,5 +1,6 @@
 @namespace Ruvarr.Programs.Components
 @using Ruvarr.Abstractions
+@using Ruvarr.Infrastructure.Sonarr
 @using Ruvarr.Infrastructure.Sonarr.Models
 @using Ruvarr.Programs.Commands.AddProgramToSonarr
 @using Ruvarr.Programs.Queries.GetSonarrQualityProfiles
@@ -10,59 +11,99 @@
 
 <dialog @ref="_dialog" @onclose="OnDialogClose">
     <h2>Add to Sonarr</h2>
-    @if (_loadErrorMessage is not null)
+    @if (_loadState is SonarrConfigLoadState.Unreachable)
     {
-        <p class="dialog-error">@_loadErrorMessage</p>
-        <button class="dialog-button" @onclick="RetryLoadAsync">Retry</button>
+        <p id="@LoadErrorId" class="dialog-error" role="alert">
+            Could not connect to Sonarr. Check the Sonarr URL and API key in <a href="/settings">Settings</a>, then retry.
+        </p>
+        <button class="dialog-button" @ref="_reloadButton" @onclick="ReloadAsync">Retry</button>
     }
     <label>
         Root Folder
-        <select class="dialog-select" disabled="@(_isLoading || _isSubmitting)" value="@_selectedRootFolderId" @onchange="OnRootFolderChanged">
-            @if (_isLoading)
+        <select class="dialog-select"
+                @ref="_rootFolderSelect"
+                disabled="@(IsRootFolderSelectDisabled || _isSubmitting)"
+                aria-describedby="@RootFolderDescribedBy"
+                value="@_selectedRootFolderId"
+                @onchange="OnRootFolderChanged">
+            @switch (_loadState)
             {
-                <option value="">Loading...</option>
-            }
-            else
-            {
-                @if (_selectedRootFolderId is null)
-                {
-                    <option value="">-- Select root folder --</option>
-                }
-                @foreach (RootFolder folder in _rootFolders)
-                {
-                    <option value="@folder.Id">@folder.Path</option>
-                }
+                case SonarrConfigLoadState.Loading:
+                    <option value="">Loading...</option>
+                    break;
+                case SonarrConfigLoadState.Loaded { HasNoRootFolders: true }:
+                    <option value="">No root folders in Sonarr</option>
+                    break;
+                case SonarrConfigLoadState.Loaded loaded:
+                    @if (_selectedRootFolderId is null)
+                    {
+                        <option value="">-- Select root folder --</option>
+                    }
+                    @foreach (RootFolder folder in loaded.RootFolders)
+                    {
+                        <option value="@folder.Id">@folder.Path</option>
+                    }
+                    break;
             }
         </select>
     </label>
+    @if (_loadState is SonarrConfigLoadState.Loaded { HasNoRootFolders: true })
+    {
+        <p id="@RootFolderErrorId" class="dialog-error" role="alert">
+            Sonarr has no root folders. Add one in Sonarr under Settings → Media Management, then reload.
+        </p>
+    }
     <label>
         Quality Profile
-        <select class="dialog-select" disabled="@(_isLoading || _isSubmitting)" @bind="_selectedQualityProfileId" @bind:event="onchange">
-            @if (_isLoading)
+        <select class="dialog-select"
+                @ref="_qualityProfileSelect"
+                disabled="@(IsQualityProfileSelectDisabled || _isSubmitting)"
+                aria-describedby="@QualityProfileDescribedBy"
+                @bind="_selectedQualityProfileId"
+                @bind:event="onchange">
+            @switch (_loadState)
             {
-                <option value="">Loading...</option>
-            }
-            else
-            {
-                @if (_selectedQualityProfileId is null)
-                {
-                    <option value="">-- Select quality profile --</option>
-                }
-                @foreach (QualityProfile profile in _qualityProfiles)
-                {
-                    <option value="@profile.Id">@profile.Name</option>
-                }
+                case SonarrConfigLoadState.Loading:
+                    <option value="">Loading...</option>
+                    break;
+                case SonarrConfigLoadState.Loaded { HasNoQualityProfiles: true }:
+                    <option value="">No quality profiles in Sonarr</option>
+                    break;
+                case SonarrConfigLoadState.Loaded loaded:
+                    @if (_selectedQualityProfileId is null)
+                    {
+                        <option value="">-- Select quality profile --</option>
+                    }
+                    @foreach (QualityProfile profile in loaded.QualityProfiles)
+                    {
+                        <option value="@profile.Id">@profile.Name</option>
+                    }
+                    break;
             }
         </select>
     </label>
-    @if (_submitErrorMessage is not null)
+    @if (_loadState is SonarrConfigLoadState.Loaded { HasNoQualityProfiles: true })
     {
-        <p class="dialog-error">@_submitErrorMessage</p>
+        <p id="@QualityProfileErrorId" class="dialog-error" role="alert">
+            Sonarr has no quality profiles. Add one in Sonarr under Settings → Profiles, then reload.
+        </p>
+    }
+    @if (_loadState is SonarrConfigLoadState.Loaded { IsIncomplete: true })
+    {
+        <button class="dialog-button" @ref="_reloadButton" @onclick="ReloadAsync">Reload</button>
+    }
+    @if (_submitError is not null)
+    {
+        <p id="@SubmitErrorId" class="dialog-error" role="alert">@SubmitErrorMessage(_submitError)</p>
+        @if (IsStaleSelection(_submitError))
+        {
+            <button class="dialog-button" @ref="_reloadButton" @onclick="ReloadAsync">Reload</button>
+        }
     }
     <div class="dialog-actions">
         <button class="dialog-button dialog-button--primary"
                 @onclick="Submit"
-                disabled="@IsConfirmDisabled(_isLoading, _isSubmitting, _selectedRootFolderId, _selectedQualityProfileId, _loadErrorMessage)"
+                disabled="@IsConfirmDisabled(_loadState, _isSubmitting, _selectedRootFolderId, _selectedQualityProfileId)"
                 aria-busy="@_isSubmitting">
             @if (_isSubmitting)
             {
@@ -75,31 +116,58 @@
 </dialog>
 
 @code {
+    private const string LoadErrorId = "sonarr-load-error";
+    private const string RootFolderErrorId = "root-folder-error";
+    private const string QualityProfileErrorId = "quality-profile-error";
+    private const string SubmitErrorId = "sonarr-submit-error";
+
     [Parameter]
     public EventCallback OnAddComplete { get; set; }
 
     private ElementReference _dialog;
+    private ElementReference _rootFolderSelect;
+    private ElementReference _qualityProfileSelect;
+    private ElementReference _reloadButton;
     private int _ruvId;
-    private bool _isLoading;
     private bool _isSubmitting;
-    private string? _loadErrorMessage;
-    private string? _submitErrorMessage;
+    private bool _focusAfterReload;
+    private SonarrConfigLoadState _loadState = new SonarrConfigLoadState.Loading();
+    private RuvarrError? _submitError;
     private readonly CancellationTokenSource _cts = new();
 
-    private IReadOnlyList<RootFolder> _rootFolders = [];
-    private IReadOnlyList<QualityProfile> _qualityProfiles = [];
     private int? _selectedRootFolderId;
     private int? _selectedQualityProfileId;
+
+    private IReadOnlyList<RootFolder> RootFolders =>
+        _loadState is SonarrConfigLoadState.Loaded loaded ? loaded.RootFolders : [];
+
+    private bool IsRootFolderSelectDisabled =>
+        _loadState is not SonarrConfigLoadState.Loaded { HasNoRootFolders: false };
+
+    private bool IsQualityProfileSelectDisabled =>
+        _loadState is not SonarrConfigLoadState.Loaded { HasNoQualityProfiles: false };
+
+    private string? RootFolderDescribedBy => _loadState switch
+    {
+        SonarrConfigLoadState.Unreachable => LoadErrorId,
+        SonarrConfigLoadState.Loaded { HasNoRootFolders: true } => RootFolderErrorId,
+        _ => null,
+    };
+
+    private string? QualityProfileDescribedBy => _loadState switch
+    {
+        SonarrConfigLoadState.Unreachable => LoadErrorId,
+        SonarrConfigLoadState.Loaded { HasNoQualityProfiles: true } => QualityProfileErrorId,
+        _ => null,
+    };
 
     public async Task OpenAsync(int ruvId)
     {
         _ruvId = ruvId;
-        _isLoading = true;
         _isSubmitting = false;
-        _loadErrorMessage = null;
-        _submitErrorMessage = null;
-        _rootFolders = [];
-        _qualityProfiles = [];
+        _focusAfterReload = false;
+        _loadState = new SonarrConfigLoadState.Loading();
+        _submitError = null;
         _selectedRootFolderId = null;
         _selectedQualityProfileId = null;
 
@@ -109,13 +177,40 @@
         await LoadSonarrConfigAsync();
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task RetryLoadAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _isLoading = true;
-        _loadErrorMessage = null;
+        if (!_focusAfterReload)
+        {
+            return;
+        }
+
+        _focusAfterReload = false;
+
+        if (!IsRootFolderSelectDisabled)
+        {
+            await _rootFolderSelect.FocusAsync();
+        }
+        else if (!IsQualityProfileSelectDisabled)
+        {
+            await _qualityProfileSelect.FocusAsync();
+        }
+        else
+        {
+            await _reloadButton.FocusAsync();
+        }
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
+    private async Task ReloadAsync()
+    {
+        _loadState = new SonarrConfigLoadState.Loading();
+        _submitError = null;
+        _selectedRootFolderId = null;
+        _selectedQualityProfileId = null;
         await InvokeAsync(StateHasChanged);
         await LoadSonarrConfigAsync();
+        _focusAfterReload = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadSonarrConfigAsync()
@@ -123,31 +218,24 @@
         try
         {
             await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
-            IRequestHandler<GetSonarrRootFoldersQuery, IReadOnlyList<RootFolder>> rootFolderHandler =
-                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetSonarrRootFoldersQuery, IReadOnlyList<RootFolder>>>();
-            IRequestHandler<GetSonarrQualityProfilesQuery, IReadOnlyList<QualityProfile>> qualityProfileHandler =
-                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetSonarrQualityProfilesQuery, IReadOnlyList<QualityProfile>>>();
+            IRequestHandler<GetSonarrRootFoldersQuery, Result<IReadOnlyList<RootFolder>>> rootFolderHandler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetSonarrRootFoldersQuery, Result<IReadOnlyList<RootFolder>>>>();
+            IRequestHandler<GetSonarrQualityProfilesQuery, Result<IReadOnlyList<QualityProfile>>> qualityProfileHandler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetSonarrQualityProfilesQuery, Result<IReadOnlyList<QualityProfile>>>>();
 
-            Task<IReadOnlyList<RootFolder>> rootFoldersTask = rootFolderHandler.Handle(new GetSonarrRootFoldersQuery(), _cts.Token);
-            Task<IReadOnlyList<QualityProfile>> qualityProfilesTask = qualityProfileHandler.Handle(new GetSonarrQualityProfilesQuery(), _cts.Token);
+            Task<Result<IReadOnlyList<RootFolder>>> rootFoldersTask = rootFolderHandler.Handle(new GetSonarrRootFoldersQuery(), _cts.Token);
+            Task<Result<IReadOnlyList<QualityProfile>>> qualityProfilesTask = qualityProfileHandler.Handle(new GetSonarrQualityProfilesQuery(), _cts.Token);
 
             await Task.WhenAll(rootFoldersTask, qualityProfilesTask);
 
-            _rootFolders = await rootFoldersTask;
-            _qualityProfiles = await qualityProfilesTask;
-
-            if (_rootFolders.Count == 0 || _qualityProfiles.Count == 0)
-            {
-                _loadErrorMessage = "Failed to load Sonarr configuration. Please check your Sonarr connection.";
-            }
+            _loadState = SonarrConfigLoadState.From(await rootFoldersTask, await qualityProfilesTask);
         }
         catch (Exception)
         {
-            _loadErrorMessage = "Failed to load Sonarr configuration. Please try again.";
+            _loadState = new SonarrConfigLoadState.Unreachable();
         }
         finally
         {
-            _isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -173,12 +261,11 @@
     private void OnDialogClose()
     {
         _ruvId = 0;
-        _rootFolders = [];
-        _qualityProfiles = [];
+        _loadState = new SonarrConfigLoadState.Loading();
         _selectedRootFolderId = null;
         _selectedQualityProfileId = null;
-        _loadErrorMessage = null;
-        _submitErrorMessage = null;
+        _submitError = null;
+        _focusAfterReload = false;
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
@@ -190,7 +277,7 @@
         }
 
         _isSubmitting = true;
-        _submitErrorMessage = null;
+        _submitError = null;
 
         if (_selectedRootFolderId is null || _selectedQualityProfileId is null)
         {
@@ -198,7 +285,7 @@
             return;
         }
 
-        string? rootFolderPath = _rootFolders.FirstOrDefault(f => f.Id == _selectedRootFolderId)?.Path;
+        string? rootFolderPath = RootFolders.FirstOrDefault(f => f.Id == _selectedRootFolderId)?.Path;
         if (rootFolderPath is null)
         {
             _isSubmitting = false;
@@ -216,13 +303,13 @@
 
             if (!result.IsSuccess)
             {
-                _submitErrorMessage = result.Error.Description;
+                _submitError = result.Error;
                 return;
             }
         }
         catch (Exception)
         {
-            _submitErrorMessage = "Failed to add series to Sonarr. Please try again.";
+            _submitError = SonarrErrors.AddSeriesFailed;
             return;
         }
         finally
@@ -240,28 +327,32 @@
         _cts.Dispose();
     }
 
-    internal static bool IsConfirmDisabled(bool isLoading, bool isSubmitting, int? selectedRootFolderId, int? selectedQualityProfileId, string? loadErrorMessage)
+    private static bool IsStaleSelection(RuvarrError error) =>
+        error.Code is SonarrErrors.InvalidRootFolderPathCode or SonarrErrors.InvalidQualityProfileIdCode;
+
+    private static string SubmitErrorMessage(RuvarrError error) => error.Code switch
     {
-        if (isLoading)
-        {
-            return true;
-        }
+        SonarrErrors.UnreachableCode => "Could not connect to Sonarr. Check that Sonarr is running, then try again.",
+        SonarrErrors.InvalidRootFolderPathCode => "The selected root folder is no longer in Sonarr. Reload and choose another.",
+        SonarrErrors.InvalidQualityProfileIdCode => "The selected quality profile is no longer in Sonarr. Reload and choose another.",
+        SonarrErrors.AddSeriesFailedCode => "Failed to add series to Sonarr. Please try again.",
+        _ => error.Description,
+    };
+
+    internal static bool IsConfirmDisabled(SonarrConfigLoadState loadState, bool isSubmitting, int? selectedRootFolderId, int? selectedQualityProfileId)
+    {
+        ArgumentNullException.ThrowIfNull(loadState);
 
         if (isSubmitting)
         {
             return true;
         }
 
-        if (loadErrorMessage is not null)
+        if (loadState is not SonarrConfigLoadState.Loaded { IsIncomplete: false })
         {
             return true;
         }
 
-        if (selectedRootFolderId is null || selectedQualityProfileId is null)
-        {
-            return true;
-        }
-
-        return false;
+        return selectedRootFolderId is null || selectedQualityProfileId is null;
     }
 }
