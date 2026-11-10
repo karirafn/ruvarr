@@ -54,4 +54,16 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
 
     public Task<Series?> AddSeriesAsync(AddSeriesRequest request, CancellationToken cancellationToken = default) =>
         PostAsync<AddSeriesRequest, Series>("api/v3/series", request, cancellationToken);
+
+    public Task<Result<IReadOnlyList<SonarrNotification>>> GetNotificationsAsync(CancellationToken cancellationToken = default) =>
+        GetMany<SonarrNotification>("api/v3/notification", cancellationToken);
+
+    public Task<RuvarrResult> TestNotificationAsync(SonarrNotification notification, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Post, "api/v3/notification/test", notification, cancellationToken);
+
+    public Task<RuvarrResult> CreateNotificationAsync(SonarrNotification notification, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Post, "api/v3/notification", notification, cancellationToken);
+
+    public Task<RuvarrResult> UpdateNotificationAsync(int id, SonarrNotification notification, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Put, $"api/v3/notification/{id}", notification with { Id = id }, cancellationToken);
 }

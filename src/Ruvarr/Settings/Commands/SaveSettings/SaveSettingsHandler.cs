@@ -5,6 +5,7 @@ using Quartz;
 using Ruvarr.Abstractions;
 using Ruvarr.Jobs;
 using Ruvarr.Programs.Domain;
+using Ruvarr.SonarrWebhook.Jobs;
 
 namespace Ruvarr.Settings.Commands.SaveSettings;
 
@@ -126,6 +127,8 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
             IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
             await scheduler.TriggerJob(new JobKey(nameof(RuvEpisodesSyncJob)), cancellationToken: cancellationToken);
         }
+
+        await SonarrWebhookReconcileJob.TriggerReprobeAsync(schedulerFactory, cancellationToken);
 
         return RuvarrResult.Success;
     }

@@ -21,10 +21,12 @@ internal static class ServiceCollectionExtensions
             .AddRuvarrResilience()
             .AddHttpMessageHandler<SonarrDelegatingHandler>();
 
-        services.AddSingleton<ISonarrClient>(sp =>
+        services.AddSingleton(sp =>
             new CachingSonarrClient(
                 () => sp.GetRequiredService<SonarrClient>(),
                 sp.GetRequiredService<IMemoryCache>()));
+        services.AddSingleton<ISonarrClient>(sp => sp.GetRequiredService<CachingSonarrClient>());
+        services.AddSingleton<ISonarrMissingEpisodesCache>(sp => sp.GetRequiredService<CachingSonarrClient>());
 
         return services;
     }

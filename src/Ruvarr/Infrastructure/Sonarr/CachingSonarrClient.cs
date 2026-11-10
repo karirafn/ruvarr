@@ -7,7 +7,7 @@ namespace Ruvarr.Infrastructure.Sonarr;
 
 internal sealed class CachingSonarrClient(
     Func<ISonarrClient> innerClientFactory,
-    IMemoryCache cache) : ISonarrClient, IDisposable
+    IMemoryCache cache) : ISonarrClient, ISonarrMissingEpisodesCache, IDisposable
 {
     private const string CacheKey = "sonarr-missing-episodes";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
@@ -85,6 +85,20 @@ internal sealed class CachingSonarrClient(
 
     public Task<Series?> AddSeriesAsync(AddSeriesRequest request, CancellationToken cancellationToken = default) =>
         innerClientFactory().AddSeriesAsync(request, cancellationToken);
+
+    public Task<Result<IReadOnlyList<SonarrNotification>>> GetNotificationsAsync(CancellationToken cancellationToken = default) =>
+        innerClientFactory().GetNotificationsAsync(cancellationToken);
+
+    public Task<RuvarrResult> TestNotificationAsync(SonarrNotification notification, CancellationToken cancellationToken = default) =>
+        innerClientFactory().TestNotificationAsync(notification, cancellationToken);
+
+    public Task<RuvarrResult> CreateNotificationAsync(SonarrNotification notification, CancellationToken cancellationToken = default) =>
+        innerClientFactory().CreateNotificationAsync(notification, cancellationToken);
+
+    public Task<RuvarrResult> UpdateNotificationAsync(int id, SonarrNotification notification, CancellationToken cancellationToken = default) =>
+        innerClientFactory().UpdateNotificationAsync(id, notification, cancellationToken);
+
+    public void InvalidateMissingEpisodes() => cache.Remove(CacheKey);
 
     public void Dispose() => _semaphore.Dispose();
 }

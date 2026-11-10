@@ -10,6 +10,9 @@ using Ruvarr.Jobs;
 using Ruvarr.Jobs.Monitoring;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Settings;
+using Ruvarr.SonarrWebhook;
+using Ruvarr.SonarrWebhook.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
 using Ruvarr.TvdbSeriesLookup.Jobs;
@@ -25,7 +28,9 @@ internal sealed class GetDashboardHandler(
     DownloadProgressNotifier downloadProgressNotifier,
     ISchedulerFactory schedulerFactory,
     TimeProvider timeProvider,
-    JobOutcomeNotifier jobOutcomeNotifier)
+    JobOutcomeNotifier jobOutcomeNotifier,
+    SonarrWebhookHealth sonarrWebhookHealth,
+    ISettingsStore settingsStore)
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
     private const int EpisodeTableLimit = 10;
@@ -47,8 +52,9 @@ internal sealed class GetDashboardHandler(
         Task<TvdbSeriesLookupCardInfo> tvdbSeriesLookupTask = GetTvdbSeriesLookupCardInfoAsync(cancellationToken);
         Task<TvdbEpisodeLookupCardInfo> tvdbEpisodeLookupTask = GetTvdbEpisodeLookupCardInfoAsync(cancellationToken);
         Task<DownloadCardInfo> downloadCardTask = GetDownloadCardInfoAsync(cancellationToken);
+        Task<SonarrWebhookCardInfo> sonarrWebhookTask = GetSonarrWebhookCardInfoAsync(cancellationToken);
 
-        await Task.WhenAll(queueStatusTask, programRefreshTask, episodeSyncTask, tvdbSeriesLookupTask, tvdbEpisodeLookupTask, downloadCardTask);
+        await Task.WhenAll(queueStatusTask, programRefreshTask, episodeSyncTask, tvdbSeriesLookupTask, tvdbEpisodeLookupTask, downloadCardTask, sonarrWebhookTask);
 
         return new DashboardData(
             await recentlyAddedTask,
@@ -60,7 +66,8 @@ internal sealed class GetDashboardHandler(
             await episodeSyncTask,
             await tvdbSeriesLookupTask,
             await tvdbEpisodeLookupTask,
-            await downloadCardTask);
+            await downloadCardTask,
+            await sonarrWebhookTask);
     }
 
     private async Task<IReadOnlyList<DashboardRecentlyAddedItem>> GetRecentlyAddedEpisodesAsync(CancellationToken cancellationToken)
@@ -362,6 +369,49 @@ internal sealed class GetDashboardHandler(
             tvdbEpisodeLookupNotifier.LastLookedUpAt,
             retryCount,
             Failure: ToFailureInfo(jobOutcomeNotifier.GetOutcome(nameof(TvdbEpisodeLookupJob))));
+    }
+
+    private async Task<SonarrWebhookCardInfo> GetSonarrWebhookCardInfoAsync(CancellationToken cancellationToken)
+    {
+        DateTimeOffset? nextAttemptUtc = null;
+        try
+        {
+            IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+            PagedResult<TriggerHeader> result = await scheduler.QueryTriggers(
+                new TriggerQuery { Job = SonarrWebhookReconcileJob.Key },
+                cancellationToken);
+            nextAttemptUtc = result.Items.Count > 0 ? result.Items[0].NextFireTimeUtc : null;
+        }
+        catch (SchedulerException)
+        {
+            // Scheduler not started or job not found
+        }
+
+        return ToSonarrWebhookCard(settingsStore.Current.IsSonarrConfigured, sonarrWebhookHealth.LastOutcome, nextAttemptUtc);
+    }
+
+    internal static SonarrWebhookCardInfo ToSonarrWebhookCard(
+        bool isSonarrConfigured,
+        SonarrWebhookReconcileOutcome? lastOutcome,
+        DateTimeOffset? nextAttemptUtc)
+    {
+        if (!isSonarrConfigured)
+        {
+            return new SonarrWebhookCardInfo(SonarrWebhookStatus.NotConfigured, null, [], null, nextAttemptUtc);
+        }
+
+        // A reconcile that found Sonarr unconfigured attempted nothing; Sonarr has been configured since.
+        if (lastOutcome is null or { Status: SonarrWebhookStatus.NotConfigured })
+        {
+            return new SonarrWebhookCardInfo(SonarrWebhookStatus.Pending, null, [], null, nextAttemptUtc);
+        }
+
+        return new SonarrWebhookCardInfo(
+            lastOutcome.Status,
+            lastOutcome.CallbackUrl,
+            lastOutcome.TriedUrls,
+            lastOutcome.AttemptedAt,
+            nextAttemptUtc);
     }
 
     internal static StallReason ComputeStallReason(TimeSpan? stalledFor, JobOutcome? programRefreshOutcome)

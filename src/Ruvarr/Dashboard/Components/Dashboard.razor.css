@@ -305,6 +305,37 @@
     margin: 0;
 }
 
+/* Sonarr Webhook card — copies the .refresh-card block; failing state reuses the card-fail-* amber */
+.webhook-card {
+    background-color: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.webhook-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.webhook-card__header .dashboard-section-title {
+    margin: 0;
+}
+
+.webhook-card__url {
+    overflow-wrap: anywhere;
+}
+
+.webhook-card__tried-urls {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.78rem;
+    color: #fcd9a0;
+}
+
 /* Episode Sync card — lifecycle view + stall banner */
 .episode-sync-card {
     background-color: #2a2a2a;

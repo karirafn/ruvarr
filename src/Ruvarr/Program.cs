@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Ruvarr;
 using Ruvarr.Components;
 using Ruvarr.Settings;
+using Ruvarr.SonarrWebhook;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +48,7 @@ catch (UnauthorizedAccessException)
 
 app.MapStaticAssets();
 app.UseAntiforgery();
+app.MapSonarrWebhook();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

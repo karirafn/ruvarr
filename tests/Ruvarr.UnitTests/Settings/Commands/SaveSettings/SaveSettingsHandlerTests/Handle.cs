@@ -8,6 +8,8 @@ using Ruvarr.Abstractions;
 using Ruvarr.Jobs;
 using Ruvarr.Settings;
 using Ruvarr.Settings.Commands.SaveSettings;
+using Ruvarr.SonarrWebhook;
+using Ruvarr.SonarrWebhook.Jobs;
 
 using Shouldly;
 
@@ -318,7 +320,7 @@ public sealed class Handle
 
         // Assert
         await _scheduler.DidNotReceive().TriggerJob(
-            Arg.Any<JobKey>(),
+            Arg.Is<JobKey>(k => k.Name == nameof(RuvEpisodesSyncJob)),
             Arg.Any<JobDataMap?>(),
             Arg.Any<CancellationToken>());
     }
@@ -336,8 +338,28 @@ public sealed class Handle
 
         // Assert
         await _scheduler.DidNotReceive().TriggerJob(
-            Arg.Any<JobKey>(),
+            Arg.Is<JobKey>(k => k.Name == nameof(RuvEpisodesSyncJob)),
             Arg.Any<JobDataMap?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("api-key")]
+    public async Task TriggersSonarrWebhookReprobeReconcileOnSave(string sonarrApiKey)
+    {
+        // Arrange
+        _store.Current.Returns(new RuvarrSettings(SonarrBaseAddress: "http://localhost:8989", SonarrApiKey: "existing-key"));
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), sonarrApiKey, "", "", "tv", "movies", [], []);
+
+        // Act
+        await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _scheduler.Received(1).TriggerJob(
+            Arg.Is<JobKey>(k => k.Name == nameof(SonarrWebhookReconcileJob)),
+            Arg.Is<JobDataMap>(m => SonarrWebhookReconcileJob.ModeFrom(m) == SonarrWebhookReconcileMode.Reprobe),
             Arg.Any<CancellationToken>());
     }
 

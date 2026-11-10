@@ -153,6 +153,43 @@ internal abstract class ApiClient(ILogger logger, HttpClient httpClient)
         }
     }
 
+    protected async Task<RuvarrResult> SendAsync<TRequest>(
+        HttpMethod method,
+        string path,
+        TRequest body,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using HttpRequestMessage request = new(method, path)
+            {
+                Content = JsonContent.Create(body, options: RuvarrJson.Default),
+            };
+            using HttpResponseMessage message = await httpClient.SendAsync(request, cancellationToken);
+
+            if (!message.IsSuccessStatusCode)
+            {
+                string content = await message.Content.ReadAsStringAsync(cancellationToken);
+                logger.LogWarning("{Method} {Path} returned status code {Code}. Reason: {Content}", method, path, message.StatusCode, SanitizeAndTruncate(content));
+                return ApiClientErrors.RequestFailed;
+            }
+
+            return RuvarrResult.Success;
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient's own timeout throws TaskCanceledException (derives from OperationCanceledException)
+            // even when the caller's token is not cancelled — treat as a request failure, not cancellation.
+            logger.LogWarning(ex, "{Method} {Path} timed out.", method, path);
+            return ApiClientErrors.RequestFailed;
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogError(ex, "{Method} {Path} failed: Reason: {Message}", method, path, SanitizeAndTruncate(ex.Message));
+            return ApiClientErrors.RequestFailed;
+        }
+    }
+
     private const int MaxLogContentLength = 512;
 
     private static string SanitizeAndTruncate(string value)
