@@ -160,9 +160,9 @@ else
         <div class="episode-sync-card__stall-alert" role="alert">
             @if (_data.EpisodeSync.StalledFor is not null)
             {
-                <div class="episode-sync-card__stall">
-                    <Icon Type="IconType.Warning" Class="icon episode-sync-card__stall-icon" />
-                    <span class="episode-sync-card__stall-text">
+                <div class="caution-strip episode-sync-card__stall">
+                    <Icon Type="IconType.Warning" Class="icon caution-strip__icon" />
+                    <span class="caution-strip__text episode-sync-card__stall-text">
                         @if (_data.EpisodeSync.Reason == StallReason.UpstreamRefreshFailing)
                         {
                             @:Stalled &mdash; program refresh failing (@(_data.EpisodeSync.UpstreamRefreshFailureCount) @(_data.EpisodeSync.UpstreamRefreshFailureCount == 1 ? "run" : "runs"))

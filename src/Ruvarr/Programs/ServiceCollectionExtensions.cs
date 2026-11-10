@@ -11,6 +11,7 @@ using Ruvarr.Programs.Commands.MatchProgramEpisodes;
 using Ruvarr.Programs.Commands.RefreshProgram;
 using Ruvarr.Programs.Commands.SetManualSeasons;
 using Ruvarr.Programs.Events;
+using Ruvarr.Programs.Queries.GetEpisodeMatchSuggestion;
 using Ruvarr.Programs.Queries.GetProgram;
 using Ruvarr.Programs.Queries.GetProgramEpisodes;
 using Ruvarr.Programs.Queries.GetPrograms;
@@ -36,6 +37,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>, GetProgramEpisodesHandler>();
         services.AddTransient<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>, GetTvdbSeriesEpisodesHandler>();
         services.AddTransient<IRequestHandler<SearchTvdbSeriesQuery, IReadOnlyList<TvdbSeriesSuggestion>>, SearchTvdbSeriesHandler>();
+        services.AddTransient<IRequestHandler<GetEpisodeMatchSuggestionQuery, EpisodeMatchSuggestion?>, GetEpisodeMatchSuggestionHandler>();
         services.AddTransient<IRequestHandler<MatchEpisodeCommand>, MatchEpisodeHandler>();
         services.AddTransient<IRequestHandler<MatchProgramCommand>, MatchProgramHandler>();
         services.AddTransient<IRequestHandler<DownloadEpisodeCommand>, DownloadEpisodeHandler>();

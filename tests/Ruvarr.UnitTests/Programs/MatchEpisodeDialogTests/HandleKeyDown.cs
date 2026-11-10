@@ -9,12 +9,16 @@ using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Commands.MatchEpisode;
 using Ruvarr.Programs.Components;
+using Ruvarr.Programs.Queries.GetEpisodeMatchSuggestion;
 using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes;
 
 namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
 
 public sealed class HandleKeyDown : BunitContext
 {
+    private const string SuggestedRuvId = "ruv-1";
+    private const string UnsuggestedRuvId = "ruv-2";
+
     private readonly IRequestHandler<MatchEpisodeCommand> _matchHandler;
     private readonly IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>> _episodesHandler;
 
@@ -30,8 +34,15 @@ public sealed class HandleKeyDown : BunitContext
             .Handle(Arg.Any<GetTvdbSeriesEpisodesQuery>(), Arg.Any<CancellationToken>())
             .Returns([new TvdbSeriesEpisode(99999, "Test Episode", 1, 1)]);
 
+        IRequestHandler<GetEpisodeMatchSuggestionQuery, EpisodeMatchSuggestion?> suggestionHandler =
+            Substitute.For<IRequestHandler<GetEpisodeMatchSuggestionQuery, EpisodeMatchSuggestion?>>();
+        suggestionHandler
+            .Handle(Arg.Is<GetEpisodeMatchSuggestionQuery>(q => q.RuvId == SuggestedRuvId), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeMatchSuggestion(new SuggestedEpisode(99999, MatchSuggestionReason.EpisodeNumber), DefaultSeason: 1, DeclaredSeasons: []));
+
         Services.AddTransient(_ => _matchHandler);
         Services.AddTransient(_ => _episodesHandler);
+        Services.AddTransient(_ => suggestionHandler);
         Services.AddSingleton(Substitute.For<IJSRuntime>());
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
@@ -41,10 +52,10 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1");
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
-        // Season auto-selected, episode auto-selected via title parsing — combobox popup is closed
+        // Episode pre-selected from the server suggestion — combobox popup is closed
         // Act — Enter with popup closed triggers submit shortcut
         await cut.Find("input[role=combobox]").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
@@ -61,10 +72,10 @@ public sealed class HandleKeyDown : BunitContext
             .Returns([new TvdbSeriesEpisode(99999, "Test Episode", 1, 1)]);
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "Mynd", siblingEpisodes: []);
+        await cut.Instance.OpenAsync(UnsuggestedRuvId, currentMatches: [], tvdbSeriesId: 42, episodeTitle: "Mynd");
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
-        // Episode not auto-selected because title doesn't match "þáttur N" pattern
+        // No suggestion for this episode, so nothing is pre-selected
         // Act — Enter with popup closed triggers submit shortcut, but match is disabled so no submit
         await cut.Find("input[role=combobox]").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
@@ -78,10 +89,10 @@ public sealed class HandleKeyDown : BunitContext
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
         List<TvdbEpisodeSummary> currentMatches = [new(99999, 1, 1, SonarrEpisodeStatus.NotTracked, false, null)];
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: "þáttur 1");
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
-        // Episode auto-selected to 99999 which equals current match
+        // Current match 99999 is loaded into the entry
         // Act — Enter with popup closed triggers submit shortcut, but match is disabled (same as current)
         await cut.Find("input[role=combobox]").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
@@ -94,7 +105,7 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1");
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 
         // Act — a non-Enter key does not submit

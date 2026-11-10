@@ -11,6 +11,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Commands.MatchEpisode;
 using Ruvarr.Programs.Components;
+using Ruvarr.Programs.Queries.GetEpisodeMatchSuggestion;
 using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes;
 
 using Shouldly;
@@ -40,8 +41,15 @@ public sealed class EditingAndFocus : BunitContext
             .Handle(Arg.Any<MatchEpisodeCommand>(), Arg.Any<CancellationToken>())
             .Returns(RuvarrResult.Success);
 
+        IRequestHandler<GetEpisodeMatchSuggestionQuery, EpisodeMatchSuggestion?> suggestionHandler =
+            Substitute.For<IRequestHandler<GetEpisodeMatchSuggestionQuery, EpisodeMatchSuggestion?>>();
+        suggestionHandler
+            .Handle(Arg.Any<GetEpisodeMatchSuggestionQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new EpisodeMatchSuggestion(new SuggestedEpisode(100, MatchSuggestionReason.EpisodeNumber), DefaultSeason: 1, DeclaredSeasons: []));
+
         Services.AddTransient(_ => _episodesHandler);
         Services.AddTransient(_ => matchHandler);
+        Services.AddTransient(_ => suggestionHandler);
         JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
@@ -58,7 +66,7 @@ public sealed class EditingAndFocus : BunitContext
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
 
         // Act
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: string.Empty, siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: string.Empty);
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count == 2);
 
         // Assert — each input shows the label for its matched episode
@@ -72,9 +80,9 @@ public sealed class EditingAndFocus : BunitContext
     [Fact]
     public async Task WhenAddAnotherMatchClicked_PrefillsNextEpisodeInFullList()
     {
-        // Arrange — open with episode 100 (first) auto-selected via title parsing
+        // Arrange — open with episode 100 (first) pre-selected from the server suggestion
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: "þáttur 1");
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count == 1);
 
         // Act — clicking Add another match should prefill next episode (101)
@@ -98,7 +106,7 @@ public sealed class EditingAndFocus : BunitContext
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
 
         // Act
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: string.Empty, siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: string.Empty);
         await cut.WaitForStateAsync(() => cut.FindAll(".dialog-spinner-container").Count == 0);
 
         // Assert
@@ -117,7 +125,7 @@ public sealed class EditingAndFocus : BunitContext
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
 
         // Act
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: string.Empty, siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: [], tvdbSeriesId: 42, episodeTitle: string.Empty);
         await cut.WaitForStateAsync(() => cut.FindAll(".dialog-error").Count > 0);
 
         // Assert
@@ -137,7 +145,7 @@ public sealed class EditingAndFocus : BunitContext
         ];
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: string.Empty, siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: string.Empty);
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count == 3);
 
         // Act — remove the third entry (index 2); 2 remain so focus goes to previous combobox
@@ -163,7 +171,7 @@ public sealed class EditingAndFocus : BunitContext
         ];
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: string.Empty, siblingEpisodes: []);
+        await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: string.Empty);
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count == 2);
 
         // Act — remove one entry, leaving one remaining; focus goes to add button
