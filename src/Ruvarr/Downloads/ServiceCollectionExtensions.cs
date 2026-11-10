@@ -1,5 +1,5 @@
 using Ruvarr.Abstractions;
-using Ruvarr.Downloads.Commands.DeleteDownloadQueueItem;
+using Ruvarr.Downloads.Commands.DismissDownloadQueueItem;
 using Ruvarr.Downloads.Commands.RetryDownloadQueueItem;
 using Ruvarr.Downloads.Events;
 using Ruvarr.Downloads.Notifiers;
@@ -18,7 +18,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton(sp => new DownloadProgressNotifier(
             sp.GetRequiredService<IDomainEventBroadcaster>(),
             sp.GetService<TimeProvider>() ?? TimeProvider.System));
-        services.AddTransient<IRequestHandler<DeleteDownloadQueueItemCommand>, DeleteDownloadQueueItemHandler>();
+        services.AddTransient<IRequestHandler<DismissDownloadQueueItemCommand>, DismissDownloadQueueItemHandler>();
         services.AddTransient<IRequestHandler<RetryDownloadQueueItemCommand>, RetryDownloadQueueItemHandler>();
         services.AddTransient<IRequestHandler<GetDownloadQueueQuery, IReadOnlyList<DownloadQueueItemSummary>>, GetDownloadQueueHandler>();
         services.AddTransient<IDomainEventHandler<EpisodeMissingEvent>, EpisodeMissingEventHandler>();
@@ -28,6 +28,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IDomainEventHandler<DownloadFailedEvent>, BroadcastEventHandler<DownloadFailedEvent>>();
         services.AddTransient<IDomainEventHandler<DownloadProgressUpdatedEvent>, BroadcastEventHandler<DownloadProgressUpdatedEvent>>();
         services.AddTransient<IDomainEventHandler<DownloadRetryScheduledEvent>, BroadcastEventHandler<DownloadRetryScheduledEvent>>();
+        services.AddTransient<IDomainEventHandler<DownloadDismissedEvent>, BroadcastEventHandler<DownloadDismissedEvent>>();
 
         return services;
     }

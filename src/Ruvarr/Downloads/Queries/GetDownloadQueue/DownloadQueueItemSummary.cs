@@ -11,4 +11,8 @@ internal sealed record DownloadQueueItemSummary(
     string? FailureReason,
     int RetryCount,
     DateTime? NextRetryAt,
-    DateTime Created);
+    DateTime Created)
+{
+    /// <summary>Failed and Exhausted items offer Retry now and Dismiss.</summary>
+    public bool HasRowActions => Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted;
+}

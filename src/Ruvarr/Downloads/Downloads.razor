@@ -5,6 +5,7 @@
 @using Ruvarr.Abstractions
 @using Ruvarr.Components
 @using Ruvarr.Contracts
+@using Ruvarr.Downloads.Commands.DismissDownloadQueueItem
 @using Ruvarr.Downloads.Commands.RetryDownloadQueueItem
 @using Ruvarr.Downloads.Domain
 @using Ruvarr.Downloads.Events
@@ -12,9 +13,12 @@
 @inject IServiceScopeFactory ScopeFactory
 @inject IDomainEventBroadcaster Broadcaster
 
-<h1>Downloads</h1>
+<h1 tabindex="-1" @ref="_heading">Downloads</h1>
 
-<div class="queue-delete-error downloads-retry-error" role="alert" aria-live="assertive">@_latestRetryError</div>
+<div class="downloads-action-feedback">
+    <div class="queue-delete-error" role="alert">@(_feedback is ActionFeedback.Error error ? error.Message : null)</div>
+    <p class="downloads-action-status" role="status">@if (_feedback is ActionFeedback.Dismissal dismissal){<text>Dismissed @dismissal.Subject. To download it again, open </text><a class="program-link" href="/program/@dismissal.ProgramRuvId">@dismissal.ProgramName</a><text>.</text>}</p>
+</div>
 
 @if (_items is null)
 {
@@ -113,20 +117,41 @@ else
                     </td>
                     <td>
                         <div class="row-actions">
-                            @if (item.Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted)
+                            @if (item.HasRowActions)
                             {
+                                bool busy = _inFlight.TryGetValue(item.EpisodeRuvId, out DownloadRowAction running);
+                                bool retrying = busy && running == DownloadRowAction.Retry;
+                                bool dismissing = busy && running == DownloadRowAction.Dismiss;
                                 <button class="action-button downloads-retry-button"
                                         type="button"
-                                        @onclick="() => RetryAsync(item.EpisodeRuvId)"
-                                        disabled="@_retrying.Contains(item.EpisodeRuvId)"
+                                        @ref="_retryButtons[item.EpisodeRuvId]"
+                                        @onclick="() => RunAsync(item, DownloadRowAction.Retry)"
+                                        disabled="@busy"
+                                        aria-busy="@(retrying ? "true" : null)"
                                         aria-label="@BuildRetryLabel(item)">
-                                    @if (_retrying.Contains(item.EpisodeRuvId))
+                                    @if (retrying)
                                     {
                                         <span class="button-spinner" aria-hidden="true"></span><text> Retrying...</text>
                                     }
                                     else
                                     {
                                         <Icon Type="IconType.Refresh" Width="12" Height="12" /><text> Retry now</text>
+                                    }
+                                </button>
+                                <button class="action-button downloads-dismiss-button"
+                                        type="button"
+                                        @ref="_dismissButtons[item.EpisodeRuvId]"
+                                        @onclick="() => RunAsync(item, DownloadRowAction.Dismiss)"
+                                        disabled="@busy"
+                                        aria-busy="@(dismissing ? "true" : null)"
+                                        aria-label="@BuildDismissLabel(item)">
+                                    @if (dismissing)
+                                    {
+                                        <span class="button-spinner" aria-hidden="true"></span><text> Dismissing...</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Dismiss</text>
                                     }
                                 </button>
                             }
@@ -139,9 +164,28 @@ else
 }
 
 @code {
+    // Closed set: the page shows nothing, an error, or a dismissal, never two at once.
+    // A dismissal keeps the program details because its row is gone by the time it renders.
+    private abstract record ActionFeedback
+    {
+        private ActionFeedback()
+        {
+        }
+
+        public sealed record None : ActionFeedback;
+
+        public sealed record Error(string Message) : ActionFeedback;
+
+        public sealed record Dismissal(string Subject, string ProgramName, int ProgramRuvId) : ActionFeedback;
+    }
+
     private IReadOnlyList<DownloadQueueItemSummary>? _items;
-    private readonly HashSet<string> _retrying = [];
-    private string? _latestRetryError;
+    private readonly Dictionary<string, DownloadRowAction> _inFlight = [];
+    private readonly Dictionary<string, ElementReference> _retryButtons = [];
+    private readonly Dictionary<string, ElementReference> _dismissButtons = [];
+    private ElementReference _heading;
+    private ActionFeedback _feedback = new ActionFeedback.None();
+    private DownloadsFocusTarget? _pendingFocus;
     private readonly CancellationTokenSource _cts = new();
 
     protected override Task OnInitializedAsync()
@@ -151,7 +195,19 @@ else
         _ = WatchAsync(Broadcaster.Subscribe<DownloadCompletedEvent>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<DownloadFailedEvent>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<DownloadRetryScheduledEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<DownloadDismissedEvent>(_cts.Token));
         return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingFocus is not { } target)
+        {
+            return;
+        }
+
+        _pendingFocus = null;
+        await ResolveFocusTarget(target).FocusAsync();
     }
 
     private async Task LoadAsync()
@@ -178,33 +234,85 @@ else
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
-    private async Task RetryAsync(string episodeRuvId)
+    private async Task RunAsync(DownloadQueueItemSummary item, DownloadRowAction action)
     {
-        _retrying.Add(episodeRuvId);
-        _latestRetryError = null;
+        int index = IndexOf(item.EpisodeRuvId);
+        _inFlight[item.EpisodeRuvId] = action;
+        _feedback = new ActionFeedback.None();
 
-        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
-        IRequestHandler<RetryDownloadQueueItemCommand> handler =
-            scope.ServiceProvider.GetRequiredService<IRequestHandler<RetryDownloadQueueItemCommand>>();
-        RuvarrResult result = await handler.Handle(new RetryDownloadQueueItemCommand(episodeRuvId), _cts.Token);
-
-        _retrying.Remove(episodeRuvId);
-        if (result.IsFailure)
+        RuvarrResult result;
+        try
         {
-            _latestRetryError = result.Error.Description;
+            result = await SendAsync(item.EpisodeRuvId, action);
+        }
+        finally
+        {
+            _inFlight.Remove(item.EpisodeRuvId);
         }
 
+        _feedback = result switch
+        {
+            { IsFailure: true } => new ActionFeedback.Error(result.Error.Description),
+            _ when action is DownloadRowAction.Dismiss => new ActionFeedback.Dismissal(DescribeEpisode(item), item.ProgramName, item.ProgramRuvId),
+            _ => new ActionFeedback.None(),
+        };
+
         _items = await QueryAsync();
+        _pendingFocus = DownloadsFocusTarget.AfterAction(_items, item.EpisodeRuvId, action, index);
         await InvokeAsync(StateHasChanged);
     }
 
-    private static string BuildRetryLabel(DownloadQueueItemSummary item)
+    private async Task<RuvarrResult> SendAsync(string episodeRuvId, DownloadRowAction action)
     {
-        string subject = string.IsNullOrWhiteSpace(item.EpisodeTitle)
+        await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+        return action switch
+        {
+            DownloadRowAction.Retry => await scope.ServiceProvider
+                .GetRequiredService<IRequestHandler<RetryDownloadQueueItemCommand>>()
+                .Handle(new RetryDownloadQueueItemCommand(episodeRuvId), _cts.Token),
+            _ => await scope.ServiceProvider
+                .GetRequiredService<IRequestHandler<DismissDownloadQueueItemCommand>>()
+                .Handle(new DismissDownloadQueueItemCommand(episodeRuvId), _cts.Token),
+        };
+    }
+
+    private ElementReference ResolveFocusTarget(DownloadsFocusTarget target)
+    {
+        if (target is DownloadsFocusTarget.RowButton row
+            && _items is { } items
+            && items.Any(x => x.EpisodeRuvId == row.EpisodeRuvId && x.HasRowActions)
+            && (row.Button is DownloadRowAction.Retry ? _retryButtons : _dismissButtons).TryGetValue(row.EpisodeRuvId, out ElementReference button))
+        {
+            return button;
+        }
+
+        return _heading;
+    }
+
+    private int IndexOf(string episodeRuvId)
+    {
+        IReadOnlyList<DownloadQueueItemSummary> items = _items ?? [];
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i].EpisodeRuvId == episodeRuvId)
+            {
+                return i;
+            }
+        }
+
+        return items.Count;
+    }
+
+    private static string DescribeEpisode(DownloadQueueItemSummary item) =>
+        string.IsNullOrWhiteSpace(item.EpisodeTitle)
             ? $"episode from {item.ProgramName}"
             : item.EpisodeTitle;
-        return $"Retry download of {subject} now";
-    }
+
+    private static string BuildRetryLabel(DownloadQueueItemSummary item) =>
+        $"Retry download of {DescribeEpisode(item)} now";
+
+    private static string BuildDismissLabel(DownloadQueueItemSummary item) =>
+        $"Dismiss {DescribeEpisode(item)} from the download queue";
 
     private static string FormatRelative(DateTime nextUtc)
     {

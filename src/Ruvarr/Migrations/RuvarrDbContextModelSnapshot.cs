@@ -15,7 +15,7 @@ namespace Ruvarr.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
             modelBuilder.Entity("Ruvarr.Downloads.Domain.DownloadQueueItem", b =>
                 {
@@ -65,6 +65,11 @@ namespace Ruvarr.Migrations
 
                     b.HasIndex("episode_id")
                         .HasDatabaseName("ix_download_queue_episode_id");
+
+                    b.HasIndex(new[] { "episode_id" }, "ix_download_queue_episode_id_unfinished")
+                        .IsUnique()
+                        .HasDatabaseName("ix_download_queue_episode_id_unfinished")
+                        .HasFilter("\"status\" <> 'Complete'");
 
                     b.ToTable("download_queue", (string)null);
                 });
