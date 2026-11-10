@@ -49,6 +49,8 @@ internal sealed class TvdbEpisodeLookupJob(
                 .Include(x => x.Series)
                 .Include(x => x.Episodes)
                     .ThenInclude(x => x.TvdbEpisodes)
+                .Include(x => x.Episodes)
+                    .ThenInclude(x => x.DownloadQueueItems)
                 .Where(x => x.RuvId == ruvId)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -81,7 +83,14 @@ internal sealed class TvdbEpisodeLookupJob(
                 });
 
             EpisodeMatchingContext matchingContext = new(program, seriesData, sonarrStatuses);
+
+            if (program.MatchRecheckRequested)
+            {
+                await RecheckMatchesAsync(matchingContext, cancellationToken);
+            }
+
             await matcher.MatchAsync(matchingContext, cancellationToken);
+            program.CompleteMatchRecheck();
 
             await ScheduleLookupAsync(program, cancellationToken);
         }
@@ -101,6 +110,47 @@ internal sealed class TvdbEpisodeLookupJob(
             broadcaster.Publish(new QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>());
         }
     }
+
+    private async Task RecheckMatchesAsync(EpisodeMatchingContext context, CancellationToken cancellationToken)
+    {
+        // Manual links are never judged: a correction the rule disagrees with would otherwise be undone on every refresh.
+        List<RuvEpisode> automaticEpisodes = [.. context.Program.Episodes
+            .Where(x => x.MatchOrigin == MatchOrigin.Automatic && x.TvdbEpisodes.Count == 1)];
+
+        if (automaticEpisodes.Count == 0)
+        {
+            return;
+        }
+
+        IReadOnlyList<IslTitle> titles = await context.IslTitles.GetAsync(tvdb, context.SeriesData.Episodes, cancellationToken);
+        SeasonConstraint constraint = context.SeasonConstraint;
+
+        foreach (RuvEpisode episode in automaticEpisodes)
+        {
+            MatchVerdict verdict = constraint.Judge(episode.TvdbEpisodes[0], IslTitleLookup.CandidatesFor(episode, titles));
+
+            if (verdict != MatchVerdict.Rejected)
+            {
+                continue;
+            }
+
+            string? previousLabel = episode.SeasonEpisodeLabel;
+            episode.Unmatch();
+
+            // Ruvarr does not touch Sonarr, so a completed download may stay imported under the wrong episode.
+            logger.LogWarning(
+                "Match re-check unmatched RÚV episode {Episode} from {PreviousSeasonEpisode}; download status: {DownloadStatus}",
+                episode.ToString(),
+                previousLabel,
+                DownloadStatusOf(episode));
+        }
+    }
+
+    private static string DownloadStatusOf(RuvEpisode episode) =>
+        episode.DownloadQueueItems
+            .OrderByDescending(x => x.Created)
+            .Select(x => x.Status.ToString())
+            .FirstOrDefault() ?? "None";
 
     private async Task ScheduleLookupAsync(RuvProgram program, CancellationToken cancellationToken)
     {

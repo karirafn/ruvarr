@@ -536,10 +536,10 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode epNoIsl = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep-no-isl", cancellationToken);
-        epNoIsl.Match(tvdbId: 100, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: false);
+        epNoIsl.Match(tvdbId: 100, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic, hasIslTranslation: false);
 
         RuvEpisode epHasIsl = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "ep-has-isl", cancellationToken);
-        epHasIsl.Match(tvdbId: 101, season: 1, episode: 2, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: true);
+        epHasIsl.Match(tvdbId: 101, season: 1, episode: 2, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic, hasIslTranslation: true);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -770,7 +770,7 @@ public sealed class GetDashboardHandlerTests(IntegrationTestFactory factory) : I
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode matchedEp = await dbContext.Set<RuvEpisode>().FirstAsync(e => e.RuvId == "mc-matched", cancellationToken);
-        matchedEp.Match(tvdbId: 200, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: true);
+        matchedEp.Match(tvdbId: 200, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic, hasIslTranslation: true);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act

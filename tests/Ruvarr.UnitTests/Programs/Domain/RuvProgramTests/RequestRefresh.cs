@@ -69,4 +69,45 @@ public sealed class RequestRefresh
         ProgramRefreshRequestedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<ProgramRefreshRequestedEvent>();
         @event.HasMultipleEpisodes.ShouldBeTrue();
     }
+
+    [Fact]
+    public void RequestsMatchRecheckForAMatchedSeries()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().WithMultipleEpisodes().Build();
+        sut.MatchTvdb(new TvdbSeriesBuilder().Build());
+
+        // Act
+        sut.RequestRefresh();
+
+        // Assert
+        sut.MatchRecheckRequested.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void DoesNotRequestMatchRecheckWithoutASeries()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().WithMultipleEpisodes().Build();
+
+        // Act
+        sut.RequestRefresh();
+
+        // Assert
+        sut.MatchRecheckRequested.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DoesNotRequestMatchRecheckForAOneOffProgram()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().WithMultipleEpisodes(false).Build();
+        sut.MatchTvdb(new TvdbSeriesBuilder().Build());
+
+        // Act
+        sut.RequestRefresh();
+
+        // Assert
+        sut.MatchRecheckRequested.ShouldBeFalse();
+    }
 }

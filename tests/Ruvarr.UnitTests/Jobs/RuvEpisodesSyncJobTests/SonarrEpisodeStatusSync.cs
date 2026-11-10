@@ -94,7 +94,7 @@ public sealed class SonarrEpisodeStatusSync
             description: string.Empty,
             firstRun: DateTime.UtcNow,
             duration: TimeSpan.FromMinutes(30));
-        program.Episodes.Single().Match(TvdbEpisodeId, season: 1, episode: 1, SonarrStatuses.Of(TvdbEpisodeId, status));
+        program.Episodes.Single().Match(TvdbEpisodeId, season: 1, episode: 1, SonarrStatuses.Of(TvdbEpisodeId, status), MatchOrigin.Automatic);
         seedContext.Set<RuvProgram>().Add(program);
         await seedContext.SaveChangesAsync(cancellationToken);
         _missingHandler.Events.Clear();

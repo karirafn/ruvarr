@@ -102,6 +102,11 @@ namespace Ruvarr.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("lookup_count");
 
+                    b.Property<string>("MatchOrigin")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("match_origin");
+
                     b.Property<DateTime?>("Matched")
                         .HasColumnType("TEXT")
                         .HasColumnName("matched");
@@ -204,6 +209,10 @@ namespace Ruvarr.Migrations
                     b.Property<int>("LookupCount")
                         .HasColumnType("INTEGER")
                         .HasColumnName("lookup_count");
+
+                    b.Property<bool>("MatchRecheckRequested")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("match_recheck_requested");
 
                     b.Property<DateTime?>("Matched")
                         .HasColumnType("TEXT")

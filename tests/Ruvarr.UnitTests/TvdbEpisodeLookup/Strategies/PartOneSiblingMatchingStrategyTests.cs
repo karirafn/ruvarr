@@ -23,7 +23,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads Part 1").WithSeasonNumber(1).WithNumber(3).Build();
@@ -52,7 +52,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar - fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar - síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(601, 2, 5, SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(601, 2, 5, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(601).WithName("Christmas Lads (1)").WithSeasonNumber(2).WithNumber(5).Build();
@@ -102,7 +102,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads Part 1").WithSeasonNumber(1).WithNumber(3).Build();
@@ -129,7 +129,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads").WithSeasonNumber(1).WithNumber(3).Build();
@@ -156,7 +156,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, seinni hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads Part 1").WithSeasonNumber(1).WithNumber(3).Build();
@@ -195,5 +195,60 @@ public sealed class PartOneSiblingMatchingStrategyTests
 
         // Assert
         program.Episodes[0].TvdbEpisodes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ResolvesPartTwoOnlyInTheSeasonOfThePartOneLink()
+    {
+        // Arrange
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show").Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
+        program.Episodes[0].Match(601, 2, 5, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
+
+        Episode earlierPartTwo = new TvdbEpisodeDataBuilder()
+            .WithId(102).WithName("Christmas Lads Part 2").WithSeasonNumber(1).WithNumber(2).Build();
+        Episode partOne = new TvdbEpisodeDataBuilder()
+            .WithId(601).WithName("Christmas Lads Part 1").WithSeasonNumber(2).WithNumber(5).Build();
+        Episode partTwo = new TvdbEpisodeDataBuilder()
+            .WithId(602).WithName("Christmas Lads Part 2").WithSeasonNumber(2).WithNumber(6).Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder()
+            .WithId(1000).WithEpisodes(earlierPartTwo, partOne, partTwo).Build();
+
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
+
+        // Act
+        await CreateSut().MatchAsync(context, CancellationToken.None);
+
+        // Assert
+        program.Episodes[1].TvdbEpisodes.ShouldHaveSingleItem().TvdbId.ShouldBe(602);
+        program.Episodes[1].MatchOrigin.ShouldBe(MatchOrigin.Automatic);
+    }
+
+    [Fact]
+    public async Task DoesNotResolvePartTwoFromAnotherSeason()
+    {
+        // Arrange
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName("Show").Build();
+        program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
+        program.Episodes[0].Match(601, 2, 5, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
+
+        Episode earlierPartTwo = new TvdbEpisodeDataBuilder()
+            .WithId(102).WithName("Christmas Lads Part 2").WithSeasonNumber(1).WithNumber(2).Build();
+        Episode partOne = new TvdbEpisodeDataBuilder()
+            .WithId(601).WithName("Christmas Lads Part 1").WithSeasonNumber(2).WithNumber(5).Build();
+        SeriesData seriesData = new TvdbSeriesDataBuilder()
+            .WithId(1000).WithEpisodes(earlierPartTwo, partOne).Build();
+
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
+
+        // Act
+        await CreateSut().MatchAsync(context, CancellationToken.None);
+
+        // Assert
+        program.Episodes[1].TvdbEpisodes.ShouldBeEmpty();
     }
 }

@@ -52,6 +52,7 @@ internal sealed class PartOneSiblingMatchingStrategy(
             }
 
             Episode? tvdbPartTwoEpisode = context.SeriesData.Episodes
+                .Where(x => x.SeasonNumber == firstMatch.SeasonNumber)
                 .FirstOrDefault(x => x.Name.Equals(partTwoName, StringComparison.OrdinalIgnoreCase));
 
             if (tvdbPartTwoEpisode is null)
@@ -59,7 +60,7 @@ internal sealed class PartOneSiblingMatchingStrategy(
                 continue;
             }
 
-            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, context.SonarrStatuses, tvdbPartTwoEpisode.NameTranslations?.Contains("isl") ?? false);
+            partTwoEpisode.Match(tvdbPartTwoEpisode.Id, tvdbPartTwoEpisode.SeasonNumber, tvdbPartTwoEpisode.Number, context.SonarrStatuses, MatchOrigin.Automatic, tvdbPartTwoEpisode.NameTranslations?.Contains("isl") ?? false);
             logger.LogInformation(
                 "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' S{TvdbSeason:D2}E{TvdbEpisode:D2} '{TvdbEpisodeName}' via part-one sibling fallback",
                 partTwoEpisode.ToString(),

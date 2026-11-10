@@ -37,7 +37,7 @@ public sealed class ToString
             .WithProgram(program)
             .WithTitle("Fyrsti dagurinn")
             .Build();
-        sut.Match(tvdbId: 1234, season: 1, episode: 3, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1234, season: 1, episode: 3, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Act
         string? result = sut.ToString();
@@ -57,7 +57,7 @@ public sealed class ToString
             .WithProgram(program)
             .WithTitle("Fyrsti dagurinn")
             .Build();
-        sut.Match(tvdbId: 5678, season: 12, episode: 145, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 5678, season: 12, episode: 145, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Act
         string? result = sut.ToString();

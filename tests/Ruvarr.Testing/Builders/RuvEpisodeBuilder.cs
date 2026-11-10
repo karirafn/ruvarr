@@ -73,7 +73,7 @@ internal sealed class RuvEpisodeBuilder
     public RuvEpisode BuildMatched(int tvdbId = 1, int season = 1, int episodeNumber = 1)
     {
         RuvEpisode episode = Build();
-        episode.Match(tvdbId: tvdbId, season: season, episode: episodeNumber, sonarrStatuses: SonarrStatuses.NotTracked);
+        episode.Match(tvdbId: tvdbId, season: season, episode: episodeNumber, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         return episode;
     }
 }

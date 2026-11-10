@@ -52,7 +52,7 @@ internal sealed class MatchEpisodeHandler(
             tvdbEpisodes.Add(TvdbEpisode.Create(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, tvdbEpisode.NameTranslations?.Contains("isl") ?? false));
         }
 
-        episode.MatchMultiple(tvdbEpisodes, sonarrStatuses);
+        episode.MatchMultiple(tvdbEpisodes, sonarrStatuses, MatchOrigin.Manual);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

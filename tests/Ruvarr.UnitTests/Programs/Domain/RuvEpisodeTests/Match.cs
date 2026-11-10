@@ -15,7 +15,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 42, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 42, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes.ShouldHaveSingleItem();
@@ -29,7 +29,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 3, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 3, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes[0].SeasonNumber.ShouldBe(3);
@@ -42,7 +42,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 7, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 7, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes[0].EpisodeNumber.ShouldBe(7);
@@ -56,7 +56,7 @@ public sealed class Match
         DateTime before = DateTime.UtcNow;
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.Matched.ShouldNotBeNull();
@@ -72,7 +72,7 @@ public sealed class Match
         sut.NextLookup.ShouldNotBeNull();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.NextLookup.ShouldBeNull();
@@ -85,7 +85,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1));
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1), origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.Missing);
@@ -98,7 +98,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.NotTracked);
@@ -111,7 +111,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic, hasIslTranslation: true);
 
         // Assert
         sut.TvdbEpisodes[0].HasIslTranslation.ShouldBeTrue();
@@ -124,7 +124,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic, hasIslTranslation: false);
 
         // Assert
         sut.TvdbEpisodes[0].HasIslTranslation.ShouldBeFalse();
@@ -135,10 +135,10 @@ public sealed class Match
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Act
-        sut.Match(tvdbId: 2, season: 2, episode: 5, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 2, season: 2, episode: 5, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes.ShouldHaveSingleItem();
@@ -152,7 +152,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrEpisodeStatuses.Unavailable);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrEpisodeStatuses.Unavailable, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.NotTracked);
@@ -163,10 +163,10 @@ public sealed class Match
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, SonarrEpisodeStatus.Downloaded));
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, SonarrEpisodeStatus.Downloaded), origin: MatchOrigin.Automatic);
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrEpisodeStatuses.Unavailable);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrEpisodeStatuses.Unavailable, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.Downloaded);
@@ -177,10 +177,10 @@ public sealed class Match
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, SonarrEpisodeStatus.Downloaded));
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, SonarrEpisodeStatus.Downloaded), origin: MatchOrigin.Automatic);
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.NotTracked);

@@ -59,7 +59,7 @@ public sealed class SonarrImport : IDisposable
         program.TryAddEpisode("ep0001", new Uri("http://test.com/stream"), "Episode 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(5001));
+        episode.Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(5001), origin: MatchOrigin.Automatic);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -80,7 +80,7 @@ public sealed class SonarrImport : IDisposable
         episode.MatchMultiple([
             TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
             TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
-        ], SonarrStatuses.NotTracked);
+        ], SonarrStatuses.NotTracked, MatchOrigin.Manual);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 

@@ -13,7 +13,7 @@ public sealed class DomainEvents
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1));
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1), origin: MatchOrigin.Automatic);
 
         // Act
         sut.ClearDomainEvents();
@@ -29,7 +29,7 @@ public sealed class DomainEvents
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         EpisodeMatchedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
@@ -43,7 +43,7 @@ public sealed class DomainEvents
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1));
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1), origin: MatchOrigin.Automatic);
 
         // Assert
         sut.DomainEvents.Count.ShouldBe(2);
@@ -56,11 +56,11 @@ public sealed class DomainEvents
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         sut.ClearDomainEvents();
 
         // Act
-        sut.Match(tvdbId: 2, season: 2, episode: 5, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 2, season: 2, episode: 5, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
 
         // Assert
         EpisodeMatchedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
@@ -86,7 +86,7 @@ public sealed class DomainEvents
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         sut.ClearDomainEvents();
 
         // Act

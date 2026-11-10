@@ -44,6 +44,9 @@ internal sealed partial class RuvProgram
 
     public bool HasMissingEpisodes { get; private set; }
 
+    /// <summary>Set by a manual refresh; the next TVDB episode lookup re-checks automatic links, then clears it.</summary>
+    public bool MatchRecheckRequested { get; private set; }
+
     public string? Slug { get; private set; }
 
     public string? Description { get; private set; }
@@ -180,8 +183,16 @@ internal sealed partial class RuvProgram
 
     public void RequestRefresh()
     {
+        // Mirrors when ProgramRefreshRequestedEventHandler enqueues the TVDB episode lookup, the only clearer of the flag.
+        if (Series is not null && HasMultipleEpisodes)
+        {
+            MatchRecheckRequested = true;
+        }
+
         _domainEvents.Add(new ProgramRefreshRequestedEvent(RuvId, Name, Series is not null, HasMultipleEpisodes));
     }
+
+    public void CompleteMatchRecheck() => MatchRecheckRequested = false;
 
     public void ScheduleLookup()
     {
@@ -253,4 +264,7 @@ internal sealed partial class RuvProgram
                 .Key
             : 0;
     }
+
+    public SeasonConstraint ResolveSeasonConstraint(IEnumerable<int> seriesSeasonNumbers) =>
+        SeasonConstraint.Resolve(SeasonNumber, seriesSeasonNumbers);
 }

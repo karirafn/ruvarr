@@ -39,7 +39,7 @@ public sealed class SonarrStatus
         }
 
         // Act
-        sut.MatchMultiple(links, SonarrEpisodeStatuses.From(lookup));
+        sut.MatchMultiple(links, SonarrEpisodeStatuses.From(lookup), MatchOrigin.Automatic);
 
         // Assert
         sut.SonarrStatus.ShouldBe(expected);
