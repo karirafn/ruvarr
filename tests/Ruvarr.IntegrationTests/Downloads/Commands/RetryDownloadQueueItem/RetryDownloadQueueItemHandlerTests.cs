@@ -125,7 +125,6 @@ public sealed class RetryDownloadQueueItemHandlerTests(IntegrationTestFactory fa
     [Theory]
     [InlineData(DownloadQueueStatus.Downloading)]
     [InlineData(DownloadQueueStatus.Pending)]
-    [InlineData(DownloadQueueStatus.Complete)]
     public async Task WhenItemIsNotRetryable_ReturnsItemNotRetryable(DownloadQueueStatus status)
     {
         // Arrange
@@ -148,7 +147,6 @@ public sealed class RetryDownloadQueueItemHandlerTests(IntegrationTestFactory fa
         {
             DownloadQueueStatus.Downloading => BuildDownloading(episode),
             DownloadQueueStatus.Pending => DownloadQueueItem.Create(episode),
-            DownloadQueueStatus.Complete => new DownloadQueueItemBuilder().WithEpisode(episode).Downloaded().Build(),
             _ => throw new ArgumentOutOfRangeException(nameof(status)),
         };
 
@@ -164,6 +162,77 @@ public sealed class RetryDownloadQueueItemHandlerTests(IntegrationTestFactory fa
         // Assert
         result.IsFailure.ShouldBeTrue();
         result.Error.Code.ShouldBe(DownloadErrors.ItemNotRetryableCode);
+    }
+
+    [Fact]
+    public async Task WhenOlderItemIsFailedAndNewerItemsAreComplete_RetriesFailedItem_AndLeavesCompleteItemsUntouched()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope arrangeScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(1, "RUV1", "Test Program", null, multipleEpisodes: true);
+        arrangeContext.Set<RuvProgram>().Add(program);
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("EP003", new Uri("https://example.com/ep.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        RuvEpisode episode = program.Episodes[0];
+        arrangeContext.Set<DownloadQueueItem>().Add(new DownloadQueueItemBuilder().WithEpisode(episode).Failed("network error").Build());
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+        arrangeContext.Set<DownloadQueueItem>().Add(new DownloadQueueItemBuilder().WithEpisode(episode).Downloaded().Build());
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
+        IRequestHandler<RetryDownloadQueueItemCommand> handler =
+            actScope.ServiceProvider.GetRequiredService<IRequestHandler<RetryDownloadQueueItemCommand>>();
+        RuvarrResult result = await handler.Handle(new RetryDownloadQueueItemCommand("EP003"), cancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+
+        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        List<DownloadQueueStatus> statuses = await verifyContext.Set<DownloadQueueItem>()
+            .OrderBy(x => x.Created)
+            .Select(x => x.Status)
+            .ToListAsync(cancellationToken);
+
+        statuses.ShouldBe([DownloadQueueStatus.Pending, DownloadQueueStatus.Complete]);
+    }
+
+    [Fact]
+    public async Task WhenEpisodeHasOnlyCompleteItems_ReturnsItemNotFound()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope arrangeScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+
+        RuvProgram program = RuvProgram.Create(1, "RUV1", "Test Program", null, multipleEpisodes: true);
+        arrangeContext.Set<RuvProgram>().Add(program);
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("EP004", new Uri("https://example.com/ep.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        arrangeContext.Set<DownloadQueueItem>().Add(new DownloadQueueItemBuilder().WithEpisode(program.Episodes[0]).Downloaded().Build());
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        await using AsyncServiceScope actScope = factory.Services.CreateAsyncScope();
+        IRequestHandler<RetryDownloadQueueItemCommand> handler =
+            actScope.ServiceProvider.GetRequiredService<IRequestHandler<RetryDownloadQueueItemCommand>>();
+        RuvarrResult result = await handler.Handle(new RetryDownloadQueueItemCommand("EP004"), cancellationToken);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        result.Error.Code.ShouldBe(DownloadErrors.ItemNotFoundCode);
     }
 
     [Fact]

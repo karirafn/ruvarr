@@ -37,6 +37,10 @@ internal sealed class DownloadQueueItem
         ? FileName
         : null;
 
+    public bool CanRetry => Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted;
+
+    public bool CanDismiss => Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted;
+
     public static DownloadQueueItem Create(RuvEpisode episode) => new()
     {
         Episode = episode,
@@ -95,7 +99,7 @@ internal sealed class DownloadQueueItem
 
     public void RetryNow()
     {
-        if (Status is not DownloadQueueStatus.Failed and not DownloadQueueStatus.Exhausted)
+        if (!CanRetry)
         {
             throw new InvalidOperationException("Only Failed or Exhausted items can be manually retried.");
         }
@@ -107,6 +111,16 @@ internal sealed class DownloadQueueItem
         NextRetryAt = null;
         FailureReason = null;
         _domainEvents.Add(new DownloadRetryScheduledEvent(this));
+    }
+
+    public void Dismiss()
+    {
+        if (!CanDismiss)
+        {
+            throw new InvalidOperationException("Only Failed or Exhausted items can be dismissed.");
+        }
+
+        _domainEvents.Add(new DownloadDismissedEvent(this));
     }
 
     public void MarkInterrupted()

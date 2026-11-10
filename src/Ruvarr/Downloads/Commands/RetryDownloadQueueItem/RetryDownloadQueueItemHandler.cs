@@ -13,15 +13,15 @@ internal sealed class RetryDownloadQueueItemHandler(RuvarrDbContext dbContext)
     {
         DownloadQueueItem? item = await dbContext.Set<DownloadQueueItem>()
             .Where(x => x.Episode.RuvId == command.EpisodeRuvId)
-            .OrderByDescending(x => x.Created)
-            .FirstOrDefaultAsync(cancellationToken);
+            .Where(x => x.Status != DownloadQueueStatus.Complete)
+            .SingleOrDefaultAsync(cancellationToken);
 
         if (item is null)
         {
             return DownloadErrors.ItemNotFound;
         }
 
-        if (item.Status is DownloadQueueStatus.Downloading or DownloadQueueStatus.Pending or DownloadQueueStatus.Complete)
+        if (!item.CanRetry)
         {
             return DownloadErrors.ItemNotRetryable;
         }

@@ -1,9 +1,11 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 
@@ -104,5 +106,65 @@ public sealed class DownloadQueueItemPersistenceTests(IntegrationTestFactory fac
             () => saved.Status.ShouldBe(DownloadQueueStatus.Exhausted),
             () => saved.RetryCount.ShouldBe(RetrySchedule.MaxRetries + 1),
             () => saved.NextRetryAt.ShouldBeNull());
+    }
+
+    [Fact]
+    public async Task WhenSecondUnfinishedItemSavedForEpisode_UniqueIndexRejectsIt()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        RuvEpisode episode = await AddEpisodeAsync(dbContext, "PERSIST03", cancellationToken);
+
+        dbContext.Set<DownloadQueueItem>().Add(new DownloadQueueItemBuilder().WithEpisode(episode).Failed("reason").Build());
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
+        DbUpdateException exception = await Should.ThrowAsync<DbUpdateException>(
+            () => dbContext.SaveChangesAsync(cancellationToken));
+
+        // Assert
+        SqliteException inner = exception.InnerException.ShouldBeOfType<SqliteException>();
+        inner.SqliteExtendedErrorCode.ShouldBe(SqliteUniqueConstraintErrorCode);
+    }
+
+    [Fact]
+    public async Task WhenCompleteItemsExistForEpisode_UnfinishedItemCanBeSaved()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        RuvEpisode episode = await AddEpisodeAsync(dbContext, "PERSIST04", cancellationToken);
+
+        dbContext.Set<DownloadQueueItem>().Add(new DownloadQueueItemBuilder().WithEpisode(episode).Downloaded().Build());
+        dbContext.Set<DownloadQueueItem>().Add(new DownloadQueueItemBuilder().WithEpisode(episode).Downloaded().Build());
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Assert
+        (await dbContext.Set<DownloadQueueItem>().CountAsync(cancellationToken)).ShouldBe(3);
+    }
+
+    private const int SqliteUniqueConstraintErrorCode = 2067;
+
+    private static async Task<RuvEpisode> AddEpisodeAsync(RuvarrDbContext dbContext, string episodeRuvId, CancellationToken cancellationToken)
+    {
+        RuvProgram program = RuvProgram.Create(901, "RÚV1", "Persistence Test Program", null, multipleEpisodes: true);
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode(episodeRuvId, new Uri("https://example.com/ep.mp4"), "Episode 1", "Desc",
+            DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return program.Episodes[0];
     }
 }

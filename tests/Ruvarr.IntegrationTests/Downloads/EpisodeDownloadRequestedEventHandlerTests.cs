@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 
@@ -25,7 +27,112 @@ public sealed class EpisodeDownloadRequestedEventHandlerTests(IntegrationTestFac
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await ArrangeAsync("ABC123", cancellationToken);
 
+        // Act
+        await RequestDownloadAsync("ABC123", cancellationToken);
+
+        // Assert
+        List<DownloadQueueItem> items = await ItemsAsync(cancellationToken);
+        items.ShouldHaveSingleItem().Status.ShouldBe(DownloadQueueStatus.Pending);
+    }
+
+    [Fact]
+    public async Task CreatesNewPendingItem_WhenAllExistingItemsAreComplete()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await ArrangeAsync(
+            "EP001",
+            cancellationToken,
+            episode => new DownloadQueueItemBuilder().WithEpisode(episode).Downloaded().Build(),
+            episode => new DownloadQueueItemBuilder().WithEpisode(episode).Downloaded().Build());
+
+        // Act
+        await RequestDownloadAsync("EP001", cancellationToken);
+
+        // Assert
+        List<DownloadQueueItem> items = await ItemsAsync(cancellationToken);
+        items.Select(x => x.Status).ShouldBe(
+            [DownloadQueueStatus.Complete, DownloadQueueStatus.Complete, DownloadQueueStatus.Pending]);
+    }
+
+    [Theory]
+    [InlineData(DownloadQueueStatus.Pending)]
+    [InlineData(DownloadQueueStatus.Downloading)]
+    public async Task DoesNotCreateItem_WhenEpisodeHasActiveItem(DownloadQueueStatus status)
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await ArrangeAsync($"EP-{status}", cancellationToken, episode =>
+        {
+            DownloadQueueItem item = DownloadQueueItem.Create(episode);
+            if (status is DownloadQueueStatus.Downloading)
+            {
+                item.MarkDownloading();
+            }
+
+            return item;
+        });
+
+        // Act
+        await RequestDownloadAsync($"EP-{status}", cancellationToken);
+
+        // Assert
+        List<DownloadQueueItem> items = await ItemsAsync(cancellationToken);
+        items.ShouldHaveSingleItem().Status.ShouldBe(status);
+    }
+
+    [Fact]
+    public async Task RetriesExistingFailedItem_KeepingRetryCount_WithoutCreatingItem()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await ArrangeAsync(
+            "EP002",
+            cancellationToken,
+            episode => new DownloadQueueItemBuilder().WithEpisode(episode).Downloaded().Build(),
+            episode => new DownloadQueueItemBuilder().WithEpisode(episode).Failed("network error").Build());
+
+        // Act
+        await RequestDownloadAsync("EP002", cancellationToken);
+
+        // Assert
+        List<DownloadQueueItem> items = await ItemsAsync(cancellationToken);
+        items.Count.ShouldBe(2);
+        DownloadQueueItem retried = items[1];
+        retried.ShouldSatisfyAllConditions(
+            () => retried.Status.ShouldBe(DownloadQueueStatus.Pending),
+            () => retried.FailureReason.ShouldBeNull(),
+            () => retried.RetryCount.ShouldBe(1));
+    }
+
+    [Fact]
+    public async Task RetriesExistingExhaustedItem_KeepingRetryCount_WithoutCreatingItem()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await ArrangeAsync(
+            "EP003",
+            cancellationToken,
+            episode => new DownloadQueueItemBuilder().WithEpisode(episode).Exhausted().Build());
+
+        // Act
+        await RequestDownloadAsync("EP003", cancellationToken);
+
+        // Assert
+        List<DownloadQueueItem> items = await ItemsAsync(cancellationToken);
+        DownloadQueueItem retried = items.ShouldHaveSingleItem();
+        retried.ShouldSatisfyAllConditions(
+            () => retried.Status.ShouldBe(DownloadQueueStatus.Pending),
+            () => retried.RetryCount.ShouldBe(RetrySchedule.MaxRetries + 1));
+    }
+
+    private async Task ArrangeAsync(
+        string episodeRuvId,
+        CancellationToken cancellationToken,
+        params Func<RuvEpisode, DownloadQueueItem>[] itemFactories)
+    {
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
 
@@ -33,53 +140,35 @@ public sealed class EpisodeDownloadRequestedEventHandlerTests(IntegrationTestFac
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.TryAddEpisode("ABC123", new Uri("https://example.com/ep.mp4"), "Test Episode", "Description", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode(episodeRuvId, new Uri("https://example.com/ep.mp4"), "Test Episode", "Description", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-
-        // Act
-        episode.RequestDownload();
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Assert
-        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
-        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-        RuvEpisode saved = await verifyContext.Set<RuvEpisode>()
-            .Include(x => x.DownloadQueueItems)
-            .Where(x => x.RuvId == "ABC123")
-            .FirstAsync(cancellationToken);
-        saved.DownloadQueueItems.ShouldHaveSingleItem();
+        foreach (Func<RuvEpisode, DownloadQueueItem> itemFactory in itemFactories)
+        {
+            dbContext.Set<DownloadQueueItem>().Add(itemFactory(episode));
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
-    [Fact]
-    public async Task CreatesSecondQueueItem_WhenEpisodeAlreadyQueued()
+    private async Task RequestDownloadAsync(string episodeRuvId, CancellationToken cancellationToken)
     {
-        // Arrange
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        RuvEpisode episode = await dbContext.Set<RuvEpisode>()
+            .Where(x => x.RuvId == episodeRuvId)
+            .FirstAsync(cancellationToken);
 
-        RuvProgram program = RuvProgram.Create(2, "RÚV1", "Test Program", null, multipleEpisodes: true);
-        dbContext.Set<RuvProgram>().Add(program);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        program.TryAddEpisode("DEF456", new Uri("https://example.com/ep.mp4"), "Test Episode", "Description", DateTime.UtcNow, TimeSpan.FromMinutes(30));
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        RuvEpisode episode = program.Episodes[0];
-        dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        // Act
         episode.RequestDownload();
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
 
-        // Assert
-        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
-        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
-        int count = await verifyContext.Set<DownloadQueueItem>().CountAsync(cancellationToken);
-        count.ShouldBe(2);
+    private async Task<List<DownloadQueueItem>> ItemsAsync(CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        return await dbContext.Set<DownloadQueueItem>()
+            .OrderBy(x => x.Created)
+            .ToListAsync(cancellationToken);
     }
 }
