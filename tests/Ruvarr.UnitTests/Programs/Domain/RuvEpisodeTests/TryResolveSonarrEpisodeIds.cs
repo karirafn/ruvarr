@@ -16,7 +16,7 @@ public sealed class TryResolveSonarrEpisodeIds
         [
             TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
             TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
-        ], SonarrStatuses.NotTracked);
+        ], SonarrStatuses.NotTracked, MatchOrigin.Manual);
 
         Dictionary<int, int> map = new()
         {
@@ -41,7 +41,7 @@ public sealed class TryResolveSonarrEpisodeIds
         [
             TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
             TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
-        ], SonarrStatuses.NotTracked);
+        ], SonarrStatuses.NotTracked, MatchOrigin.Manual);
 
         Dictionary<int, int> map = new()
         {
@@ -65,7 +65,7 @@ public sealed class TryResolveSonarrEpisodeIds
         [
             TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
             TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
-        ], SonarrStatuses.NotTracked);
+        ], SonarrStatuses.NotTracked, MatchOrigin.Manual);
 
         Dictionary<int, int> map = new()
         {

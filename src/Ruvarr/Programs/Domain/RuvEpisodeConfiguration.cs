@@ -44,6 +44,10 @@ internal sealed class RuvEpisodeConfiguration : IEntityTypeConfiguration<RuvEpis
                 v => TimeSpan.FromSeconds(v))
             .HasColumnName("duration_seconds");
 
+        builder.Property(x => x.MatchOrigin)
+            .HasConversion<string>()
+            .HasMaxLength(16);
+
         builder.Ignore(x => x.RuvUrl);
 
         builder.HasMany(x => x.TvdbEpisodes)

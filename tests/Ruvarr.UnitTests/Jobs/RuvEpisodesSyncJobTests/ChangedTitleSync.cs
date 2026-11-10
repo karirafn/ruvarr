@@ -161,7 +161,7 @@ public sealed class ChangedTitleSync
             // Attach a TVDB link via the production Match path so the episode has linked episodes.
             RuvEpisode seededEpisode = await seedContext.Set<RuvEpisode>()
                 .SingleAsync(e => e.RuvId == LinkedEpisodeId, cancellationToken);
-            seededEpisode.Match(tvdbId: 7001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+            seededEpisode.Match(tvdbId: 7001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
             seededEpisode.ClearDomainEvents();
             await seedContext.SaveChangesAsync(cancellationToken);
 

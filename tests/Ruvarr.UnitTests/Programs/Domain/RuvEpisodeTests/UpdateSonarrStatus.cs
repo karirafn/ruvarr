@@ -12,7 +12,7 @@ public sealed class UpdateSonarrStatus
     private static RuvEpisode MatchedEpisode(SonarrEpisodeStatus status)
     {
         RuvEpisode episode = new RuvEpisodeBuilder().Build();
-        episode.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, status));
+        episode.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, status), origin: MatchOrigin.Automatic);
         episode.ClearDomainEvents();
         return episode;
     }
@@ -89,7 +89,8 @@ public sealed class UpdateSonarrStatus
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
         sut.MatchMultiple(
             [TvdbEpisode.Create(1, 1, 1), TvdbEpisode.Create(2, 1, 2)],
-            SonarrStatuses.Missing(1));
+            SonarrStatuses.Missing(1),
+            MatchOrigin.Manual);
         sut.ClearDomainEvents();
 
         // Act

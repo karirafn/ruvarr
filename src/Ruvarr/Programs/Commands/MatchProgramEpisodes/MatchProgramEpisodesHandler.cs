@@ -77,7 +77,7 @@ internal sealed class MatchProgramEpisodesHandler(
                 return ProgramErrors.EpisodeNotFound;
             }
 
-            episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, sonarrStatuses, tvdbEpisode.NameTranslations?.Contains("isl") ?? false);
+            episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, sonarrStatuses, MatchOrigin.Manual, tvdbEpisode.NameTranslations?.Contains("isl") ?? false);
             logger.LogInformation(
                 "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' - '{TvdbEpisodeName}'",
                 episode.ToString(),

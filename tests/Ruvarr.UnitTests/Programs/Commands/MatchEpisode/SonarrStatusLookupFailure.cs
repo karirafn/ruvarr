@@ -54,7 +54,7 @@ public sealed class SonarrStatusLookupFailure
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(TvdbSeriesId).Build());
         if (existingLinkStatus is SonarrEpisodeStatus status)
         {
-            program.Episodes[0].Match(TvdbEpisodeId, season: 1, episode: 1, SonarrStatuses.Of(TvdbEpisodeId, status));
+            program.Episodes[0].Match(TvdbEpisodeId, season: 1, episode: 1, SonarrStatuses.Of(TvdbEpisodeId, status), MatchOrigin.Automatic);
         }
 
         seedContext.Set<RuvProgram>().Add(program);
@@ -121,6 +121,22 @@ public sealed class SonarrStatusLookupFailure
         IReadOnlyList<TvdbEpisode> links = await LinksAsync(cancellationToken);
         links.Single(l => l.TvdbId == TvdbEpisodeId).SonarrStatus.ShouldBe(SonarrEpisodeStatus.Downloaded);
         links.Single(l => l.TvdbId == OtherTvdbEpisodeId).SonarrStatus.ShouldBe(SonarrEpisodeStatus.NotTracked);
+    }
+
+    [Fact]
+    public async Task RecordsManualOrigin()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await SeedAsync(existingLinkStatus: SonarrEpisodeStatus.NotTracked, cancellationToken);
+
+        // Act
+        await MatchAsync([TvdbEpisodeId], cancellationToken);
+
+        // Assert
+        using RuvarrDbContext assertContext = CreateDbContext();
+        RuvEpisode episode = await assertContext.Set<RuvEpisode>().SingleAsync(x => x.RuvId == RuvEpisodeId, cancellationToken);
+        episode.MatchOrigin.ShouldBe(MatchOrigin.Manual);
     }
 
     [Fact]

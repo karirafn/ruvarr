@@ -43,8 +43,8 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
         program.TryAddEpisode("OE-EP1", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.Episodes[0].Match(tvdbId: 7002, season: 1, episode: 2, sonarrStatuses: SonarrStatuses.NotTracked);
-        program.Episodes[1].Match(tvdbId: 7001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(tvdbId: 7002, season: 1, episode: 2, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
+        program.Episodes[1].Match(tvdbId: 7001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -152,7 +152,7 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
         program.TryAddEpisode("TVDB-EP2", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.Episodes[0].Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -253,7 +253,8 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
             {
                 [9201] = SonarrEpisodeStatus.Downloaded,
                 [9202] = SonarrEpisodeStatus.Missing,
-            }));
+            }),
+            MatchOrigin.Manual);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act

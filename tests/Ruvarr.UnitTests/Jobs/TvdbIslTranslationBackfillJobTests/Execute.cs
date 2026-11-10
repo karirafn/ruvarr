@@ -99,7 +99,7 @@ public sealed class Execute
         dbContext.Set<RuvProgram>().Add(program);
 
         RuvEpisode episode = RuvEpisode.Create(program, "ep1", new Uri("http://test.com"), "Ep 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
-        episode.Match(tvdbId: 100, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: false);
+        episode.Match(tvdbId: 100, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic, hasIslTranslation: false);
         episode.ClearDomainEvents();
         dbContext.Set<RuvEpisode>().Add(episode);
 
@@ -136,7 +136,7 @@ public sealed class Execute
         dbContext.Set<RuvProgram>().Add(program);
 
         RuvEpisode episode = RuvEpisode.Create(program, "ep1", new Uri("http://test.com"), "Ep 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
-        episode.Match(tvdbId: 100, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: false);
+        episode.Match(tvdbId: 100, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic, hasIslTranslation: false);
         episode.ClearDomainEvents();
         dbContext.Set<RuvEpisode>().Add(episode);
 

@@ -39,7 +39,7 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 1001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        episode.Match(tvdbId: 1001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -73,7 +73,7 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 2001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        episode.Match(tvdbId: 2001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -105,7 +105,7 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 3001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        episode.Match(tvdbId: 3001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
         dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 

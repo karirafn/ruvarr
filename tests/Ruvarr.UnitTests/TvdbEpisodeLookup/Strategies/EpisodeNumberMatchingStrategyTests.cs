@@ -109,7 +109,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "þáttur 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(201, 2, 1, SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(201, 2, 1, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
 
         Episode tvdbEpisode201 = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
         Episode tvdbEpisode202 = new TvdbEpisodeDataBuilder().WithId(202).WithSeasonNumber(2).WithNumber(2).Build();
@@ -185,10 +185,10 @@ public sealed class EpisodeNumberMatchingStrategyTests
         program.TryAddEpisode("ep0005", new Uri("http://test.com"), "þáttur 5", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0006", new Uri("http://test.com"), "þáttur 6", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(201, 2, 1, SonarrStatuses.NotTracked);
-        program.Episodes[1].Match(202, 2, 2, SonarrStatuses.NotTracked);
-        program.Episodes[2].Match(203, 2, 3, SonarrStatuses.NotTracked);
-        program.Episodes[3].Match(204, 2, 4, SonarrStatuses.NotTracked);
+        program.Episodes[0].Match(201, 2, 1, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
+        program.Episodes[1].Match(202, 2, 2, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
+        program.Episodes[2].Match(203, 2, 3, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
+        program.Episodes[3].Match(204, 2, 4, SonarrStatuses.NotTracked, MatchOrigin.Automatic);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
         Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder().WithId(202).WithSeasonNumber(2).WithNumber(2).Build();

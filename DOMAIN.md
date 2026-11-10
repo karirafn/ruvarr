@@ -20,9 +20,14 @@ The process of linking each `RuvEpisode` to its TVDB season/episode so it can be
 - **Multi-episode file** — The download produced by a **multi-episode match**, named in Sonarr's `Repeat` multi-episode style (`S01E01E02`) with one `E` segment per linked TVDB episode.
 - **Matching strategy** — A focused rule that attempts to match unmatched episodes. Strategies run in sequence; each only touches episodes still unmatched after the previous ran:
   - **Episode Number matching** — Matches by episode number when the TVDB season's episode count equals the program's total episode count (a 1:1 season alignment). Handles **generic episode titles**.
-  - **Part-One Sibling matching** — Matches a "part two" episode by locating its already-matched "part one" sibling and resolving the adjacent TVDB episode by name.
-  - **Translation matching** — Matches by comparing the RÚV title against the episode's Icelandic (`isl`) TVDB title translation.
-- **Matching season resolution** — Choosing which TVDB season a program's episodes belong to: the program's explicit season number when set, otherwise the unique TVDB season whose episode count equals the program's total episode count.
+  - **Part-One Sibling matching** — Matches a "part two" episode by locating its already-matched "part one" sibling and resolving the adjacent TVDB episode by name within the season of the part-one link.
+  - **Translation matching** — Matches by comparing the RÚV title against the episode's Icelandic (`isl`) TVDB title translation, picking among the candidates by **season-constrained translation matching**.
+- **Declared season** — The season a RÚV program gives itself: parsed from the last word of its name (a number or Roman numeral), falling back to the foreign name. A later issue adds manual seasons, which take precedence.
+- **Year-numbered series** — A TVDB series with at least one regular season numbered 1900 or above.
+- **Season-constrained translation matching** — Translation matching that picks among a RÚV episode's title candidates using the program's `SeasonConstraint`: strict (only the declared season counts) for a year-named program in a year-numbered series, preferred otherwise (a candidate in the declared season wins, else the candidates are used only when they all sit in one season); ambiguous → no match.
+- **Match origin** — How a RÚV episode's links were made: *Automatic* (a matching strategy) or *Manual* (a user action). Stored once per episode.
+- **Match re-check** — The step a manual refresh adds to the TVDB episode lookup: judge each Automatic link against season-constrained translation matching, and unmatch it when the rule rejects it outright. Manual links are never judged.
+- **Matching season resolution** — Choosing which TVDB season a program's episodes belong to: the program's **declared season** when set, otherwise the unique TVDB season whose episode count equals the program's total episode count.
 - **Default season** — The TVDB season the manual match dialog offers first: the lowest season already matched by the program's other episodes, falling back to the program's earliest available TVDB season. Distinct from **matching season resolution**, which is the automated strategy's rule — the default season only shapes what the UI presents.
 - **Generic episode title** — A RÚV title of the form "Þáttur N af M" ("Episode N of M"), carrying the episode number but no descriptive name. Number-based matching is the only viable strategy for these.
 
@@ -51,4 +56,4 @@ The lifecycle of a file from download start to import-ready.
 ## Lookup & Refresh
 
 - **Lookup schedule** — The exponential backoff governing when an unmatched program or episode is next re-attempted (1h → 2h → 4h → 1d → 7d), tracked via `LookupCount` and `NextLookup`.
-- **Manual refresh** — A user-initiated re-attempt from the UI. Priority-enqueues a fresh lookup that re-runs the matching strategies on all unmatched episodes immediately, ignoring the lookup schedule backoff.
+- **Manual refresh** — A user-initiated re-attempt from the UI. Priority-enqueues a fresh lookup that re-runs the matching strategies on all unmatched episodes immediately, ignoring the lookup schedule backoff. For a matched series it also requests a **match re-check**, run by that lookup before the strategies.

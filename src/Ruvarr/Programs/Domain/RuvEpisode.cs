@@ -43,6 +43,9 @@ internal sealed partial class RuvEpisode
 
     public DateTime? Matched { get; private set; }
 
+    /// <summary>How the current links were made; <c>null</c> while unmatched.</summary>
+    public MatchOrigin? MatchOrigin { get; private set; }
+
     public DateTime? NextLookup { get; private set; }
 
     public TimeSpan Duration { get; private set; }
@@ -138,15 +141,19 @@ internal sealed partial class RuvEpisode
             : SonarrEpisodeStatus.NotTracked;
     }
 
-    public void Match(int tvdbId, int season, int episode, SonarrEpisodeStatuses sonarrStatuses, bool hasIslTranslation = false)
+    public void Match(int tvdbId, int season, int episode, SonarrEpisodeStatuses sonarrStatuses, MatchOrigin origin, bool hasIslTranslation = false)
     {
-        MatchMultiple([TvdbEpisode.Create(tvdbId, season, episode, hasIslTranslation)], sonarrStatuses);
+        MatchMultiple([TvdbEpisode.Create(tvdbId, season, episode, hasIslTranslation)], sonarrStatuses, origin);
     }
 
-    public void MatchMultiple(IReadOnlyList<TvdbEpisode> tvdbEpisodes, SonarrEpisodeStatuses sonarrStatuses)
+    public void MatchMultiple(IReadOnlyList<TvdbEpisode> tvdbEpisodes, SonarrEpisodeStatuses sonarrStatuses, MatchOrigin origin)
     {
         ArgumentNullException.ThrowIfNull(tvdbEpisodes);
         ArgumentNullException.ThrowIfNull(sonarrStatuses);
+        if (!Enum.IsDefined(origin))
+        {
+            throw new ArgumentOutOfRangeException(nameof(origin), origin, "Unknown match origin.");
+        }
 
         SonarrEpisodeStatus? previousStatus = SonarrStatus;
         Dictionary<int, SonarrEpisodeStatus> storedStatuses = [];
@@ -164,11 +171,20 @@ internal sealed partial class RuvEpisode
 
         _domainEvents.Add(new EpisodeMatchedEvent(this));
         Matched = DateTime.UtcNow;
+        MatchOrigin = origin;
         NextLookup = null;
         _tvdbEpisodes.Clear();
         _tvdbEpisodes.AddRange(tvdbEpisodes);
 
         RaiseEpisodeMissingOnTransition(previousStatus);
+    }
+
+    public void Unmatch()
+    {
+        _tvdbEpisodes.Clear();
+        Matched = null;
+        MatchOrigin = null;
+        ResetLookupSchedule();
     }
 
     public void UpdateSonarrStatus(IReadOnlyDictionary<int, SonarrEpisodeStatus> sonarrStatuses)
@@ -213,9 +229,14 @@ internal sealed partial class RuvEpisode
 
         if (_tvdbEpisodes.Count == 0)
         {
-            LookupCount = 0;
-            NextLookup = null;
+            ResetLookupSchedule();
         }
+    }
+
+    private void ResetLookupSchedule()
+    {
+        LookupCount = 0;
+        NextLookup = null;
     }
 
     public bool TryResolveSonarrEpisodeIds(

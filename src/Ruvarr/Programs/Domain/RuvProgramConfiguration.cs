@@ -55,6 +55,9 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
         builder.Property(x => x.HasMissingEpisodes)
             .IsRequired();
 
+        builder.Property(x => x.MatchRecheckRequested)
+            .IsRequired();
+
         builder.HasMany(x => x.Episodes)
             .WithOne(x => x.Program)
             .HasForeignKey("program_id")
