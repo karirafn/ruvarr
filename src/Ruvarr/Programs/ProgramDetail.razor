@@ -94,6 +94,15 @@ else
             <button class="action-button" @onclick="OpenMatchProgramDialog" title="@GetMatchButtonLabel(_program.TvdbSeriesId, _program.IsMovieMatch)">
                 <Icon Type="IconType.Link" Width="12" Height="12" /> @GetMatchButtonLabel(_program.TvdbSeriesId, _program.IsMovieMatch)
             </button>
+            @if (_program.SeriesName is not null && !_program.IsMovieMatch && _program.TvdbSeriesId is int tvdbSeriesId)
+            {
+                <SeasonSelector ProgramRuvId="_program.ProgramRuvId"
+                                TvdbSeriesId="tvdbSeriesId"
+                                ManualSeasons="_program.ManualSeasons"
+                                ParsedSeasonToken="@_program.ParsedSeasonToken"
+                                ParsedSeasonNumber="_program.ParsedSeasonNumber"
+                                OnSaved="OnSeasonsSavedAsync" />
+            }
             @if (_program.TvdbSeriesId is not null && !_program.IsMonitored && !_program.IsMovieMatch)
             {
                 <button class="action-button" @onclick="OpenAddToSonarrDialog">
@@ -544,6 +553,13 @@ else
         }
 
         await _addToSonarrDialog.OpenAsync(_program.ProgramRuvId);
+    }
+
+    private async Task OnSeasonsSavedAsync()
+    {
+        // The save already requested the refresh; this only shows it as pending until the queue reports it.
+        _pendingRefresh.Add(RuvId);
+        await ReloadProgramDetailsAsync();
     }
 
     private async Task ReloadProgramAsync()

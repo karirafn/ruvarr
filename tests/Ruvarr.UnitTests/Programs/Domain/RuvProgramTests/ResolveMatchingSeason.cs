@@ -114,4 +114,55 @@ public sealed class ResolveMatchingSeason
         // Assert
         result.ShouldBe(1);
     }
+
+    private static List<Episode> Season(int season, int count) =>
+        [.. Enumerable.Range(1, count).Select(n =>
+            new TvdbEpisodeDataBuilder().WithId((season * 100) + n).WithSeasonNumber(season).WithNumber(n).Build())];
+
+    [Fact]
+    public void NoDeclaredSeason_ComparesAgainstTheExpectedSeasonLength()
+    {
+        // Arrange: Hundurinn Ibbi, 22 published of 26
+        RuvProgram sut = new RuvProgramBuilder().WithName("Hundurinn Ibbi").WithForeignName(null).Build();
+        for (int n = 1; n <= 22; n++)
+        {
+            sut.TryAddEpisode($"ep{n:D4}", new Uri("http://test.com"), $"Þáttur {n} af 26", "", DateTime.UtcNow, TimeSpan.FromMinutes(7));
+        }
+
+        // Act
+        int result = sut.ResolveMatchingSeason([.. Season(1, 22), .. Season(2, 26)]);
+
+        // Assert
+        result.ShouldBe(2);
+    }
+
+    [Fact]
+    public void OneManualSeason_ReturnsThatSeason()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().WithName("Ráðherrann").WithForeignName(null).Build();
+        sut.MatchTvdb(new TvdbSeriesBuilder().Build());
+        sut.SetManualSeasons([2], [1, 2]);
+
+        // Act
+        int result = sut.ResolveMatchingSeason([.. Season(1, 8), .. Season(2, 8)]);
+
+        // Assert
+        result.ShouldBe(2);
+    }
+
+    [Fact]
+    public void SeveralManualSeasons_ReturnsZero()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().WithName("Bursti I").Build();
+        sut.MatchTvdb(new TvdbSeriesBuilder().Build());
+        sut.SetManualSeasons([1, 2], [1, 2]);
+
+        // Act
+        int result = sut.ResolveMatchingSeason([.. Season(1, 8), .. Season(2, 8)]);
+
+        // Assert
+        result.ShouldBe(0);
+    }
 }

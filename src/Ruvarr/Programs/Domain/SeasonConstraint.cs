@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 using Ruvarr.Infrastructure.Tvdb.Models;
 
 namespace Ruvarr.Programs.Domain;
@@ -10,20 +12,23 @@ internal enum MatchVerdict
 
 /// <summary>
 /// The rule season-constrained translation matching uses to pick among a RÚV episode's title candidates:
-/// strict (declared season only) for a year-named program in a year-numbered series, preferred otherwise.
+/// strict (declared seasons only) for manual seasons or a year-named program in a year-numbered series,
+/// preferred otherwise.
 /// </summary>
 internal sealed record SeasonConstraint
 {
     public const int YearSeasonThreshold = 1900;
 
-    private SeasonConstraint(int declaredSeason, bool isStrict)
+    private readonly ImmutableSortedSet<int> _declaredSeasons;
+
+    private SeasonConstraint(ImmutableSortedSet<int> declaredSeasons, bool isStrict)
     {
-        DeclaredSeason = declaredSeason;
+        _declaredSeasons = declaredSeasons;
         IsStrict = isStrict;
     }
 
-    /// <summary>The program's declared season; 0 when it declares none.</summary>
-    public int DeclaredSeason { get; }
+    /// <summary>The program's declared seasons; empty when it declares none.</summary>
+    public IReadOnlySet<int> DeclaredSeasons => _declaredSeasons;
 
     public bool IsStrict { get; }
 
@@ -35,18 +40,28 @@ internal sealed record SeasonConstraint
         bool isStrict = declaredSeason >= YearSeasonThreshold
             && seriesSeasonNumbers.Any(s => s >= YearSeasonThreshold);
 
-        return new SeasonConstraint(declaredSeason, isStrict);
+        ImmutableSortedSet<int> declaredSeasons = declaredSeason > 0 ? [declaredSeason] : [];
+
+        return new SeasonConstraint(declaredSeasons, isStrict);
+    }
+
+    /// <summary>A user's assertion about which seasons the program belongs to is never second-guessed.</summary>
+    public static SeasonConstraint StrictTo(ManualSeasons manualSeasons)
+    {
+        ArgumentNullException.ThrowIfNull(manualSeasons);
+
+        return new SeasonConstraint([.. manualSeasons.Numbers], isStrict: true);
     }
 
     public Episode? Select(IReadOnlyCollection<Episode> candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
 
-        List<Episode> inDeclaredSeason = [.. candidates.Where(IsInDeclaredSeason)];
+        List<Episode> inDeclaredSeasons = [.. candidates.Where(x => _declaredSeasons.Contains(x.SeasonNumber))];
 
-        if (IsStrict || inDeclaredSeason.Count > 0)
+        if (IsStrict || inDeclaredSeasons.Count > 0)
         {
-            return SingleOrNone(inDeclaredSeason);
+            return SingleOrNone(inDeclaredSeasons);
         }
 
         // Falling back across seasons is only safe when the title points at one season; spread over
@@ -63,7 +78,7 @@ internal sealed record SeasonConstraint
 
         if (IsStrict)
         {
-            return currentLink.SeasonNumber == DeclaredSeason ? MatchVerdict.Kept : MatchVerdict.Rejected;
+            return _declaredSeasons.Contains(currentLink.SeasonNumber) ? MatchVerdict.Kept : MatchVerdict.Rejected;
         }
 
         Episode? selected = Select(candidates);
@@ -73,8 +88,20 @@ internal sealed record SeasonConstraint
             : MatchVerdict.Kept;
     }
 
-    private bool IsInDeclaredSeason(Episode candidate) =>
-        DeclaredSeason > 0 && candidate.SeasonNumber == DeclaredSeason;
+    public bool Equals(SeasonConstraint? other) =>
+        other is not null && IsStrict == other.IsStrict && _declaredSeasons.SequenceEqual(other._declaredSeasons);
+
+    public override int GetHashCode()
+    {
+        HashCode hash = new();
+        hash.Add(IsStrict);
+        foreach (int season in _declaredSeasons)
+        {
+            hash.Add(season);
+        }
+
+        return hash.ToHashCode();
+    }
 
     private static Episode? SingleOrNone(IReadOnlyCollection<Episode> candidates) =>
         candidates.Count == 1 ? candidates.First() : null;

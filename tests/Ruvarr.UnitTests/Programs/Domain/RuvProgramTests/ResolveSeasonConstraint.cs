@@ -31,7 +31,7 @@ public sealed class ResolveSeasonConstraint
         SeasonConstraint result = sut.ResolveSeasonConstraint([1, 31, 32]);
 
         // Assert
-        result.DeclaredSeason.ShouldBe(2024);
+        result.DeclaredSeasons.ShouldBe([2024]);
         result.IsStrict.ShouldBeFalse();
     }
 
@@ -45,7 +45,7 @@ public sealed class ResolveSeasonConstraint
         SeasonConstraint result = sut.ResolveSeasonConstraint([1, 2, 3]);
 
         // Assert
-        result.DeclaredSeason.ShouldBe(1);
+        result.DeclaredSeasons.ShouldBe([1]);
         result.IsStrict.ShouldBeFalse();
     }
 
@@ -59,7 +59,23 @@ public sealed class ResolveSeasonConstraint
         SeasonConstraint result = sut.ResolveSeasonConstraint([1987, 2026]);
 
         // Assert
-        result.DeclaredSeason.ShouldBe(0);
+        result.DeclaredSeasons.ShouldBeEmpty();
         result.IsStrict.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ManualSeasons_AreStrictToTheSet()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().WithName("Bursti I").Build();
+        sut.MatchTvdb(new TvdbSeriesBuilder().Build());
+        sut.SetManualSeasons([1, 2], [1, 2, 3]);
+
+        // Act
+        SeasonConstraint result = sut.ResolveSeasonConstraint([1, 2, 3]);
+
+        // Assert
+        result.IsStrict.ShouldBeTrue();
+        result.DeclaredSeasons.ShouldBe([1, 2], ignoreOrder: true);
     }
 }

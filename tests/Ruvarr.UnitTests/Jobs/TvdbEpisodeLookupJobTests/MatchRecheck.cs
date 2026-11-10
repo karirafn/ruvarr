@@ -362,4 +362,58 @@ public sealed class MatchRecheck : IDisposable
         message.ShouldContain("S2024E05");
         message.ShouldContain(nameof(DownloadQueueStatus.Pending));
     }
+
+    [Fact]
+    public async Task ManualSeasons_KeepLinksInEverySeasonOfTheSet()
+    {
+        // Arrange: Bursti I spans TVDB seasons 1 and 2
+        TvdbEpisode(101, 1, 1, "Burstinn");
+        TvdbEpisode(201, 2, 1, "Burstinn snýr aftur");
+        TvdbEpisode(301, 3, 1, "Annar þáttur");
+        RuvProgram program = Program("Bursti I", "Burstinn", "Burstinn snýr aftur");
+        Link(program.Episodes[0], 101, 1, 1);
+        Link(program.Episodes[1], 201, 2, 1);
+        program.SetManualSeasons([1, 2], [1, 2, 3]).IsSuccess.ShouldBeTrue();
+
+        // Act
+        await RefreshAsync(program);
+
+        // Assert
+        program.Episodes[0].TvdbEpisodes.ShouldHaveSingleItem().TvdbId.ShouldBe(101);
+        program.Episodes[1].TvdbEpisodes.ShouldHaveSingleItem().TvdbId.ShouldBe(201);
+    }
+
+    [Fact]
+    public async Task ManualSeasons_RelinkAnAutomaticLinkOutsideTheSetToItsTitleInTheSet()
+    {
+        // Arrange
+        TvdbEpisode(101, 1, 1, "Hús");
+        TvdbEpisode(201, 2, 1, "Hús");
+        RuvProgram program = Program("Ráðherrann", "Hús");
+        Link(program.Episodes[0], 101, 1, 1);
+        program.SetManualSeasons([2], [1, 2]).IsSuccess.ShouldBeTrue();
+
+        // Act
+        await RefreshAsync(program);
+
+        // Assert
+        program.Episodes[0].TvdbEpisodes.ShouldHaveSingleItem().TvdbId.ShouldBe(201);
+    }
+
+    [Fact]
+    public async Task ManualSeasons_NeverTouchAManualLinkOutsideTheSet()
+    {
+        // Arrange
+        TvdbEpisode(101, 1, 1, "Hús");
+        TvdbEpisode(201, 2, 1, "Hús");
+        RuvProgram program = Program("Ráðherrann", "Hús");
+        Link(program.Episodes[0], 101, 1, 1, MatchOrigin.Manual);
+        program.SetManualSeasons([2], [1, 2]).IsSuccess.ShouldBeTrue();
+
+        // Act
+        await RefreshAsync(program);
+
+        // Assert
+        program.Episodes[0].TvdbEpisodes.ShouldHaveSingleItem().TvdbId.ShouldBe(101);
+    }
 }

@@ -1,0 +1,375 @@
+@namespace Ruvarr.Programs.Components
+@using Ruvarr.Abstractions
+@using Ruvarr.Contracts
+@using Ruvarr.Programs.Commands.ClearManualSeasons
+@using Ruvarr.Programs.Commands.SetManualSeasons
+@using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes
+@implements IAsyncDisposable
+@inject IServiceScopeFactory ScopeFactory
+@inject IJSRuntime Js
+
+<button @ref="_trigger"
+        type="button"
+        class="@TriggerClass"
+        aria-haspopup="dialog"
+        title="@FormatFullLabel(ManualSeasons, ParsedSeasonNumber)"
+        aria-label="@FormatFullLabel(ManualSeasons, ParsedSeasonNumber)"
+        @onclick="OpenAsync">
+    @FormatTriggerLabel(ManualSeasons, ParsedSeasonNumber)
+</button>
+
+@* A click that reaches the dialog element itself landed on the backdrop; the body stops clicks inside it. *@
+<dialog @ref="_dialog" class="season-selector-dialog" @onclose="OnDialogClose" @onclick="CloseAsync" aria-labelledby="@_titleId">
+    <div class="season-selector-body" @onclick:stopPropagation="true">
+        <h2 id="@_titleId">Season</h2>
+        <p id="@_helpId" class="season-selector-help">
+            Episodes match within these TVDB seasons.<span class="visually-hidden"> Choosing a season turns off Automatic.</span>
+        </p>
+        @if (_selection is not null)
+        {
+            <fieldset class="season-selector-fieldset" aria-describedby="@_helpId">
+                <legend class="visually-hidden">Seasons</legend>
+                <label class="@RowClass(_selection.IsAutomatic)" @key="_automaticRowKey">
+                    <input type="checkbox"
+                           @ref="_automaticInput"
+                           checked="@_selection.IsAutomatic"
+                           disabled="@_isSaving"
+                           @onchange="ToggleAutomatic" />
+                    @FormatAutomaticLabel(ParsedSeasonToken, ParsedSeasonNumber)
+                </label>
+                <hr class="season-selector-divider" />
+                <div class="season-selector-list">
+                    @if (_seriesSeasons is null && _loadFailed)
+                    {
+                        <p class="dialog-error" role="alert">Couldn't load seasons from TVDB.</p>
+                        <button class="match-entry-remove season-selector-retry" type="button" @onclick="LoadSeasonsAsync">Retry</button>
+                    }
+                    else if (_seriesSeasons is null)
+                    {
+                        <div class="dialog-spinner-container" role="status" aria-label="Loading seasons">
+                            <span class="dialog-spinner"></span>
+                        </div>
+                    }
+                    else if (DisplayedSeasons.Count == 0)
+                    {
+                        <p class="season-selector-empty">TVDB lists no regular seasons for this series.</p>
+                    }
+                    else
+                    {
+                        @foreach (int season in DisplayedSeasons)
+                        {
+                            int current = season;
+                            <label class="@RowClass(_selection.IsChecked(current))" @key="current">
+                                <input type="checkbox"
+                                       @ref="_seasonInputs[current]"
+                                       checked="@_selection.IsChecked(current)"
+                                       disabled="@_isSaving"
+                                       @onchange="() => ToggleSeason(current)" />
+                                Season @current
+                                @if (!_seriesSeasons.Contains(current))
+                                {
+                                    <span class="season-selector-missing">(not on TVDB)</span>
+                                }
+                            </label>
+                        }
+                    }
+                </div>
+            </fieldset>
+        }
+        <div aria-live="polite" aria-atomic="true" class="visually-hidden">@_announcement</div>
+        @if (_saveError is not null)
+        {
+            <p class="dialog-error" role="alert">@_saveError</p>
+        }
+        <div class="dialog-actions">
+            <button class="dialog-button dialog-button--primary" @ref="_saveButton" disabled="@IsSaveDisabled" @onclick="SaveAsync">
+                @if (_isSaving)
+                {
+                    <span class="button-spinner"></span>
+                }
+                Save
+            </button>
+            <button class="dialog-button" type="button" disabled="@_isSaving" @onclick="CloseAsync">Cancel</button>
+        </div>
+    </div>
+</dialog>
+
+@code {
+    private const int CollapsedSeasonCount = 3;
+
+    [Parameter, EditorRequired]
+    public int ProgramRuvId { get; set; }
+
+    [Parameter, EditorRequired]
+    public int TvdbSeriesId { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<int> ManualSeasons { get; set; } = [];
+
+    [Parameter]
+    public string? ParsedSeasonToken { get; set; }
+
+    [Parameter]
+    public int? ParsedSeasonNumber { get; set; }
+
+    [Parameter]
+    public EventCallback OnSaved { get; set; }
+
+    private readonly string _titleId = $"season-selector-title-{Guid.NewGuid():N}";
+    private readonly string _helpId = $"season-selector-help-{Guid.NewGuid():N}";
+    private readonly CancellationTokenSource _cts = new();
+    private readonly Dictionary<int, ElementReference> _seasonInputs = [];
+
+    private ElementReference _trigger;
+    private ElementReference _dialog;
+    private ElementReference _automaticInput;
+    private ElementReference _saveButton;
+
+    private SeasonSelection? _selection;
+    private List<int>? _seriesSeasons;
+    private int? _seasonsSeriesId;
+    private bool _loadFailed;
+    private bool _isSaving;
+    private string? _saveError;
+    private string? _announcement;
+    private int _automaticRowKey;
+    private Func<ValueTask>? _pendingFocus;
+
+    private string TriggerClass => ManualSeasons.Count > 0
+        ? "action-button season-selector-trigger action-button--active"
+        : "action-button season-selector-trigger";
+
+    private bool IsSaveDisabled => _isSaving || _selection is null || _selection.IsUnchanged;
+
+    private List<int> DisplayedSeasons =>
+        [.. (_seriesSeasons ?? []).Union(ManualSeasons).Order()];
+
+    internal static string FormatTriggerLabel(IReadOnlyList<int> manualSeasons, int? parsedSeasonNumber)
+    {
+        if (manualSeasons.Count <= CollapsedSeasonCount)
+        {
+            return FormatFullLabel(manualSeasons, parsedSeasonNumber);
+        }
+
+        string shown = string.Join(", ", manualSeasons.Take(CollapsedSeasonCount));
+        return $"Season: {shown} +{manualSeasons.Count - CollapsedSeasonCount}";
+    }
+
+    internal static string FormatFullLabel(IReadOnlyList<int> manualSeasons, int? parsedSeasonNumber)
+    {
+        if (manualSeasons.Count > 0)
+        {
+            return $"Season: {string.Join(", ", manualSeasons)}";
+        }
+
+        return parsedSeasonNumber is null ? "Season: Auto" : $"Season: Auto ({parsedSeasonNumber})";
+    }
+
+    internal static string FormatAutomaticLabel(string? parsedSeasonToken, int? parsedSeasonNumber)
+    {
+        if (parsedSeasonNumber is null)
+        {
+            return "Automatic";
+        }
+
+        string number = parsedSeasonNumber.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return parsedSeasonToken is null || parsedSeasonToken == number
+            ? $"Automatic ({number})"
+            : $"Automatic ({parsedSeasonToken} → {number})";
+    }
+
+    private static string RowClass(bool isChecked) =>
+        isChecked ? "season-selector-row is-selected" : "season-selector-row";
+
+    protected override void OnParametersSet()
+    {
+        if (_seasonsSeriesId != TvdbSeriesId)
+        {
+            _seriesSeasons = null;
+            _seasonsSeriesId = null;
+            _loadFailed = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingFocus is { } focus)
+        {
+            _pendingFocus = null;
+            await focus();
+        }
+    }
+
+    private async Task OpenAsync()
+    {
+        _selection = new SeasonSelection(ManualSeasons);
+        _saveError = null;
+        _announcement = null;
+        QueueFocusOnFirstCheckedRow();
+
+        await Js.InvokeVoidAsync("showDialog", _dialog);
+
+        if (_seriesSeasons is null)
+        {
+            await LoadSeasonsAsync();
+        }
+    }
+
+    private async Task LoadSeasonsAsync()
+    {
+        int seriesId = TvdbSeriesId;
+        _loadFailed = false;
+        StateHasChanged();
+
+        try
+        {
+            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+            IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>> handler =
+                scope.ServiceProvider.GetRequiredService<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>>();
+            IReadOnlyList<TvdbSeriesEpisode> episodes = await handler.Handle(new GetTvdbSeriesEpisodesQuery(seriesId), _cts.Token);
+
+            if (seriesId != TvdbSeriesId)
+            {
+                return;
+            }
+
+            _seriesSeasons = [.. episodes.Select(x => x.SeasonNumber).Where(x => x > 0).Distinct().Order()];
+            _seasonsSeriesId = seriesId;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _loadFailed = true;
+        }
+
+        if (_selection is { IsAutomatic: false })
+        {
+            QueueFocusOnFirstCheckedRow();
+        }
+
+        StateHasChanged();
+    }
+
+    private void QueueFocusOnFirstCheckedRow()
+    {
+        _pendingFocus = () =>
+        {
+            if (_selection is null)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            int? firstChecked = _selection.Seasons.Where(_seasonInputs.ContainsKey).Cast<int?>().FirstOrDefault();
+            ElementReference target = firstChecked is int season ? _seasonInputs[season] : _automaticInput;
+            return Js.InvokeVoidAsync("focusElement", target);
+        };
+    }
+
+    private void ToggleAutomatic()
+    {
+        if (_selection is null)
+        {
+            return;
+        }
+
+        string? announcement = _selection.ToggleAutomatic();
+        if (announcement is null)
+        {
+            // The browser already unchecked the box; re-creating the row restores the checked state Blazor renders.
+            _automaticRowKey++;
+            _pendingFocus = () => Js.InvokeVoidAsync("focusElement", _automaticInput);
+            return;
+        }
+
+        _announcement = announcement;
+        _saveError = null;
+    }
+
+    private void ToggleSeason(int season)
+    {
+        if (_selection is null)
+        {
+            return;
+        }
+
+        string? announcement = _selection.ToggleSeason(season);
+        if (announcement is not null)
+        {
+            _announcement = announcement;
+        }
+
+        _saveError = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (IsSaveDisabled || _selection is null)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _saveError = null;
+        RuvarrResult? result = null;
+
+        try
+        {
+            await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
+            if (_selection.IsAutomatic)
+            {
+                IRequestHandler<ClearManualSeasonsCommand> handler =
+                    scope.ServiceProvider.GetRequiredService<IRequestHandler<ClearManualSeasonsCommand>>();
+                result = await handler.Handle(new ClearManualSeasonsCommand(ProgramRuvId), _cts.Token);
+            }
+            else
+            {
+                IRequestHandler<SetManualSeasonsCommand> handler =
+                    scope.ServiceProvider.GetRequiredService<IRequestHandler<SetManualSeasonsCommand>>();
+                result = await handler.Handle(new SetManualSeasonsCommand(ProgramRuvId, [.. _selection.Seasons]), _cts.Token);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _saveError = "Couldn't save seasons. Please try again.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+
+        if (result is not { IsSuccess: true })
+        {
+            _saveError ??= result?.Error.Description;
+            // Save was disabled while saving, which drops focus; put it back where the user left it.
+            _pendingFocus = () => Js.InvokeVoidAsync("focusElement", _saveButton);
+            return;
+        }
+
+        await Js.InvokeVoidAsync("closeDialog", _dialog);
+        await OnSaved.InvokeAsync();
+    }
+
+    private async Task CloseAsync()
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        await Js.InvokeVoidAsync("closeDialog", _dialog);
+    }
+
+    private async Task OnDialogClose()
+    {
+        _selection = null;
+        _saveError = null;
+        _announcement = null;
+        _seasonInputs.Clear();
+        await Js.InvokeVoidAsync("focusElement", _trigger);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _cts.Dispose();
+    }
+}

@@ -48,7 +48,10 @@ public sealed class RefreshWhileProcessing : BunitContext
             ImageUrl: null,
             IsMovieMatch: false,
             Description: null,
-            EpisodeCount: 0);
+            EpisodeCount: 0,
+            ManualSeasons: [],
+            ParsedSeasonToken: null,
+            ParsedSeasonNumber: null);
 
         IStreamingRequestHandler<GetProgramsQuery, ProgramSummary> programsHandler =
             Substitute.For<IStreamingRequestHandler<GetProgramsQuery, ProgramSummary>>();

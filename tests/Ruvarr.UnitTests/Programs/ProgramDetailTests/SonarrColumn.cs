@@ -58,7 +58,10 @@ public sealed class SonarrColumn : BunitContext
             ImageUrl: null,
             IsMovieMatch: false,
             Description: null,
-            EpisodeCount: 0);
+            EpisodeCount: 0,
+            ManualSeasons: [],
+            ParsedSeasonToken: null,
+            ParsedSeasonNumber: null);
 
         IRequestHandler<GetProgramQuery, ProgramSummary?> programHandler =
             Substitute.For<IRequestHandler<GetProgramQuery, ProgramSummary?>>();

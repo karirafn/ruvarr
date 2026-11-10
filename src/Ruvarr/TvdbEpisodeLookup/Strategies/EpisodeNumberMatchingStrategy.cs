@@ -19,7 +19,7 @@ internal sealed class EpisodeNumberMatchingStrategy(
             {
                 List<Episode> tvdbSeasonEpisodes = [.. context.SeriesData.Episodes.Where(x => x.SeasonNumber == season)];
 
-                if (tvdbSeasonEpisodes.Count == context.Program.Episodes.Count)
+                if (tvdbSeasonEpisodes.Count == context.Program.ExpectedSeasonLength)
                 {
                     foreach (RuvEpisode unmatchedEpisode in unmatchedEpisodes)
                     {
