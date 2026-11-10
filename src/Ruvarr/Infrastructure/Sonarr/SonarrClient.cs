@@ -12,13 +12,10 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
     public Task<Result<IReadOnlyList<Series>>> GetSeriesAsync(CancellationToken cancellationToken = default) =>
         GetMany<Series>("api/v3/series", cancellationToken);
 
-    public async Task<IReadOnlyList<SonarrEpisode>> GetEpisodesAsync(int seriesId, CancellationToken cancellationToken = default)
-    {
-        Result<IReadOnlyList<SonarrEpisode>> result = await GetMany<SonarrEpisode>($"api/v3/episode?seriesId={seriesId}", cancellationToken);
-        return result.Match(v => v, _ => []);
-    }
+    public Task<Result<IReadOnlyList<SonarrEpisode>>> GetEpisodesAsync(int seriesId, CancellationToken cancellationToken = default) =>
+        GetMany<SonarrEpisode>($"api/v3/episode?seriesId={seriesId}", cancellationToken);
 
-    public async Task<IReadOnlyCollection<MissingEpisode>> GetMissingEpisodesAsync(int pageSize = int.MaxValue, CancellationToken cancellationToken = default)
+    public async Task<Result<IReadOnlyCollection<MissingEpisode>>> GetMissingEpisodesAsync(int pageSize = int.MaxValue, CancellationToken cancellationToken = default)
     {
         NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);
         parameters.Add("pageSize", $"{pageSize}");
@@ -27,13 +24,15 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
 
         Result<MissingEpisodesResponse> result = await GetAsync<MissingEpisodesResponse>(path, cancellationToken);
 
-        return result.Match(v => (IReadOnlyCollection<MissingEpisode>)v.Records, _ => []);
+        return result.Match(
+            v => new Result<IReadOnlyCollection<MissingEpisode>>(v.Records),
+            error => new Result<IReadOnlyCollection<MissingEpisode>>(error));
     }
 
     public Task ManualImportFilesAsync(IEnumerable<ManualImportRequest> files, CancellationToken cancellationToken = default) =>
         PostAsync("api/v3/command", new ManualImportCommand(files), cancellationToken);
 
-    public async Task<IReadOnlyList<ManualImportFile>> GetManualImportsAsync(string folder, int? seriesId = null, CancellationToken cancellationToken = default)
+    public Task<Result<IReadOnlyList<ManualImportFile>>> GetManualImportsAsync(string folder, int? seriesId = null, CancellationToken cancellationToken = default)
     {
         NameValueCollection parameters = HttpUtility.ParseQueryString(string.Empty);
         parameters.Add("folder", folder);
@@ -44,21 +43,14 @@ internal sealed class SonarrClient(ILogger<SonarrClient> logger, HttpClient http
 
         string path = $"api/v3/manualimport?{HttpUtility.UrlPathEncode(parameters.ToString())}";
 
-        Result<IReadOnlyList<ManualImportFile>> result = await GetMany<ManualImportFile>(path, cancellationToken);
-        return result.Match(v => v, _ => []);
+        return GetMany<ManualImportFile>(path, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<RootFolder>> GetRootFoldersAsync(CancellationToken cancellationToken = default)
-    {
-        Result<IReadOnlyList<RootFolder>> result = await GetMany<RootFolder>("api/v3/rootfolder", cancellationToken);
-        return result.Match(v => v, _ => []);
-    }
+    public Task<Result<IReadOnlyList<RootFolder>>> GetRootFoldersAsync(CancellationToken cancellationToken = default) =>
+        GetMany<RootFolder>("api/v3/rootfolder", cancellationToken);
 
-    public async Task<IReadOnlyList<QualityProfile>> GetQualityProfilesAsync(CancellationToken cancellationToken = default)
-    {
-        Result<IReadOnlyList<QualityProfile>> result = await GetMany<QualityProfile>("api/v3/qualityprofile", cancellationToken);
-        return result.Match(v => v, _ => []);
-    }
+    public Task<Result<IReadOnlyList<QualityProfile>>> GetQualityProfilesAsync(CancellationToken cancellationToken = default) =>
+        GetMany<QualityProfile>("api/v3/qualityprofile", cancellationToken);
 
     public Task<Series?> AddSeriesAsync(AddSeriesRequest request, CancellationToken cancellationToken = default) =>
         PostAsync<AddSeriesRequest, Series>("api/v3/series", request, cancellationToken);

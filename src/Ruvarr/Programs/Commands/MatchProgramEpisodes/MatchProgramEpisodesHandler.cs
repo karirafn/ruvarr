@@ -54,7 +54,17 @@ internal sealed class MatchProgramEpisodesHandler(
             return ProgramErrors.ProgramEpisodeCountMismatch;
         }
 
-        HashSet<int> missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
+        Result<HashSet<int>> missingResult = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
+        // Linking to TVDB does not depend on Sonarr; the next healthy RÚV episode sync sets the missing status.
+        HashSet<int> missingTvdbIds = missingResult.Match(
+            ids => ids,
+            error =>
+            {
+                logger.LogWarning(
+                    "Sonarr missing-episodes lookup failed ({ErrorCode}); storing matches as not missing until the next episode sync",
+                    error.Code);
+                return [];
+            });
 
         foreach (RuvEpisode episode in program.Episodes)
         {

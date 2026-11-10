@@ -116,7 +116,7 @@ public sealed class FileReuse : IDisposable
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
             .Returns(new Result<IReadOnlyList<Ruvarr.Infrastructure.Sonarr.Models.Series>>([]));
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IReadOnlyList<Ruvarr.Infrastructure.Sonarr.Models.ManualImportFile>>([]));
+            .Returns(Array.Empty<Ruvarr.Infrastructure.Sonarr.Models.ManualImportFile>());
 
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
@@ -228,7 +228,7 @@ public sealed class FileReuse : IDisposable
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
             .Returns(Array.Empty<Series>());
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
-            .Returns([scanFile]);
+            .Returns(new[] { scanFile });
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[]
             {

@@ -24,8 +24,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ISonarrClient>(sp =>
             new CachingSonarrClient(
                 () => sp.GetRequiredService<SonarrClient>(),
-                sp.GetRequiredService<IMemoryCache>(),
-                sp.GetRequiredService<ILogger<CachingSonarrClient>>()));
+                sp.GetRequiredService<IMemoryCache>()));
 
         return services;
     }

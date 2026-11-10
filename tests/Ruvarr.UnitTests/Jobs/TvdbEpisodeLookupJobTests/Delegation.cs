@@ -33,7 +33,7 @@ public sealed class Delegation
 
     public Delegation()
     {
-        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([]);
+        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Array.Empty<MissingEpisode>());
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
@@ -93,7 +93,7 @@ public sealed class Delegation
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).Build();
         MissingEpisode missingEpisode = new MissingEpisodeBuilder().WithTvdbId(101).Build();
         _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
-        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([missingEpisode]);
+        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(new[] { missingEpisode });
         _notifier.Enqueue(1, program.Name);
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 

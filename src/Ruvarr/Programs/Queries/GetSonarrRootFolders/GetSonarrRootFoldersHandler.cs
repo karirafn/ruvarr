@@ -5,8 +5,8 @@ using Ruvarr.Infrastructure.Sonarr.Models;
 namespace Ruvarr.Programs.Queries.GetSonarrRootFolders;
 
 internal sealed class GetSonarrRootFoldersHandler(ISonarrClient sonarrClient)
-    : IRequestHandler<GetSonarrRootFoldersQuery, IReadOnlyList<RootFolder>>
+    : IRequestHandler<GetSonarrRootFoldersQuery, Result<IReadOnlyList<RootFolder>>>
 {
-    public async Task<IReadOnlyList<RootFolder>> Handle(GetSonarrRootFoldersQuery request, CancellationToken cancellationToken) =>
-        await sonarrClient.GetRootFoldersAsync(cancellationToken);
+    public Task<Result<IReadOnlyList<RootFolder>>> Handle(GetSonarrRootFoldersQuery request, CancellationToken cancellationToken) =>
+        sonarrClient.GetRootFoldersAsync(cancellationToken);
 }

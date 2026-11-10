@@ -59,26 +59,33 @@ internal sealed class RuvEpisodesSyncJob(
             .Select(x => new { x.RuvId, x.Name })
             .ToListAsync(cancellationToken);
 
-        HashSet<int> missingTvdbIds;
+        Result<HashSet<int>> missingResult;
 
         try
         {
-            missingTvdbIds = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
+            missingResult = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
         catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
-            logger.LogError(ex, "Sonarr GetMissingEpisodesAsync failed during RÚV episode sync");
-
-            foreach (IQueueLease l in leases)
-            {
-                l.Dispose();
-            }
-
-            broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+            logger.LogError(ex, "Sonarr GetMissingEpisodesAsync threw during RÚV episode sync");
+            ReleaseAll(leases);
             return;
         }
+
+        if (missingResult.IsFailure)
+        {
+            // Treating the failure as "nothing missing" would clear every IsMissing flag and
+            // re-raise EpisodeMissingEvent for each one once Sonarr recovers.
+            logger.LogError(
+                "Sonarr GetMissingEpisodesAsync failed during RÚV episode sync ({ErrorCode}); skipping episode missing-status updates",
+                missingResult.Error.Code);
+            ReleaseAll(leases);
+            return;
+        }
+
+        HashSet<int> missingTvdbIds = missingResult.FromResult();
 
         Result<IReadOnlyList<Series>> seriesResult = await sonarr.GetSeriesAsync(cancellationToken);
 
@@ -87,13 +94,7 @@ internal sealed class RuvEpisodesSyncJob(
             logger.LogError(
                 "Sonarr GetSeriesAsync failed during RÚV episode sync ({ErrorCode}); skipping monitored/missing-episode updates",
                 seriesResult.Error.Code);
-
-            foreach (IQueueLease l in leases)
-            {
-                l.Dispose();
-            }
-
-            broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+            ReleaseAll(leases);
             return;
         }
 
@@ -165,6 +166,16 @@ internal sealed class RuvEpisodesSyncJob(
         foreach (IQueueLease unloadedLease in leases.Where(l => !loadedIds.Contains(l.RuvId)))
         {
             unloadedLease.Dispose();
+        }
+
+        broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());
+    }
+
+    private void ReleaseAll(List<IQueueLease> leases)
+    {
+        foreach (IQueueLease lease in leases)
+        {
+            lease.Dispose();
         }
 
         broadcaster.Publish(new QueueChangedEvent<ProgramRefreshQueueItemSummary>());

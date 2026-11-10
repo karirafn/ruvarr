@@ -8,6 +8,7 @@ using Quartz;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
+using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
@@ -31,7 +32,7 @@ public sealed class ExceptionHandling
 
     public ExceptionHandling()
     {
-        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([]);
+        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Array.Empty<MissingEpisode>());
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",

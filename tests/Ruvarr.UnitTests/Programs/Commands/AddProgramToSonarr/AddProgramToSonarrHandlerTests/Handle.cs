@@ -83,7 +83,7 @@ public sealed class Handle
         await dbContext.SaveChangesAsync(CancellationToken.None);
 
         _sonarrClient.GetRootFoldersAsync(Arg.Any<CancellationToken>())
-            .Returns([new RootFolder(1, "/tv"), new RootFolder(2, "/media/shows")]);
+            .Returns(new[] { new RootFolder(1, "/tv"), new RootFolder(2, "/media/shows") });
 
         AddProgramToSonarrHandler sut = CreateHandler(dbContext);
 
@@ -94,6 +94,56 @@ public sealed class Handle
         // Assert
         result.IsFailure.ShouldBeTrue();
         result.Error.ShouldBe(SonarrErrors.InvalidRootFolderPath);
+        await _sonarrClient.DidNotReceive().AddSeriesAsync(Arg.Any<AddSeriesRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReturnsUnreachableWhenRootFolderLookupFails()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
+        program.MatchTvdb(new TvdbSeriesBuilder().WithId(12345).Build());
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(CancellationToken.None);
+
+        _sonarrClient.GetRootFoldersAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<RootFolder>>(ApiClientErrors.RequestFailed));
+
+        AddProgramToSonarrHandler sut = CreateHandler(dbContext);
+
+        // Act
+        RuvarrResult result = await sut.Handle(
+            new AddProgramToSonarrCommand(1, 1, "/tv"), CancellationToken.None);
+
+        // Assert
+        result.Error.ShouldBe(SonarrErrors.Unreachable);
+        await _sonarrClient.DidNotReceive().AddSeriesAsync(Arg.Any<AddSeriesRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReturnsUnreachableWhenQualityProfileLookupFails()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
+        program.MatchTvdb(new TvdbSeriesBuilder().WithId(12345).Build());
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(CancellationToken.None);
+
+        _sonarrClient.GetRootFoldersAsync(Arg.Any<CancellationToken>())
+            .Returns(new[] { new RootFolder(1, "/tv") });
+        _sonarrClient.GetQualityProfilesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<QualityProfile>>(ApiClientErrors.RequestFailed));
+
+        AddProgramToSonarrHandler sut = CreateHandler(dbContext);
+
+        // Act
+        RuvarrResult result = await sut.Handle(
+            new AddProgramToSonarrCommand(1, 1, "/tv"), CancellationToken.None);
+
+        // Assert
+        result.Error.ShouldBe(SonarrErrors.Unreachable);
         await _sonarrClient.DidNotReceive().AddSeriesAsync(Arg.Any<AddSeriesRequest>(), Arg.Any<CancellationToken>());
     }
 
@@ -109,9 +159,9 @@ public sealed class Handle
         await dbContext.SaveChangesAsync(CancellationToken.None);
 
         _sonarrClient.GetRootFoldersAsync(Arg.Any<CancellationToken>())
-            .Returns([new RootFolder(1, "/tv")]);
+            .Returns(new[] { new RootFolder(1, "/tv") });
         _sonarrClient.GetQualityProfilesAsync(Arg.Any<CancellationToken>())
-            .Returns([new QualityProfile(1, "HD-1080p"), new QualityProfile(2, "SD")]);
+            .Returns(new[] { new QualityProfile(1, "HD-1080p"), new QualityProfile(2, "SD") });
 
         AddProgramToSonarrHandler sut = CreateHandler(dbContext);
 
@@ -137,9 +187,9 @@ public sealed class Handle
         await dbContext.SaveChangesAsync(CancellationToken.None);
 
         _sonarrClient.GetRootFoldersAsync(Arg.Any<CancellationToken>())
-            .Returns([new RootFolder(1, "/tv")]);
+            .Returns(new[] { new RootFolder(1, "/tv") });
         _sonarrClient.GetQualityProfilesAsync(Arg.Any<CancellationToken>())
-            .Returns([new QualityProfile(1, "HD-1080p")]);
+            .Returns(new[] { new QualityProfile(1, "HD-1080p") });
         _sonarrClient.AddSeriesAsync(Arg.Any<AddSeriesRequest>(), Arg.Any<CancellationToken>())
             .Returns((Series?)null);
 
@@ -166,9 +216,9 @@ public sealed class Handle
         await dbContext.SaveChangesAsync(CancellationToken.None);
 
         _sonarrClient.GetRootFoldersAsync(Arg.Any<CancellationToken>())
-            .Returns([new RootFolder(1, "/tv")]);
+            .Returns(new[] { new RootFolder(1, "/tv") });
         _sonarrClient.GetQualityProfilesAsync(Arg.Any<CancellationToken>())
-            .Returns([new QualityProfile(1, "HD-1080p")]);
+            .Returns(new[] { new QualityProfile(1, "HD-1080p") });
         Series sonarrSeries = CreateSonarrSeries(42, 12345);
         _sonarrClient.AddSeriesAsync(Arg.Any<AddSeriesRequest>(), Arg.Any<CancellationToken>())
             .Returns(sonarrSeries);
@@ -195,9 +245,9 @@ public sealed class Handle
         await dbContext.SaveChangesAsync(CancellationToken.None);
 
         _sonarrClient.GetRootFoldersAsync(Arg.Any<CancellationToken>())
-            .Returns([new RootFolder(1, "/media/tv")]);
+            .Returns(new[] { new RootFolder(1, "/media/tv") });
         _sonarrClient.GetQualityProfilesAsync(Arg.Any<CancellationToken>())
-            .Returns([new QualityProfile(7, "HD-1080p")]);
+            .Returns(new[] { new QualityProfile(7, "HD-1080p") });
         Series sonarrSeries = CreateSonarrSeries(42, 12345);
         _sonarrClient.AddSeriesAsync(Arg.Any<AddSeriesRequest>(), Arg.Any<CancellationToken>())
             .Returns(sonarrSeries);

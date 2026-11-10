@@ -1,5 +1,7 @@
 using NSubstitute;
 
+using Ruvarr.Abstractions;
+
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 
@@ -41,10 +43,10 @@ public sealed class SonarrClientExtensionsTests
             CreateMissingEpisode(300)
         ];
         sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(missingEpisodes);
+            .Returns(new Result<IReadOnlyCollection<MissingEpisode>>(missingEpisodes));
 
         // Act
-        HashSet<int> result = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
+        HashSet<int> result = (await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None)).FromResult();
 
         // Assert
         result.ShouldBe(new HashSet<int> { 100, 200, 300 });
@@ -56,10 +58,10 @@ public sealed class SonarrClientExtensionsTests
         // Arrange
         ISonarrClient sonarr = Substitute.For<ISonarrClient>();
         sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([]);
+            .Returns(new Result<IReadOnlyCollection<MissingEpisode>>(Array.Empty<MissingEpisode>()));
 
         // Act
-        HashSet<int> result = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
+        HashSet<int> result = (await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None)).FromResult();
 
         // Assert
         result.ShouldBeEmpty();
@@ -76,10 +78,10 @@ public sealed class SonarrClientExtensionsTests
             CreateMissingEpisode(100)
         ];
         sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(missingEpisodes);
+            .Returns(new Result<IReadOnlyCollection<MissingEpisode>>(missingEpisodes));
 
         // Act
-        HashSet<int> result = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
+        HashSet<int> result = (await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None)).FromResult();
 
         // Assert
         result.Count.ShouldBe(1);
@@ -92,7 +94,7 @@ public sealed class SonarrClientExtensionsTests
         // Arrange
         ISonarrClient sonarr = Substitute.For<ISonarrClient>();
         sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([]);
+            .Returns(new Result<IReadOnlyCollection<MissingEpisode>>(Array.Empty<MissingEpisode>()));
         using CancellationTokenSource cts = new();
 
         // Act
@@ -100,5 +102,21 @@ public sealed class SonarrClientExtensionsTests
 
         // Assert
         await sonarr.Received(1).GetMissingEpisodesAsync(Arg.Any<int>(), cts.Token);
+    }
+
+    [Fact]
+    public async Task GetMissingTvdbIdsAsync_WhenSonarrFails_ReturnsFailure()
+    {
+        // Arrange
+        ISonarrClient sonarr = Substitute.For<ISonarrClient>();
+        sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyCollection<MissingEpisode>>(ApiClientErrors.RequestFailed));
+
+        // Act
+        Result<HashSet<int>> result = await sonarr.GetMissingTvdbIdsAsync(CancellationToken.None);
+
+        // Assert
+        result.IsFailure.ShouldBeTrue();
+        result.Error.ShouldBe(ApiClientErrors.RequestFailed);
     }
 }

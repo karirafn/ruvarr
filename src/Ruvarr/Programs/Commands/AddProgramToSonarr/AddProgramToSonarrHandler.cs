@@ -30,14 +30,24 @@ internal sealed class AddProgramToSonarrHandler(
             return ProgramErrors.ProgramNotMatched;
         }
 
-        IReadOnlyList<RootFolder> rootFolders = await sonarrClient.GetRootFoldersAsync(cancellationToken);
-        if (!rootFolders.Any(f => f.Path == command.RootFolderPath))
+        Result<IReadOnlyList<RootFolder>> rootFolders = await sonarrClient.GetRootFoldersAsync(cancellationToken);
+        if (rootFolders.IsFailure)
+        {
+            return SonarrErrors.Unreachable;
+        }
+
+        if (!rootFolders.FromResult().Any(f => f.Path == command.RootFolderPath))
         {
             return SonarrErrors.InvalidRootFolderPath;
         }
 
-        IReadOnlyList<QualityProfile> qualityProfiles = await sonarrClient.GetQualityProfilesAsync(cancellationToken);
-        if (!qualityProfiles.Any(p => p.Id == command.QualityProfileId))
+        Result<IReadOnlyList<QualityProfile>> qualityProfiles = await sonarrClient.GetQualityProfilesAsync(cancellationToken);
+        if (qualityProfiles.IsFailure)
+        {
+            return SonarrErrors.Unreachable;
+        }
+
+        if (!qualityProfiles.FromResult().Any(p => p.Id == command.QualityProfileId))
         {
             return SonarrErrors.InvalidQualityProfileId;
         }
