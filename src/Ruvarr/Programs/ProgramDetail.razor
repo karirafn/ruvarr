@@ -504,7 +504,7 @@ else
             return;
         }
 
-        await _matchDialog.OpenAsync(ruvId, currentMatches, _program.TvdbSeriesId.Value, episodeTitle, _episodes);
+        await _matchDialog.OpenAsync(ruvId, currentMatches, _program.TvdbSeriesId.Value, episodeTitle);
     }
 
     internal static string FormatSeasons(IReadOnlyList<TvdbEpisodeSummary> matches)

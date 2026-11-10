@@ -1,7 +1,9 @@
 @namespace Ruvarr.Programs.Components
 @using Ruvarr.Abstractions
 @using Ruvarr.Contracts
+@using System.Globalization
 @using Ruvarr.Programs.Commands.MatchEpisode
+@using Ruvarr.Programs.Queries.GetEpisodeMatchSuggestion
 @using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes
 @implements IAsyncDisposable
 @inject IServiceScopeFactory ScopeFactory
@@ -29,6 +31,7 @@
         {
             int index = i;
             MatchEntry entry = _matchEntries[index];
+            TvdbSeriesEpisode? suggested = index == 0 ? ShownSuggestedEpisode() : null;
             <fieldset class="match-entry">
                 <legend class="visually-hidden">Match @(index + 1)</legend>
                 <EpisodeCombobox
@@ -36,7 +39,22 @@
                     @bind-SelectedEpisodeId="entry.SelectedEpisodeId"
                     DefaultSeason="_defaultSeason"
                     OnSubmitRequested="HandleSubmitRequested"
+                    AriaDescribedBy="@(suggested is null ? null : SuggestionNoteId)"
                     @ref="entry.ComboboxRef" />
+                @if (suggested is not null && _suggestion is not null)
+                {
+                    @if (_suggestion.Reason == MatchSuggestionReason.OutsideDeclaredSeason)
+                    {
+                        <p id="@SuggestionNoteId" class="caution-strip match-suggestion-note">
+                            <Icon Type="IconType.Warning" Class="icon caution-strip__icon" />
+                            <span class="caution-strip__text"><span class="visually-hidden">Caution: </span>Title matches @SeasonEpisodeCode(suggested), outside this program's @FormatDeclaredSeasons(_declaredSeasons). Check before matching.</span>
+                        </p>
+                    }
+                    else
+                    {
+                        <p id="@SuggestionNoteId" class="match-suggestion-note match-suggestion-note--neutral">Suggested from the title &quot;@_episodeTitle&quot;: @SeasonEpisodeCode(suggested).</p>
+                    }
+                }
                 @if (_matchEntries.Count > 1)
                 {
                     <button class="match-entry-remove" type="button" @onclick="() => RemoveEntry(index)" aria-label="Remove match @(index + 1)">Remove</button>
@@ -77,54 +95,52 @@
     private List<MatchEntry> _matchEntries = [];
     private int _tvdbSeriesId;
     private string _episodeTitle = string.Empty;
-    private List<EpisodeSummary> _siblingEpisodes = [];
     private int? _defaultSeason;
+    private SuggestedEpisode? _suggestion;
+    private IReadOnlyList<int> _declaredSeasons = [];
 
-    public async Task OpenAsync(string ruvId, IReadOnlyList<TvdbEpisodeSummary> currentMatches, int tvdbSeriesId, string episodeTitle, List<EpisodeSummary> siblingEpisodes)
+    private const string SuggestionNoteId = "match-suggestion-note";
+
+    public async Task OpenAsync(string ruvId, IReadOnlyList<TvdbEpisodeSummary> currentMatches, int tvdbSeriesId, string episodeTitle)
     {
         _ruvId = ruvId;
         _currentMatches = [.. currentMatches];
         _tvdbSeriesId = tvdbSeriesId;
         _episodeTitle = episodeTitle;
-        _siblingEpisodes = siblingEpisodes;
         _isLoading = true;
         _errorMessage = null;
         _allEpisodes = [];
         _matchEntries = [new MatchEntry()];
+        _suggestion = null;
+        _declaredSeasons = [];
 
         await InvokeAsync(StateHasChanged);
         await Js.InvokeVoidAsync("showDialog", _dialog);
 
-        await LoadEpisodesAsync();
+        await LoadEpisodesAsync(ruvId);
     }
 
-    private async Task LoadEpisodesAsync()
+    private async Task LoadEpisodesAsync(string ruvId)
     {
         try
         {
             await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
             IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>> handler =
                 scope.ServiceProvider.GetRequiredService<IRequestHandler<GetTvdbSeriesEpisodesQuery, IReadOnlyList<TvdbSeriesEpisode>>>();
-            _allEpisodes = await handler.Handle(new GetTvdbSeriesEpisodesQuery(_tvdbSeriesId), _cts.Token);
-
-            List<int> availableSeasons = [.. _allEpisodes.Select(e => e.SeasonNumber).Distinct().OrderBy(s => s)];
-            _defaultSeason = ResolveDefaultSeason(_siblingEpisodes, availableSeasons);
+            Task<IReadOnlyList<TvdbSeriesEpisode>> episodesTask = handler.Handle(new GetTvdbSeriesEpisodesQuery(_tvdbSeriesId), _cts.Token);
 
             if (_currentMatches.Count > 0)
             {
-                _matchEntries.Clear();
-                foreach (TvdbEpisodeSummary match in _currentMatches)
-                {
-                    MatchEntry entry = new()
-                    {
-                        SelectedEpisodeId = match.TvdbId,
-                    };
-                    _matchEntries.Add(entry);
-                }
+                _allEpisodes = await episodesTask;
+                _defaultSeason = _currentMatches.Min(m => m.SeasonNumber);
+                _matchEntries = [.. _currentMatches.Select(m => new MatchEntry { SelectedEpisodeId = m.TvdbId })];
             }
             else
             {
-                TryAutoSelectEpisode(_matchEntries[0]);
+                Task<EpisodeMatchSuggestion?> suggestionTask = GetSuggestionAsync(scope.ServiceProvider, ruvId);
+                await Task.WhenAll(episodesTask, suggestionTask);
+                _allEpisodes = await episodesTask;
+                ApplySuggestion(await suggestionTask);
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -152,28 +168,46 @@
         }
     }
 
-    private void TryAutoSelectEpisode(MatchEntry entry)
+    private async Task<EpisodeMatchSuggestion?> GetSuggestionAsync(IServiceProvider services, string ruvId)
     {
-        if (_allEpisodes.Count == 0)
+        try
         {
-            return;
+            IRequestHandler<GetEpisodeMatchSuggestionQuery, EpisodeMatchSuggestion?> handler =
+                services.GetRequiredService<IRequestHandler<GetEpisodeMatchSuggestionQuery, EpisodeMatchSuggestion?>>();
+            return await handler.Handle(new GetEpisodeMatchSuggestionQuery(ruvId), _cts.Token);
         }
-
-        if (!TryGetEpisodeNumber(_episodeTitle, out int episodeNumber))
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return;
-        }
-
-        IEnumerable<TvdbSeriesEpisode> candidateEpisodes = _defaultSeason is not null
-            ? _allEpisodes.Where(e => e.SeasonNumber == _defaultSeason)
-            : _allEpisodes;
-
-        TvdbSeriesEpisode? match = candidateEpisodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
-        if (match is not null)
-        {
-            entry.SelectedEpisodeId = match.TvdbId;
+            // A suggestion is a convenience: without one the dialog works as an unsuggested manual match.
+            return null;
         }
     }
+
+    private void ApplySuggestion(EpisodeMatchSuggestion? response)
+    {
+        _defaultSeason = response?.DefaultSeason ?? _allEpisodes.Select(e => (int?)e.SeasonNumber).Min();
+        _declaredSeasons = response?.DeclaredSeasons ?? [];
+
+        if (response?.Suggestion is SuggestedEpisode suggestion && _allEpisodes.Any(e => e.TvdbId == suggestion.TvdbId))
+        {
+            _suggestion = suggestion;
+            _matchEntries[0].SelectedEpisodeId = suggestion.TvdbId;
+        }
+    }
+
+    /// <summary>The suggested episode while entry 0 still holds it; the note hides once the user picks another.</summary>
+    private TvdbSeriesEpisode? ShownSuggestedEpisode() =>
+        _suggestion is not null && _matchEntries.Count > 0 && _matchEntries[0].SelectedEpisodeId == _suggestion.TvdbId
+            ? _allEpisodes.FirstOrDefault(e => e.TvdbId == _suggestion.TvdbId)
+            : null;
+
+    private static string SeasonEpisodeCode(TvdbSeriesEpisode episode) =>
+        string.Create(CultureInfo.InvariantCulture, $"S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}");
+
+    private static string FormatDeclaredSeasons(IReadOnlyList<int> declaredSeasons) =>
+        declaredSeasons.Count == 1
+            ? string.Create(CultureInfo.InvariantCulture, $"season {declaredSeasons[0]}")
+            : "seasons " + string.Join(", ", declaredSeasons.Select(s => s.ToString(CultureInfo.InvariantCulture)));
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private void AddEntry()
@@ -214,19 +248,6 @@
         }
     }
 
-    internal static bool TryGetEpisodeNumber(string title, out int number)
-    {
-        string[] parts = title.Split(' ');
-
-        if (parts.Length < 2 || !parts[0].Equals("þáttur", StringComparison.OrdinalIgnoreCase))
-        {
-            number = 0;
-            return false;
-        }
-
-        return int.TryParse(parts[1], out number);
-    }
-
     internal static int? GetNextEpisodeId(IReadOnlyList<TvdbSeriesEpisode> episodes, int? currentEpisodeId)
     {
         if (currentEpisodeId is null)
@@ -252,27 +273,6 @@
         return episodes[currentIndex + 1].TvdbId;
     }
 
-    internal static int? ResolveDefaultSeason(IReadOnlyList<EpisodeSummary> siblingEpisodes, IReadOnlyList<int> availableSeasons)
-    {
-        List<int> matchedSeasons = [.. siblingEpisodes
-            .SelectMany(e => e.TvdbMatches)
-            .Where(m => m.SeasonNumber > 0)
-            .Select(m => m.SeasonNumber)
-            .Distinct()
-            .OrderBy(s => s)];
-
-        if (matchedSeasons.Count > 0)
-        {
-            int lowest = matchedSeasons[0];
-            if (availableSeasons.Contains(lowest))
-            {
-                return lowest;
-            }
-        }
-
-        return availableSeasons.Count > 0 ? availableSeasons[0] : null;
-    }
-
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1144", Justification = "Called from Razor template via @onclick")]
     private async Task CloseAsync()
     {
@@ -287,7 +287,8 @@
         _matchEntries = [];
         _errorMessage = null;
         _episodeTitle = string.Empty;
-        _siblingEpisodes = [];
+        _suggestion = null;
+        _declaredSeasons = [];
         _defaultSeason = null;
     }
 

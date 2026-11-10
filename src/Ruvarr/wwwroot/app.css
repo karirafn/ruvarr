@@ -976,6 +976,35 @@ dialog input[type="number"]:focus {
     outline-offset: 1px;
 }
 
+.match-suggestion-note {
+    margin: 0.4rem 0 0;
+}
+
+.match-suggestion-note--neutral {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Caution strip — an amber, left-ruled note for a state the user should check (Dashboard stall, match suggestion) */
+.caution-strip {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 4px;
+    border-inline-start: 3px solid var(--color-amber);
+    background: color-mix(in oklch, var(--color-amber) 12%, transparent);
+    color: var(--color-amber);
+}
+
+.caution-strip__icon {
+    flex: 0 0 auto;
+}
+
+.caution-strip__text {
+    font-size: 0.85rem;
+}
+
 .match-add-button {
     width: 100%;
     background: none;

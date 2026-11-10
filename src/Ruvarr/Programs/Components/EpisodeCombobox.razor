@@ -16,6 +16,7 @@
                aria-expanded="@_isPopupOpen.ToString().ToLowerInvariant()"
                aria-controls="@_listboxId"
                aria-labelledby="@_labelId"
+               aria-describedby="@AriaDescribedBy"
                @attributes="ActiveDescendantAttribute"
                autocomplete="off"
                value="@_query"
@@ -95,6 +96,10 @@
 
     [Parameter]
     public EventCallback OnSubmitRequested { get; set; }
+
+    /// <summary>The id of an element describing the selection, announced when the input takes focus.</summary>
+    [Parameter]
+    public string? AriaDescribedBy { get; set; }
 
     private readonly string _id = $"episode-combobox-{Guid.NewGuid():N}";
 

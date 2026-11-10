@@ -71,6 +71,23 @@ internal sealed record SeasonConstraint
             : null;
     }
 
+    /// <summary>
+    /// The candidate to offer for a manual match when the title points at exactly one episode, and that episode sits
+    /// outside the declared seasons; <c>null</c> when the program declares no season, a candidate sits in a declared
+    /// season, or the title is ambiguous.
+    /// </summary>
+    public Episode? SuggestOutsideDeclaredSeason(IReadOnlyCollection<Episode> candidates)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+
+        if (_declaredSeasons.Count == 0 || candidates.Any(x => _declaredSeasons.Contains(x.SeasonNumber)))
+        {
+            return null;
+        }
+
+        return SingleOrNone(candidates);
+    }
+
     public MatchVerdict Judge(TvdbEpisode currentLink, IReadOnlyCollection<Episode> candidates)
     {
         ArgumentNullException.ThrowIfNull(currentLink);

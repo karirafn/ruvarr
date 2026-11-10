@@ -444,25 +444,13 @@
     overflow: hidden;
 }
 
-/* Stall banner — the only new visual state */
+/* Stall banner — the shared .caution-strip (app.css), centred on one line */
 .episode-sync-card__stall {
-    display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 0.75rem;
     margin-bottom: 1rem;
-    border-radius: 4px;
-    border-left: 3px solid #f59e0b;
-    background: rgba(245, 158, 11, 0.12);
-    color: #fbbf24;
-}
-
-.episode-sync-card__stall-icon {
-    flex: 0 0 auto;
 }
 
 .episode-sync-card__stall-text {
-    font-size: 0.85rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
