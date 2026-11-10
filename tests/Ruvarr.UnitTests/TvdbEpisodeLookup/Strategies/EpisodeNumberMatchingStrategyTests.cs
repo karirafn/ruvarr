@@ -215,4 +215,82 @@ public sealed class EpisodeNumberMatchingStrategyTests
         program.Episodes[4].TvdbEpisodes[0].TvdbId.ShouldBe(205);
         program.Episodes[5].TvdbEpisodes[0].TvdbId.ShouldBe(206);
     }
+
+    private static RuvProgram MatchedProgram(string name, int published, string titleSuffix)
+    {
+        RuvProgram program = new RuvProgramBuilder().WithRuvId(1).WithName(name).WithForeignName(null).Build();
+        for (int n = 1; n <= published; n++)
+        {
+            program.TryAddEpisode($"ep{n:D4}", new Uri("http://test.com"), $"Þáttur {n}{titleSuffix}", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        }
+
+        program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
+        return program;
+    }
+
+    private static IEnumerable<Episode> TvdbSeason(int season, int count) =>
+        Enumerable.Range(1, count).Select(n =>
+            new TvdbEpisodeDataBuilder().WithId((season * 1000) + n).WithSeasonNumber(season).WithNumber(n).Build());
+
+    private static async Task MatchAsync(RuvProgram program, params IEnumerable<Episode>[] seasons)
+    {
+        SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes([.. seasons.SelectMany(x => x)]).Build();
+        await CreateSut().MatchAsync(new EpisodeMatchingContext(program, seriesData, SonarrStatuses.NotTracked), CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task OneManualSeason_MatchesByNumberInThatSeason()
+    {
+        // Arrange: Ráðherrann, manual seasons {2}, TVDB S1 and S2 both have 8 episodes
+        RuvProgram program = MatchedProgram("Ráðherrann", 8, " af 8");
+        program.SetManualSeasons([2], [1, 2]);
+
+        // Act
+        await MatchAsync(program, TvdbSeason(1, 8), TvdbSeason(2, 8));
+
+        // Assert
+        program.Episodes.ShouldAllBe(x => x.TvdbEpisodes.Single().SeasonNumber == 2);
+        program.Episodes[7].TvdbEpisodes[0].EpisodeNumber.ShouldBe(8);
+    }
+
+    [Fact]
+    public async Task PartlyPublishedSeason_MatchesAgainstTheExpectedSeasonLength()
+    {
+        // Arrange: Molang VI, 49 of 52 published
+        RuvProgram program = MatchedProgram("Molang VI", 49, " af 52");
+
+        // Act
+        await MatchAsync(program, TvdbSeason(5, 52), TvdbSeason(6, 52));
+
+        // Assert
+        program.Episodes.ShouldAllBe(x => x.TvdbEpisodes.Single().SeasonNumber == 6);
+    }
+
+    [Fact]
+    public async Task ManualSeasonOfADifferentLength_DoesNotMatchByNumber()
+    {
+        // Arrange: Andri og Edda II, manual seasons {3}; II's "Þáttur 1" is S3E11
+        RuvProgram program = MatchedProgram("Andri og Edda II", 10, " af 10");
+        program.SetManualSeasons([3], [1, 2, 3]);
+
+        // Act
+        await MatchAsync(program, TvdbSeason(1, 10), TvdbSeason(2, 10), TvdbSeason(3, 20));
+
+        // Assert
+        program.Episodes.ShouldAllBe(x => x.TvdbEpisodes.Count == 0);
+    }
+
+    [Fact]
+    public async Task SeveralManualSeasons_DoNotMatchByNumber()
+    {
+        // Arrange
+        RuvProgram program = MatchedProgram("Bursti I", 8, " af 8");
+        program.SetManualSeasons([1, 2], [1, 2]);
+
+        // Act
+        await MatchAsync(program, TvdbSeason(1, 8), TvdbSeason(2, 8));
+
+        // Assert
+        program.Episodes.ShouldAllBe(x => x.TvdbEpisodes.Count == 0);
+    }
 }

@@ -14,4 +14,7 @@ public sealed record ProgramSummary(
     Uri? ImageUrl,
     bool IsMovieMatch,
     string? Description,
-    int EpisodeCount);
+    int EpisodeCount,
+    IReadOnlyList<int> ManualSeasons,
+    string? ParsedSeasonToken,
+    int? ParsedSeasonNumber);

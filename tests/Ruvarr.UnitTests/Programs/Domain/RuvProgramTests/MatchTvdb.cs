@@ -80,4 +80,34 @@ public sealed class MatchTvdb
         @event.RuvId.ShouldBe(42);
         @event.Name.ShouldBe("Test Program");
     }
+
+    [Fact]
+    public void ClearsManualSeasonsWhenMatchedToADifferentSeries()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
+        sut.SetManualSeasons([2], [1, 2]);
+
+        // Act
+        sut.MatchTvdb(new TvdbSeriesBuilder().WithId(2000).Build());
+
+        // Assert
+        sut.ManualSeasons.ShouldBeNull();
+    }
+
+    [Fact]
+    public void KeepsManualSeasonsWhenRematchedToTheSameSeries()
+    {
+        // Arrange
+        RuvProgram sut = new RuvProgramBuilder().Build();
+        sut.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
+        sut.SetManualSeasons([2], [1, 2]);
+
+        // Act
+        sut.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
+
+        // Assert
+        sut.ManualSeasons!.Numbers.ShouldBe([2]);
+    }
 }

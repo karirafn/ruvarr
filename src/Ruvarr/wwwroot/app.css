@@ -771,10 +771,18 @@ dialog input[type="number"]:focus {
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
     margin-top: 0.5rem;
     padding-bottom: 1.25rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     margin-bottom: 1.5rem;
+}
+
+@media (max-width: 640px) {
+    .series-meta {
+        justify-content: center;
+    }
 }
 
 .series-name {
@@ -872,6 +880,13 @@ dialog input[type="number"]:focus {
 .action-button:focus {
     outline: 2px solid rgba(255, 255, 255, 0.6);
     outline-offset: 1px;
+}
+
+.action-button--active,
+.action-button--active:hover {
+    color: var(--color-blue);
+    background-color: color-mix(in srgb, var(--color-blue) 15%, transparent);
+    border-color: color-mix(in srgb, var(--color-blue) 50%, transparent);
 }
 
 .dialog-select {

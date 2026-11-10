@@ -2,12 +2,14 @@
 using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Programs.Commands.AddProgramToSonarr;
+using Ruvarr.Programs.Commands.ClearManualSeasons;
 using Ruvarr.Programs.Filters;
 using Ruvarr.Programs.Commands.DownloadEpisode;
 using Ruvarr.Programs.Commands.MatchEpisode;
 using Ruvarr.Programs.Commands.MatchProgram;
 using Ruvarr.Programs.Commands.MatchProgramEpisodes;
 using Ruvarr.Programs.Commands.RefreshProgram;
+using Ruvarr.Programs.Commands.SetManualSeasons;
 using Ruvarr.Programs.Events;
 using Ruvarr.Programs.Queries.GetProgram;
 using Ruvarr.Programs.Queries.GetProgramEpisodes;
@@ -39,6 +41,8 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IRequestHandler<DownloadEpisodeCommand>, DownloadEpisodeHandler>();
         services.AddTransient<IRequestHandler<MatchProgramEpisodesCommand>, MatchProgramEpisodesHandler>();
         services.AddTransient<IRequestHandler<RefreshProgramCommand>, RefreshProgramHandler>();
+        services.AddTransient<IRequestHandler<SetManualSeasonsCommand>, SetManualSeasonsHandler>();
+        services.AddTransient<IRequestHandler<ClearManualSeasonsCommand>, ClearManualSeasonsHandler>();
         services.AddTransient<IRequestHandler<AddProgramToSonarrCommand>, AddProgramToSonarrHandler>();
         services.AddTransient<IRequestHandler<GetSonarrRootFoldersQuery, Result<IReadOnlyList<RootFolder>>>, GetSonarrRootFoldersHandler>();
         services.AddTransient<IRequestHandler<GetSonarrQualityProfilesQuery, Result<IReadOnlyList<QualityProfile>>>, GetSonarrQualityProfilesHandler>();

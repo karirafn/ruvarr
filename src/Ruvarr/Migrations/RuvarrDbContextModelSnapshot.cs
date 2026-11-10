@@ -210,6 +210,12 @@ namespace Ruvarr.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("lookup_count");
 
+                    b.Property<string>("ManualSeasons")
+                        .HasMaxLength(256)
+                        .IsUnicode(false)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("manual_seasons");
+
                     b.Property<bool>("MatchRecheckRequested")
                         .HasColumnType("INTEGER")
                         .HasColumnName("match_recheck_requested");

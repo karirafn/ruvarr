@@ -266,4 +266,65 @@ public sealed class GetProgramHandlerTests(IntegrationTestFactory factory) : ICl
         // Assert
         result.ShouldBeNull();
     }
+
+    [Fact]
+    public async Task ReturnsManualSeasonsAndTheSeasonParsedFromTheName()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(40020)
+            .WithName("Bursti II")
+            .WithMultipleEpisodes()
+            .Build();
+        program.MatchTvdb(new TvdbSeriesBuilder().Build());
+        program.SetManualSeasons([3, 1], [1, 2, 3]).IsSuccess.ShouldBeTrue();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40020), cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ManualSeasons.ShouldBe([1, 3]);
+        result.ParsedSeasonToken.ShouldBe("II");
+        result.ParsedSeasonNumber.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task ReturnsNoManualSeasonsWhenAutomatic()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramQuery, ProgramSummary?> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramQuery, ProgramSummary?>>();
+
+        RuvProgram program = new RuvProgramBuilder()
+            .WithRuvId(40021)
+            .WithName("Hundurinn Ibbi")
+            .WithForeignName(null)
+            .WithMultipleEpisodes()
+            .Build();
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        ProgramSummary? result = await handler.Handle(new GetProgramQuery(40021), cancellationToken);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ManualSeasons.ShouldBeEmpty();
+        result.ParsedSeasonToken.ShouldBeNull();
+        result.ParsedSeasonNumber.ShouldBeNull();
+    }
 }

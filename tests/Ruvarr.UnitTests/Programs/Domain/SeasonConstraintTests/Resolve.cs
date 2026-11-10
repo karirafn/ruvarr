@@ -18,7 +18,7 @@ public sealed class Resolve
         SeasonConstraint sut = SeasonConstraint.Resolve(declaredSeason, [1, 1987, 2024]);
 
         // Assert
-        sut.DeclaredSeason.ShouldBe(declaredSeason);
+        sut.DeclaredSeasons.ShouldBe(declaredSeason > 0 ? new[] { declaredSeason } : []);
         sut.IsStrict.ShouldBe(expectedStrict);
     }
 

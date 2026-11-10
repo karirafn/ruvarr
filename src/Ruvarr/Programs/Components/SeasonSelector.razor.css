@@ -1,0 +1,70 @@
+.season-selector-dialog {
+    padding: 0;
+}
+
+.season-selector-body {
+    padding: 1.5rem;
+}
+
+.season-selector-help {
+    margin: -0.75rem 0 1rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.season-selector-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Overrides the global `dialog label` column layout for checkbox rows. */
+.season-selector-dialog label.season-selector-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.6rem;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+}
+
+.season-selector-dialog label.season-selector-row + label.season-selector-row {
+    margin-top: 0;
+}
+
+.season-selector-dialog label.season-selector-row.is-selected {
+    border-left-color: rgba(96, 165, 250, 0.8);
+    background-color: rgba(96, 165, 250, 0.1);
+    color: var(--color-blue);
+}
+
+.season-selector-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 0.5rem 0;
+}
+
+.season-selector-list {
+    max-height: min(18rem, 40vh);
+    overflow-y: auto;
+}
+
+.season-selector-missing {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+}
+
+.season-selector-empty {
+    margin: 0.5rem 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+@media (pointer: coarse) {
+    .season-selector-dialog label.season-selector-row {
+        min-height: 44px;
+    }
+}

@@ -22,6 +22,7 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
             {
                 x.Channel,
                 x.Name,
+                x.ForeignName,
                 x.RuvId,
                 x.Slug,
                 x.IsMonitored,
@@ -35,23 +36,31 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 AllEpisodesMatched = x.Episodes.All(e => e.TvdbEpisodes.Any()),
                 AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbEpisodes.Any()),
                 HasMovie = x.Movie != null,
+                x.ManualSeasons,
             })
             .AsAsyncEnumerable()
-            .Select(x => new ProgramSummary(
-                x.Channel,
-                x.Name,
-                x.RuvId,
-                x.IsMonitored,
-                x.HasMissingEpisodes,
-                x.SeriesName,
-                x.SeriesSlug is { } seriesSlug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(seriesSlug)}") : null,
-                x.SeriesTvdbId,
-                x.Slug is { } programSlug ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(programSlug)}/{x.RuvId}") : null,
-                DeriveEpisodeMatchStatus(x.HasSeries, x.HasAnyEpisodes, x.AllEpisodesMatched, x.AnyEpisodeMatched),
-                null,
-                x.HasMovie,
-                null,
-                x.EpisodeCount));
+            .Select(x =>
+            {
+                ParsedSeason? parsedSeason = RuvProgram.ParseSeason(x.Name, x.ForeignName);
+                return new ProgramSummary(
+                    x.Channel,
+                    x.Name,
+                    x.RuvId,
+                    x.IsMonitored,
+                    x.HasMissingEpisodes,
+                    x.SeriesName,
+                    x.SeriesSlug is { } seriesSlug ? new Uri($"https://www.thetvdb.com/series/{Uri.EscapeDataString(seriesSlug)}") : null,
+                    x.SeriesTvdbId,
+                    x.Slug is { } programSlug ? new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(programSlug)}/{x.RuvId}") : null,
+                    DeriveEpisodeMatchStatus(x.HasSeries, x.HasAnyEpisodes, x.AllEpisodesMatched, x.AnyEpisodeMatched),
+                    null,
+                    x.HasMovie,
+                    null,
+                    x.EpisodeCount,
+                    x.ManualSeasons?.Numbers ?? [],
+                    parsedSeason?.Token,
+                    parsedSeason?.Number);
+            });
 
         await foreach (ProgramSummary summary in results.WithCancellation(cancellationToken))
         {

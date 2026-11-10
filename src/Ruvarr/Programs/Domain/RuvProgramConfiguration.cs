@@ -58,6 +58,11 @@ internal sealed class RuvProgramConfiguration : IEntityTypeConfiguration<RuvProg
         builder.Property(x => x.MatchRecheckRequested)
             .IsRequired();
 
+        builder.Property(x => x.ManualSeasons)
+            .HasMaxLength(256)
+            .IsUnicode(false)
+            .HasConversion(x => x!.ToStorage(), x => ManualSeasons.FromStorage(x));
+
         builder.HasMany(x => x.Episodes)
             .WithOne(x => x.Program)
             .HasForeignKey("program_id")
