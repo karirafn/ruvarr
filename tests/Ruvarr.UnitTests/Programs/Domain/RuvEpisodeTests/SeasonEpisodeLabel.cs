@@ -25,7 +25,7 @@ public sealed class SeasonEpisodeLabel
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1234, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1234, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Act
         string? result = sut.SeasonEpisodeLabel;
@@ -41,9 +41,9 @@ public sealed class SeasonEpisodeLabel
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
         sut.MatchMultiple(
         [
-            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2, isMissing: false),
-            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1, isMissing: false),
-        ]);
+            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
+            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
+        ], SonarrStatuses.NotTracked);
 
         // Act
         string? result = sut.SeasonEpisodeLabel;

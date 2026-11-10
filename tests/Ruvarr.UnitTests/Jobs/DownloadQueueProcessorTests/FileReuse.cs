@@ -232,7 +232,7 @@ public sealed class FileReuse : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[]
             {
-                new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1),
+                new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true),
             });
 
         DownloadQueueProcessor sut = CreateJob(dbContext);
@@ -264,7 +264,7 @@ public sealed class FileReuse : IDisposable
         program.TryAddEpisode("ep0001", new Uri("http://test.com/stream"), "Episode 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 5001, season: 1, episode: 1, isMissing: true);
+        episode.Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(5001));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 

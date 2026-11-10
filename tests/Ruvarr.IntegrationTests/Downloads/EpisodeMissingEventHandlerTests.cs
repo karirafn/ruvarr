@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Programs.Domain;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 
@@ -21,7 +23,7 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
-    public async Task EnqueuesDownload_WhenEpisodeBecomesIsMissing()
+    public async Task EnqueuesDownload_WhenEpisodeBecomesMissing()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -37,11 +39,11 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 1001, season: 1, episode: 1, isMissing: false);
+        episode.Match(tvdbId: 1001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
-        episode.UpdateMissingStatus(new HashSet<int> { 1001 });
+        episode.UpdateSonarrStatus(new Dictionary<int, SonarrEpisodeStatus> { [1001] = SonarrEpisodeStatus.Missing });
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Assert — the episode now has a queue item
@@ -71,12 +73,12 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 2001, season: 1, episode: 1, isMissing: false);
+        episode.Match(tvdbId: 2001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Act — episode already has a Pending queue item; UpdateMissingStatus should not add another
-        episode.UpdateMissingStatus(new HashSet<int> { 2001 });
+        // Act — episode already has a Pending queue item; UpdateSonarrStatus should not add another
+        episode.UpdateSonarrStatus(new Dictionary<int, SonarrEpisodeStatus> { [2001] = SonarrEpisodeStatus.Missing });
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Assert — still exactly one queue item
@@ -103,7 +105,7 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 3001, season: 1, episode: 1, isMissing: false);
+        episode.Match(tvdbId: 3001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         dbContext.Set<DownloadQueueItem>().Add(DownloadQueueItem.Create(episode));
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -111,8 +113,8 @@ public sealed class EpisodeMissingEventHandlerTests(IntegrationTestFactory facto
             $"UPDATE download_queue SET status = 'Complete', downloaded = {DateTime.UtcNow.ToString("o")} WHERE episode_id = (SELECT id FROM episodes WHERE ruv_id = 'GHI789')",
             cancellationToken);
 
-        // Act — only completed items exist; UpdateMissingStatus should add a new one
-        episode.UpdateMissingStatus(new HashSet<int> { 3001 });
+        // Act — only completed items exist; UpdateSonarrStatus should add a new one
+        episode.UpdateSonarrStatus(new Dictionary<int, SonarrEpisodeStatus> { [3001] = SonarrEpisodeStatus.Missing });
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Assert — two queue items total (one complete, one pending)

@@ -5,6 +5,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Programs.Queries.GetPrograms;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 
@@ -479,8 +480,8 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         RuvEpisode ep1 = program.Episodes.First(e => e.RuvId == "FM-EP1");
         RuvEpisode ep2 = program.Episodes.First(e => e.RuvId == "FM-EP2");
-        ep1.Match(tvdbId: 101, season: 1, episode: 1, isMissing: false);
-        ep2.Match(tvdbId: 102, season: 1, episode: 2, isMissing: false);
+        ep1.Match(tvdbId: 101, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+        ep2.Match(tvdbId: 102, season: 1, episode: 2, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -515,7 +516,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvEpisode ep1 = program.Episodes.First(e => e.RuvId == "PM-EP1");
-        ep1.Match(tvdbId: 201, season: 1, episode: 1, isMissing: false);
+        ep1.Match(tvdbId: 201, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -721,7 +722,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         fullyMatched.TryAddEpisode("FMF-EP1", new Uri("https://example.com/fmf-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
-        fullyMatched.Episodes.First(e => e.RuvId == "FMF-EP1").Match(tvdbId: 301, season: 1, episode: 1, isMissing: false);
+        fullyMatched.Episodes.First(e => e.RuvId == "FMF-EP1").Match(tvdbId: 301, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvProgram noneMatched = RuvProgram.Create(40002, "RÚV1", "None Matched Filter", null, multipleEpisodes: true);
@@ -761,7 +762,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
         partial.TryAddEpisode("PMF-EP1", new Uri("https://example.com/pmf-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         partial.TryAddEpisode("PMF-EP2", new Uri("https://example.com/pmf-ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
-        partial.Episodes.First(e => e.RuvId == "PMF-EP1").Match(tvdbId: 401, season: 1, episode: 1, isMissing: false);
+        partial.Episodes.First(e => e.RuvId == "PMF-EP1").Match(tvdbId: 401, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         RuvProgram fullyMatched = RuvProgram.Create(40004, "RÚV1", "Fully Matched For Partial Filter", null, multipleEpisodes: true);
@@ -771,7 +772,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         fullyMatched.TryAddEpisode("FMF2-EP1", new Uri("https://example.com/fmf2-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
-        fullyMatched.Episodes.First(e => e.RuvId == "FMF2-EP1").Match(tvdbId: 402, season: 1, episode: 1, isMissing: false);
+        fullyMatched.Episodes.First(e => e.RuvId == "FMF2-EP1").Match(tvdbId: 402, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -810,7 +811,7 @@ public sealed class GetProgramsHandlerTests(IntegrationTestFactory factory) : IC
 
         partial.TryAddEpisode("PMF2-EP1", new Uri("https://example.com/pmf2-ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
-        partial.Episodes.First(e => e.RuvId == "PMF2-EP1").Match(tvdbId: 501, season: 1, episode: 1, isMissing: false);
+        partial.Episodes.First(e => e.RuvId == "PMF2-EP1").Match(tvdbId: 501, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act

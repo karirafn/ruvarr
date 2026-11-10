@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
@@ -36,17 +37,7 @@ internal sealed class MatchEpisodeHandler(
             return ProgramErrors.EpisodeNotFound;
         }
 
-        Result<HashSet<int>> missingResult = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
-        // Linking to TVDB does not depend on Sonarr; the next healthy RÚV episode sync sets the missing status.
-        HashSet<int> missingTvdbIds = missingResult.Match(
-            ids => ids,
-            error =>
-            {
-                logger.LogWarning(
-                    "Sonarr missing-episodes lookup failed ({ErrorCode}); storing matches as not missing until the next episode sync",
-                    error.Code);
-                return [];
-            });
+        SonarrEpisodeStatuses sonarrStatuses = await LookUpSonarrStatusesAsync(episode.Program, cancellationToken);
 
         List<TvdbEpisode> tvdbEpisodes = [];
         foreach (int tvdbId in command.TvdbIds)
@@ -58,10 +49,10 @@ internal sealed class MatchEpisodeHandler(
                 return TvdbErrors.EpisodeNotFound;
             }
 
-            tvdbEpisodes.Add(TvdbEpisode.Create(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id), tvdbEpisode.NameTranslations?.Contains("isl") ?? false));
+            tvdbEpisodes.Add(TvdbEpisode.Create(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, tvdbEpisode.NameTranslations?.Contains("isl") ?? false));
         }
 
-        episode.MatchMultiple(tvdbEpisodes);
+        episode.MatchMultiple(tvdbEpisodes, sonarrStatuses);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
@@ -70,5 +61,28 @@ internal sealed class MatchEpisodeHandler(
             tvdbEpisodes.Count);
 
         return RuvarrResult.Success;
+    }
+
+    private async Task<SonarrEpisodeStatuses> LookUpSonarrStatusesAsync(RuvProgram program, CancellationToken cancellationToken)
+    {
+        if (program.Series is null)
+        {
+            // A program without a TVDB series cannot be in Sonarr.
+            return SonarrEpisodeStatuses.From(new Dictionary<int, SonarrEpisodeStatus>());
+        }
+
+        Result<IReadOnlyDictionary<int, SonarrEpisodeStatus>> statusResult =
+            await sonarr.GetEpisodeStatusesAsync(program.Series.TvdbId, cancellationToken);
+
+        // Linking to TVDB does not depend on Sonarr; the next healthy RÚV episode sync sets the Sonarr status.
+        return statusResult.Match(
+            SonarrEpisodeStatuses.From,
+            error =>
+            {
+                logger.LogWarning(
+                    "Sonarr episode status lookup failed ({ErrorCode}); keeping stored Sonarr statuses until the next episode sync",
+                    error.Code);
+                return SonarrEpisodeStatuses.Unavailable;
+            });
     }
 }

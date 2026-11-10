@@ -5,6 +5,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Programs.Queries.GetProgramEpisodes;
+using Ruvarr.Testing.Builders;
 
 using Shouldly;
 
@@ -42,8 +43,8 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
         program.TryAddEpisode("OE-EP1", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.Episodes[0].Match(tvdbId: 7002, season: 1, episode: 2, isMissing: false);
-        program.Episodes[1].Match(tvdbId: 7001, season: 1, episode: 1, isMissing: false);
+        program.Episodes[0].Match(tvdbId: 7002, season: 1, episode: 2, sonarrStatuses: SonarrStatuses.NotTracked);
+        program.Episodes[1].Match(tvdbId: 7001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -151,7 +152,7 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
         program.TryAddEpisode("TVDB-EP2", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        program.Episodes[0].Match(tvdbId: 5001, season: 1, episode: 1, isMissing: false);
+        program.Episodes[0].Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Act
@@ -224,5 +225,44 @@ public sealed class GetProgramEpisodesHandlerTests(IntegrationTestFactory factor
         // Assert
         result.Count.ShouldBe(1);
         result[0].RuvUrl.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ProjectsPerLinkAndCombinedSonarrStatus()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext dbContext = scope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>> handler =
+            scope.ServiceProvider.GetRequiredService<IRequestHandler<GetProgramEpisodesQuery, List<EpisodeSummary>>>();
+
+        RuvProgram program = RuvProgram.Create(30009, "RÚV1", "Sonarr Status Program", null, multipleEpisodes: true);
+        program.MatchTvdb(TvdbSeries.Create(9101, "Sonarr Status Series"));
+        dbContext.Set<RuvProgram>().Add(program);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.TryAddEpisode("SS-EP1", new Uri("https://example.com/ep1.mp4"), "Episode 1", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        program.TryAddEpisode("SS-EP2", new Uri("https://example.com/ep2.mp4"), "Episode 2", "Desc", DateTime.UtcNow, TimeSpan.FromMinutes(30));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        program.Episodes.Single(e => e.RuvId == "SS-EP1").MatchMultiple(
+            [TvdbEpisode.Create(9201, 1, 1), TvdbEpisode.Create(9202, 1, 2)],
+            SonarrEpisodeStatuses.From(new Dictionary<int, SonarrEpisodeStatus>
+            {
+                [9201] = SonarrEpisodeStatus.Downloaded,
+                [9202] = SonarrEpisodeStatus.Missing,
+            }));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        List<EpisodeSummary> result = await handler.Handle(new GetProgramEpisodesQuery(30009), cancellationToken);
+
+        // Assert
+        EpisodeSummary matched = result.Single(x => x.EpisodeRuvId == "SS-EP1");
+        matched.TvdbMatches.Select(m => m.SonarrStatus).ShouldBe([SonarrEpisodeStatus.Downloaded, SonarrEpisodeStatus.Missing]);
+        matched.SonarrStatus.ShouldBe(SonarrEpisodeStatus.Missing);
+        result.Single(x => x.EpisodeRuvId == "SS-EP2").SonarrStatus.ShouldBeNull();
     }
 }

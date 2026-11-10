@@ -47,3 +47,13 @@
         text-align: center;
     }
 }
+
+.episodes-table-scroll {
+    overflow-x: auto;
+}
+
+@media (max-width: 640px) {
+    .episodes-table {
+        min-inline-size: 40rem;
+    }
+}

@@ -3,13 +3,14 @@ using AngleSharp.Dom;
 using Bunit;
 
 using Microsoft.AspNetCore.Components.Web;
+
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
-using Ruvarr.Programs.Components;
 using Ruvarr.Programs.Commands.MatchEpisode;
+using Ruvarr.Programs.Components;
 using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes;
 
 using Shouldly;
@@ -50,8 +51,8 @@ public sealed class EditingAndFocus : BunitContext
         // Arrange
         List<TvdbEpisodeSummary> currentMatches =
         [
-            new(100, 1, 1, false, false, null),
-            new(101, 1, 2, false, false, null),
+            new(100, 1, 1, SonarrEpisodeStatus.NotTracked, false, null),
+            new(101, 1, 2, SonarrEpisodeStatus.NotTracked, false, null),
         ];
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
@@ -130,9 +131,9 @@ public sealed class EditingAndFocus : BunitContext
         // Arrange — open with three existing matches so removing one leaves 2 (> 1)
         List<TvdbEpisodeSummary> currentMatches =
         [
-            new(100, 1, 1, false, false, null),
-            new(101, 1, 2, false, false, null),
-            new(102, 1, 3, false, false, null),
+            new(100, 1, 1, SonarrEpisodeStatus.NotTracked, false, null),
+            new(101, 1, 2, SonarrEpisodeStatus.NotTracked, false, null),
+            new(102, 1, 3, SonarrEpisodeStatus.NotTracked, false, null),
         ];
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
@@ -157,8 +158,8 @@ public sealed class EditingAndFocus : BunitContext
         // Arrange — open with two existing matches
         List<TvdbEpisodeSummary> currentMatches =
         [
-            new(100, 1, 1, false, false, null),
-            new(101, 1, 2, false, false, null),
+            new(100, 1, 1, SonarrEpisodeStatus.NotTracked, false, null),
+            new(101, 1, 2, SonarrEpisodeStatus.NotTracked, false, null),
         ];
 
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();

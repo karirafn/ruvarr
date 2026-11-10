@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
@@ -17,16 +16,19 @@ using Ruvarr.Programs.Domain;
 using Ruvarr.Programs.Events;
 using Ruvarr.Settings;
 using Ruvarr.Testing.Builders;
+using Ruvarr.Testing.Logging;
 
 using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.RuvEpisodesSyncJobTests;
 
-public sealed class MissingEpisodesFailure
+public sealed class SonarrEpisodeStatusSync
 {
     private const int RuvProgramId = 301;
     private const string RuvEpisodeId = "ep-301-1";
     private const string EpisodeTitle = "Þáttur 1";
+    private const int TvdbSeriesId = 9001;
+    private const int SonarrSeriesId = 42;
     private const int TvdbEpisodeId = 5001;
 
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
@@ -37,9 +39,10 @@ public sealed class MissingEpisodesFailure
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly IDomainEventBroadcaster _broadcaster = Substitute.For<IDomainEventBroadcaster>();
     private readonly RecordingEpisodeMissingHandler _missingHandler = new();
+    private readonly RecordingLogger<RuvEpisodesSyncJob> _logger = new();
     private readonly string _databaseName = Guid.NewGuid().ToString();
 
-    public MissingEpisodesFailure()
+    public SonarrEpisodeStatusSync()
     {
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _serviceProvider.GetService(typeof(IEnumerable<IDomainEventHandler<EpisodeMissingEvent>>))
@@ -47,7 +50,11 @@ public sealed class MissingEpisodesFailure
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key"));
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
-            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
+            .Returns(new Result<IReadOnlyList<Series>>([SonarrSeriesBuilder.Build(SonarrSeriesId, TvdbSeriesId)]));
+        _sonarr.GetEpisodesAsync(SonarrSeriesId, Arg.Any<CancellationToken>())
+            .Returns(SonarrEpisode(hasFile: false));
+        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(SonarrListsNothingAsMissing());
 
         RuvTvProgram apiResponse = new RuvTvProgramBuilder()
             .WithId(RuvProgramId)
@@ -57,11 +64,17 @@ public sealed class MissingEpisodesFailure
             .Returns((Result<RuvTvProgram>)apiResponse);
     }
 
+    private static Result<IReadOnlyList<SonarrEpisode>> SonarrEpisode(bool hasFile) =>
+        new([new SonarrEpisode(Id: 201, SeriesId: SonarrSeriesId, TvdbId: TvdbEpisodeId, SeasonNumber: 1, EpisodeNumber: 1, HasFile: hasFile, Monitored: true)]);
+
     private static Result<IReadOnlyCollection<MissingEpisode>> SonarrFailure() =>
         new(ApiClientErrors.RequestFailed);
 
     private static Result<IReadOnlyCollection<MissingEpisode>> SonarrListsEpisodeAsMissing() =>
         new([new MissingEpisodeBuilder().WithTvdbId(TvdbEpisodeId).Build()]);
+
+    private static Result<IReadOnlyCollection<MissingEpisode>> SonarrListsNothingAsMissing() =>
+        new(Array.Empty<MissingEpisode>());
 
     private RuvarrDbContext CreateDbContext() => new(
         new DbContextOptionsBuilder<RuvarrDbContext>()
@@ -69,10 +82,11 @@ public sealed class MissingEpisodesFailure
             .Options,
         _serviceProvider);
 
-    private async Task SeedMatchedEpisodeAsync(bool isMissing, CancellationToken cancellationToken)
+    private async Task SeedMatchedEpisodeAsync(SonarrEpisodeStatus status, CancellationToken cancellationToken)
     {
         using RuvarrDbContext seedContext = CreateDbContext();
         RuvProgram program = new RuvProgramBuilder().WithRuvId(RuvProgramId).WithMultipleEpisodes().Build();
+        program.MatchTvdb(new TvdbSeriesBuilder().WithId(TvdbSeriesId).Build());
         program.TryAddEpisode(
             id: RuvEpisodeId,
             uri: new Uri("http://ruv.is/ep1"),
@@ -80,7 +94,7 @@ public sealed class MissingEpisodesFailure
             description: string.Empty,
             firstRun: DateTime.UtcNow,
             duration: TimeSpan.FromMinutes(30));
-        program.Episodes.Single().Match(TvdbEpisodeId, season: 1, episode: 1, isMissing: isMissing);
+        program.Episodes.Single().Match(TvdbEpisodeId, season: 1, episode: 1, SonarrStatuses.Of(TvdbEpisodeId, status));
         seedContext.Set<RuvProgram>().Add(program);
         await seedContext.SaveChangesAsync(cancellationToken);
         _missingHandler.Events.Clear();
@@ -91,26 +105,73 @@ public sealed class MissingEpisodesFailure
         _syncQueue.Enqueue(RuvProgramId, "Test Program");
         using RuvarrDbContext dbContext = CreateDbContext();
         RuvEpisodesSyncJob sut = new(
-            NullLogger<RuvEpisodesSyncJob>.Instance,
-            _ruv, dbContext, _sonarr, _syncQueue, _broadcaster, _settingsStore);
+            _logger, _ruv, dbContext, _sonarr, _syncQueue, _broadcaster, _settingsStore);
         await sut.Execute(_context, cancellationToken);
     }
 
-    private async Task<bool> IsMissingAsync(CancellationToken cancellationToken)
+    private async Task<SonarrEpisodeStatus> StoredStatusAsync(CancellationToken cancellationToken)
     {
         using RuvarrDbContext assertContext = CreateDbContext();
         RuvEpisode episode = await assertContext.Set<RuvEpisode>()
             .Include(x => x.TvdbEpisodes)
             .SingleAsync(x => x.RuvId == RuvEpisodeId, cancellationToken);
-        return episode.TvdbEpisodes.Single().IsMissing;
+        return episode.TvdbEpisodes.Single().SonarrStatus;
     }
 
     [Fact]
-    public async Task WhenMissingEpisodesFails_ReleasesLeasesAndPublishesQueueChanged()
+    public async Task EpisodeWithFile_StoresDownloaded()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await SeedMatchedEpisodeAsync(isMissing: true, cancellationToken);
+        await SeedMatchedEpisodeAsync(SonarrEpisodeStatus.NotTracked, cancellationToken);
+        _sonarr.GetEpisodesAsync(SonarrSeriesId, Arg.Any<CancellationToken>()).Returns(SonarrEpisode(hasFile: true));
+
+        // Act
+        await RunSyncAsync(cancellationToken);
+
+        // Assert
+        (await StoredStatusAsync(cancellationToken)).ShouldBe(SonarrEpisodeStatus.Downloaded);
+        _missingHandler.Events.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SeriesNotInSonarr_StoresNotTracked()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await SeedMatchedEpisodeAsync(SonarrEpisodeStatus.Downloaded, cancellationToken);
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
+
+        // Act
+        await RunSyncAsync(cancellationToken);
+
+        // Assert
+        (await StoredStatusAsync(cancellationToken)).ShouldBe(SonarrEpisodeStatus.NotTracked);
+        await _sonarr.DidNotReceive().GetEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ReadsSeriesOnceAndEpisodesOncePerProgram()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await SeedMatchedEpisodeAsync(SonarrEpisodeStatus.NotTracked, cancellationToken);
+
+        // Act
+        await RunSyncAsync(cancellationToken);
+
+        // Assert
+        await _sonarr.Received(1).GetSeriesAsync(Arg.Any<CancellationToken>());
+        await _sonarr.Received(1).GetEpisodesAsync(SonarrSeriesId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task WhenLookupFails_StillSyncsProgramAndLogsWarning()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await SeedMatchedEpisodeAsync(SonarrEpisodeStatus.Missing, cancellationToken);
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(SonarrFailure());
 
         // Act
@@ -118,53 +179,58 @@ public sealed class MissingEpisodesFailure
 
         // Assert
         _syncQueue.Items.ShouldBeEmpty();
-        _broadcaster.Received().Publish(Arg.Any<QueueChangedEvent<ProgramRefreshQueueItemSummary>>());
-        await _ruv.DidNotReceive().GetProgramAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+        await _ruv.Received(1).GetProgramAsync(RuvProgramId, Arg.Any<CancellationToken>());
+        _logger.Entries.ShouldContain(e => e.Level == LogLevel.Warning && e.Message.Contains("Sonarr", StringComparison.Ordinal));
     }
 
-    [Fact]
-    public async Task WhenMissingEpisodesFails_LeavesIsMissingUnchangedAndRaisesNoEpisodeMissingEvent()
+    [Theory]
+    [InlineData(SonarrEpisodeStatus.Missing)]
+    [InlineData(SonarrEpisodeStatus.Downloaded)]
+    public async Task WhenLookupFails_LeavesStatusUnchangedAndRaisesNoEpisodeMissingEvent(SonarrEpisodeStatus stored)
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await SeedMatchedEpisodeAsync(isMissing: true, cancellationToken);
-        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(SonarrFailure());
+        await SeedMatchedEpisodeAsync(stored, cancellationToken);
+        _sonarr.GetEpisodesAsync(SonarrSeriesId, Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<SonarrEpisode>>(ApiClientErrors.RequestFailed));
 
         // Act
         await RunSyncAsync(cancellationToken);
 
         // Assert
-        (await IsMissingAsync(cancellationToken)).ShouldBeTrue();
+        (await StoredStatusAsync(cancellationToken)).ShouldBe(stored);
         _missingHandler.Events.ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task OutageFollowedByHealthySync_KeepsIsMissingTrueAndRaisesNoEpisodeMissingEvent()
+    public async Task OutageFollowedByHealthySync_KeepsMissingAndRaisesNoEpisodeMissingEvent()
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await SeedMatchedEpisodeAsync(isMissing: true, cancellationToken);
+        await SeedMatchedEpisodeAsync(SonarrEpisodeStatus.Missing, cancellationToken);
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(SonarrFailure(), SonarrListsEpisodeAsMissing());
 
         // Act
         await RunSyncAsync(cancellationToken);
-        bool isMissingAfterOutage = await IsMissingAsync(cancellationToken);
+        SonarrEpisodeStatus afterOutage = await StoredStatusAsync(cancellationToken);
         await RunSyncAsync(cancellationToken);
-        bool isMissingAfterRecovery = await IsMissingAsync(cancellationToken);
+        SonarrEpisodeStatus afterRecovery = await StoredStatusAsync(cancellationToken);
 
         // Assert
-        isMissingAfterOutage.ShouldBeTrue();
-        isMissingAfterRecovery.ShouldBeTrue();
+        afterOutage.ShouldBe(SonarrEpisodeStatus.Missing);
+        afterRecovery.ShouldBe(SonarrEpisodeStatus.Missing);
         _missingHandler.Events.ShouldBeEmpty();
     }
 
-    [Fact]
-    public async Task EpisodeMatchedDuringOutage_HealthySyncSetsIsMissingAndRaisesEpisodeMissingEventOnce()
+    [Theory]
+    [InlineData(SonarrEpisodeStatus.NotTracked)]
+    [InlineData(SonarrEpisodeStatus.Downloaded)]
+    public async Task TransitionIntoMissing_StoresMissingAndRaisesEpisodeMissingEventOnce(SonarrEpisodeStatus stored)
     {
         // Arrange
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        await SeedMatchedEpisodeAsync(isMissing: false, cancellationToken);
+        await SeedMatchedEpisodeAsync(stored, cancellationToken);
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(SonarrListsEpisodeAsMissing());
 
@@ -172,7 +238,7 @@ public sealed class MissingEpisodesFailure
         await RunSyncAsync(cancellationToken);
 
         // Assert
-        (await IsMissingAsync(cancellationToken)).ShouldBeTrue();
+        (await StoredStatusAsync(cancellationToken)).ShouldBe(SonarrEpisodeStatus.Missing);
         _missingHandler.Events.ShouldHaveSingleItem().Episode.RuvId.ShouldBe(RuvEpisodeId);
     }
 

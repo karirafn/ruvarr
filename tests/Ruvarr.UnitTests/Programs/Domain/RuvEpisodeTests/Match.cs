@@ -1,3 +1,4 @@
+using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Testing.Builders;
 
@@ -14,7 +15,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 42, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 42, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         sut.TvdbEpisodes.ShouldHaveSingleItem();
@@ -28,7 +29,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 3, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 3, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         sut.TvdbEpisodes[0].SeasonNumber.ShouldBe(3);
@@ -41,7 +42,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 7, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 7, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         sut.TvdbEpisodes[0].EpisodeNumber.ShouldBe(7);
@@ -55,7 +56,7 @@ public sealed class Match
         DateTime before = DateTime.UtcNow;
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         sut.Matched.ShouldNotBeNull();
@@ -71,36 +72,36 @@ public sealed class Match
         sut.NextLookup.ShouldNotBeNull();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         sut.NextLookup.ShouldBeNull();
     }
 
     [Fact]
-    public void SetsIsMissingTrue()
+    public void SetsSonarrStatusFromLookup()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1));
 
         // Assert
-        sut.TvdbEpisodes[0].IsMissing.ShouldBeTrue();
+        sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.Missing);
     }
 
     [Fact]
-    public void SetsIsMissingFalse()
+    public void SetsNotTracked_WhenEpisodeAbsentFromLookup()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
-        sut.TvdbEpisodes[0].IsMissing.ShouldBeFalse();
+        sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.NotTracked);
     }
 
     [Fact]
@@ -110,7 +111,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false, hasIslTranslation: true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: true);
 
         // Assert
         sut.TvdbEpisodes[0].HasIslTranslation.ShouldBeTrue();
@@ -123,7 +124,7 @@ public sealed class Match
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false, hasIslTranslation: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked, hasIslTranslation: false);
 
         // Assert
         sut.TvdbEpisodes[0].HasIslTranslation.ShouldBeFalse();
@@ -134,13 +135,54 @@ public sealed class Match
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Act
-        sut.Match(tvdbId: 2, season: 2, episode: 5, isMissing: false);
+        sut.Match(tvdbId: 2, season: 2, episode: 5, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         sut.TvdbEpisodes.ShouldHaveSingleItem();
         sut.TvdbEpisodes[0].TvdbId.ShouldBe(2);
+    }
+
+    [Fact]
+    public void SetsNotTracked_WhenLookupUnavailable()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrEpisodeStatuses.Unavailable);
+
+        // Assert
+        sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.NotTracked);
+    }
+
+    [Fact]
+    public void KeepsStoredStatusOfExistingLink_WhenLookupUnavailable()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, SonarrEpisodeStatus.Downloaded));
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrEpisodeStatuses.Unavailable);
+
+        // Assert
+        sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.Downloaded);
+    }
+
+    [Fact]
+    public void OverwritesStoredStatusOfExistingLink_WhenLookupSucceeds()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(1, SonarrEpisodeStatus.Downloaded));
+
+        // Act
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
+
+        // Assert
+        sut.TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.NotTracked);
     }
 }

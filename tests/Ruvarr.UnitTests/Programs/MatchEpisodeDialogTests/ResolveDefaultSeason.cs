@@ -109,7 +109,7 @@ public sealed class ResolveDefaultSeason
     private static EpisodeSummary CreateEpisode(int? seasonNumber)
     {
         IReadOnlyList<TvdbEpisodeSummary> matches = seasonNumber is not null
-            ? [new TvdbEpisodeSummary(100, seasonNumber.Value, 1, false, false, null)]
+            ? [new TvdbEpisodeSummary(100, seasonNumber.Value, 1, SonarrEpisodeStatus.NotTracked, false, null)]
             : [];
 
         return new(
@@ -119,6 +119,7 @@ public sealed class ResolveDefaultSeason
             TvdbMatches: matches,
             FirstRun: DateTime.UtcNow,
             RuvUrl: null,
-            Duration: TimeSpan.Zero);
+            Duration: TimeSpan.Zero,
+            SonarrStatus: null);
     }
 }

@@ -26,6 +26,16 @@ The process of linking each `RuvEpisode` to its TVDB season/episode so it can be
 - **Default season** — The TVDB season the manual match dialog offers first: the lowest season already matched by the program's other episodes, falling back to the program's earliest available TVDB season. Distinct from **matching season resolution**, which is the automated strategy's rule — the default season only shapes what the UI presents.
 - **Generic episode title** — A RÚV title of the form "Þáttur N af M" ("Episode N of M"), carrying the episode number but no descriptive name. Number-based matching is the only viable strategy for these.
 
+## Sonarr
+
+- **Sonarr episode status** — What Sonarr currently holds for a TVDB episode linked to a RÚV episode (`SonarrEpisodeStatus`, stored on each `TvdbEpisode`). Refreshed on match, on TVDB episode lookup, and on RÚV episode sync, always from Sonarr reads. When the Sonarr read fails, stored statuses are kept rather than cleared.
+  - **Downloaded** — Sonarr has a file for the episode (`hasFile`; Sonarr's UI label "Episode Downloaded").
+  - **Missing** — The episode is on Sonarr's *Wanted → Missing* list (`api/v3/wanted/missing`), meaning monitored, aired, and with no file (Sonarr: "Episode missing from disk"). A transition into Missing raises `EpisodeMissingEvent`, which queues an automatic download.
+  - **Not tracked** — Anything else, such as the series not being in Sonarr, or the episode being unmonitored or not yet aired.
+
+  Not the same as a download queue item's `Downloaded` stage, which means Ruvarr fetched the file, not that Sonarr holds it.
+- **Combined Sonarr episode status** — The Sonarr episode status of a `RuvEpisode`, combined from its TVDB links: Downloaded when every link is Downloaded, otherwise Missing when any link is Missing, otherwise Not tracked. None for an unmatched episode.
+
 ## Downloads
 
 The lifecycle of a file from download start to import-ready.

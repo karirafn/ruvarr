@@ -15,12 +15,12 @@ public sealed class MatchMultiple
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
         List<TvdbEpisode> matches =
         [
-            TvdbEpisode.Create(100, 1, 1, false),
-            TvdbEpisode.Create(101, 1, 2, false),
+            TvdbEpisode.Create(100, 1, 1),
+            TvdbEpisode.Create(101, 1, 2),
         ];
 
         // Act
-        sut.MatchMultiple(matches);
+        sut.MatchMultiple(matches, SonarrStatuses.NotTracked);
 
         // Assert
         sut.TvdbEpisodes.Count.ShouldBe(2);
@@ -33,16 +33,16 @@ public sealed class MatchMultiple
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         List<TvdbEpisode> newMatches =
         [
-            TvdbEpisode.Create(200, 2, 1, false),
-            TvdbEpisode.Create(201, 2, 2, false),
+            TvdbEpisode.Create(200, 2, 1),
+            TvdbEpisode.Create(201, 2, 2),
         ];
 
         // Act
-        sut.MatchMultiple(newMatches);
+        sut.MatchMultiple(newMatches, SonarrStatuses.NotTracked);
 
         // Assert
         sut.TvdbEpisodes.Count.ShouldBe(2);
@@ -57,7 +57,7 @@ public sealed class MatchMultiple
         DateTime before = DateTime.UtcNow;
 
         // Act
-        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1, false)]);
+        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1)], SonarrStatuses.NotTracked);
 
         // Assert
         sut.Matched.ShouldNotBeNull();
@@ -72,7 +72,7 @@ public sealed class MatchMultiple
         sut.ScheduleLookup();
 
         // Act
-        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1, false)]);
+        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1)], SonarrStatuses.NotTracked);
 
         // Assert
         sut.NextLookup.ShouldBeNull();
@@ -85,7 +85,7 @@ public sealed class MatchMultiple
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1, false)]);
+        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1)], SonarrStatuses.NotTracked);
 
         // Assert
         sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
@@ -100,9 +100,9 @@ public sealed class MatchMultiple
         // Act
         sut.MatchMultiple(
         [
-            TvdbEpisode.Create(100, 1, 1, false),
-            TvdbEpisode.Create(101, 1, 2, true),
-        ]);
+            TvdbEpisode.Create(100, 1, 1),
+            TvdbEpisode.Create(101, 1, 2),
+        ], SonarrStatuses.Missing(101));
 
         // Assert
         sut.DomainEvents.Count.ShouldBe(2);
@@ -119,9 +119,24 @@ public sealed class MatchMultiple
         // Act
         sut.MatchMultiple(
         [
-            TvdbEpisode.Create(100, 1, 1, false),
-            TvdbEpisode.Create(101, 1, 2, false),
-        ]);
+            TvdbEpisode.Create(100, 1, 1),
+            TvdbEpisode.Create(101, 1, 2),
+        ], SonarrStatuses.NotTracked);
+
+        // Assert
+        sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
+    }
+
+    [Fact]
+    public void DoesNotRaiseEpisodeMissingEvent_WhenAlreadyMissingBeforeRematch()
+    {
+        // Arrange
+        RuvEpisode sut = new RuvEpisodeBuilder().Build();
+        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1)], SonarrStatuses.Missing(100));
+        sut.ClearDomainEvents();
+
+        // Act
+        sut.MatchMultiple([TvdbEpisode.Create(100, 1, 1)], SonarrStatuses.Missing(100));
 
         // Assert
         sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();

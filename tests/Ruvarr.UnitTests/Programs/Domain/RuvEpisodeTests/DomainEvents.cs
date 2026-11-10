@@ -9,57 +9,11 @@ namespace Ruvarr.UnitTests.Programs.Domain.RuvEpisodeTests;
 public sealed class DomainEvents
 {
     [Fact]
-    public void UpdateMissingStatus_WhenTransitioningToTrue_RaisesEpisodeMissingEvent()
-    {
-        // Arrange
-        RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
-        sut.ClearDomainEvents();
-
-        // Act
-        sut.UpdateMissingStatus(new HashSet<int> { 1 });
-
-        // Assert
-        EpisodeMissingEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMissingEvent>();
-        @event.Episode.ShouldBe(sut);
-    }
-
-    [Fact]
-    public void UpdateMissingStatus_WhenAlreadyMissing_DoesNotRaiseSecondEvent()
-    {
-        // Arrange
-        RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
-        sut.ClearDomainEvents();
-
-        // Act
-        sut.UpdateMissingStatus(new HashSet<int> { 1 });
-
-        // Assert
-        sut.DomainEvents.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public void UpdateMissingStatus_WhenFalse_DoesNotRaiseEvent()
-    {
-        // Arrange
-        RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
-        sut.ClearDomainEvents();
-
-        // Act
-        sut.UpdateMissingStatus([]);
-
-        // Assert
-        sut.DomainEvents.ShouldBeEmpty();
-    }
-
-    [Fact]
     public void ClearDomainEvents_ClearsAllEvents()
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1));
 
         // Act
         sut.ClearDomainEvents();
@@ -75,7 +29,7 @@ public sealed class DomainEvents
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         EpisodeMatchedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
@@ -89,7 +43,7 @@ public sealed class DomainEvents
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
 
         // Act
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: true);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(1));
 
         // Assert
         sut.DomainEvents.Count.ShouldBe(2);
@@ -102,11 +56,11 @@ public sealed class DomainEvents
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         sut.ClearDomainEvents();
 
         // Act
-        sut.Match(tvdbId: 2, season: 2, episode: 5, isMissing: false);
+        sut.Match(tvdbId: 2, season: 2, episode: 5, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Assert
         EpisodeMatchedEvent @event = sut.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<EpisodeMatchedEvent>();
@@ -132,7 +86,7 @@ public sealed class DomainEvents
     {
         // Arrange
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
-        sut.Match(tvdbId: 1, season: 1, episode: 1, isMissing: false);
+        sut.Match(tvdbId: 1, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.NotTracked);
         sut.ClearDomainEvents();
 
         // Act

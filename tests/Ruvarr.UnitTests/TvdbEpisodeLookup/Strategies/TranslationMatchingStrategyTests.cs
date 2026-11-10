@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
@@ -39,7 +40,7 @@ public sealed class TranslationMatchingStrategyTests
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new EpisodeTranslation("Þáttur 1", "", "isl", true));
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act
@@ -62,7 +63,7 @@ public sealed class TranslationMatchingStrategyTests
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((EpisodeTranslation?)null);
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act
@@ -83,7 +84,7 @@ public sealed class TranslationMatchingStrategyTests
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder().WithId(101).WithNameTranslations("eng").Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act
@@ -107,7 +108,7 @@ public sealed class TranslationMatchingStrategyTests
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new EpisodeTranslation("Different title", "", "isl", true));
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act
@@ -142,7 +143,7 @@ public sealed class TranslationMatchingStrategyTests
         _tvdb.GetEpisodeTranslationAsync(103, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new EpisodeTranslation("Þáttur 3", "", "isl", true));
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act
@@ -156,7 +157,7 @@ public sealed class TranslationMatchingStrategyTests
     }
 
     [Fact]
-    public async Task SetsIsMissingWhenTvdbIdIsInMissingSet()
+    public async Task SetsSonarrStatusFromLookup()
     {
         // Arrange
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
@@ -169,15 +170,15 @@ public sealed class TranslationMatchingStrategyTests
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new EpisodeTranslation("Þáttur 1", "", "isl", true));
 
-        HashSet<int> missingTvdbIds = [101];
-        EpisodeMatchingContext context = new(program, seriesData, missingTvdbIds);
+        SonarrEpisodeStatuses sonarrStatuses = SonarrStatuses.Missing(101);
+        EpisodeMatchingContext context = new(program, seriesData, sonarrStatuses);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act
         await sut.MatchAsync(context, CancellationToken.None);
 
         // Assert
-        program.Episodes[0].TvdbEpisodes[0].IsMissing.ShouldBeTrue();
+        program.Episodes[0].TvdbEpisodes[0].SonarrStatus.ShouldBe(SonarrEpisodeStatus.Missing);
     }
 
     [Fact]
@@ -187,7 +188,7 @@ public sealed class TranslationMatchingStrategyTests
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "MH-MR", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(200, 2026, 3, false);
+        program.Episodes[0].Match(200, 2026, 3, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder()
             .WithId(101)
@@ -199,7 +200,7 @@ public sealed class TranslationMatchingStrategyTests
         _tvdb.GetEpisodeTranslationAsync(101, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new EpisodeTranslation("MH-MR", "", "isl", true));
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act
@@ -220,7 +221,7 @@ public sealed class TranslationMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Þáttur 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(101, 1, 1, false);
+        program.Episodes[0].Match(101, 1, 1, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(101).WithSeasonNumber(1).WithNumber(1).WithNameTranslations("isl").Build();
@@ -231,7 +232,7 @@ public sealed class TranslationMatchingStrategyTests
         _tvdb.GetEpisodeTranslationAsync(102, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new EpisodeTranslation("Þáttur 2", "", "isl", true));
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         TranslationMatchingStrategy sut = CreateSut();
 
         // Act

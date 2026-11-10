@@ -123,124 +123,141 @@ else
     }
     else
     {
-        <table class="episodes-table">
-            <thead>
-                <tr>
-                    <th class="col-center">Season</th>
-                    <th class="col-center">Episode</th>
-                    <th>First Run</th>
-                    <th>Duration</th>
-                    <th>Title</th>
-                    <th>Description</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (EpisodeSummary episode in _episodes)
-                {
+        <div class="episodes-table-scroll" role="region" aria-label="Episodes" tabindex="0">
+            <table class="episodes-table">
+                <thead>
                     <tr>
-                        <td class="col-number col-center">@FormatSeasons(episode.TvdbMatches)</td>
-                        <td class="col-number col-center">@FormatEpisodes(episode.TvdbMatches)</td>
-                        <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
-                        <td class="col-duration">
-                            @((int)Math.Round(episode.Duration.TotalMinutes, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
-                        </td>
-                        <td class="col-copyable">
-                            @episode.EpisodeTitle
-                            @if (!string.IsNullOrWhiteSpace(episode.EpisodeTitle))
-                            {
-                                string titleKey = $"{episode.EpisodeRuvId}-title";
-                                @if (_copied.Contains(titleKey))
-                                {
-                                    <span class="icon-button copy-button copy-button--copied">
-                                        <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
-                                    </span>
-                                }
-                                else if (_copyFailed.Contains(titleKey))
-                                {
-                                    <span class="icon-button copy-button copy-button--failed">
-                                        <Icon Type="IconType.Warning" Class="icon" AriaLabel="Copy failed" />
-                                    </span>
-                                }
-                                else
-                                {
-                                    <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeTitle, titleKey)" title="Copy title">
-                                        <Icon Type="IconType.Copy" Class="icon" AriaLabel="Copy" />
-                                    </button>
-                                }
-                            }
-                        </td>
-                        <td class="col-description col-copyable">
-                            @episode.EpisodeDescription
-                            @if (!string.IsNullOrWhiteSpace(episode.EpisodeDescription))
-                            {
-                                string descKey = $"{episode.EpisodeRuvId}-desc";
-                                @if (_copied.Contains(descKey))
-                                {
-                                    <span class="icon-button copy-button copy-button--copied">
-                                        <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
-                                    </span>
-                                }
-                                else if (_copyFailed.Contains(descKey))
-                                {
-                                    <span class="icon-button copy-button copy-button--failed">
-                                        <Icon Type="IconType.Warning" Class="icon" AriaLabel="Copy failed" />
-                                    </span>
-                                }
-                                else
-                                {
-                                    <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeDescription, descKey)" title="Copy description">
-                                        <Icon Type="IconType.Copy" Class="icon" AriaLabel="Copy" />
-                                    </button>
-                                }
-                            }
-                        </td>
-                        <td>
-                            <div class="row-actions">
-                                <span title="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation on TVDB" : "No Icelandic translation on TVDB")">
-                                    <IcelandicFlag Class="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? null : "flag--dimmed")"
-                                                   AriaLabel="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation" : "No Icelandic translation")" />
-                                </span>
-                                @if (episode.TvdbMatches.FirstOrDefault()?.TvdbUrl is { } tvdbUrl)
-                                {
-                                    <a class="badge--tvdb" href="@tvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
-                                }
-                                @if (episode.RuvUrl is not null)
-                                {
-                                    <a class="badge--ruv" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
-                                }
-                                @if (_program.SeriesName is not null)
-                                {
-                                    <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbMatches, episode.EpisodeTitle)" title="Match to TVDB">
-                                        <Icon Type="IconType.LinkDiagonal" Class="icon" AriaLabel="Match to TVDB" />
-                                    </button>
-                                }
-                                @if (_downloading.Contains(episode.EpisodeRuvId))
-                                {
-                                    <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Queuing" />
-                                }
-                                else if (_queued.Contains(episode.EpisodeRuvId))
-                                {
-                                    <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Queued" />
-                                }
-                                else if (_failed.Contains(episode.EpisodeRuvId))
-                                {
-                                    <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
-                                        <Icon Type="IconType.Refresh" Class="icon" AriaLabel="Retry" />
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
-                                        <Icon Type="IconType.Download" Class="icon" AriaLabel="Download" />
-                                    </button>
-                                }
-                            </div>
-                        </td>
+                        <th scope="col" class="col-center">Season</th>
+                        <th scope="col" class="col-center">Episode</th>
+                        <th scope="col" class="col-center">Sonarr</th>
+                        <th scope="col">First Run</th>
+                        <th scope="col">Duration</th>
+                        <th scope="col">Title</th>
+                        <th scope="col">Description</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (EpisodeSummary episode in _episodes)
+                    {
+                        <tr>
+                            <td class="col-number col-center">@FormatSeasons(episode.TvdbMatches)</td>
+                            <td class="col-number col-center">@FormatEpisodes(episode.TvdbMatches)</td>
+                            <td class="col-center">
+                                @switch (episode.SonarrStatus)
+                                {
+                                    case SonarrEpisodeStatus.Downloaded:
+                                        <span title="Downloaded in Sonarr"><Icon Type="IconType.CheckmarkCircle" Class="icon icon--downloaded" AriaLabel="Downloaded in Sonarr" /></span>
+                                        break;
+                                    case SonarrEpisodeStatus.Missing:
+                                        <span title="Missing in Sonarr"><Icon Type="IconType.Warning" Class="icon icon--missing" AriaLabel="Missing in Sonarr" /></span>
+                                        break;
+                                    case SonarrEpisodeStatus.NotTracked:
+                                        <span class="unmatched-dash" title="Not tracked by Sonarr"><span aria-hidden="true">—</span><span class="visually-hidden">Not tracked by Sonarr</span></span>
+                                        break;
+                                }
+                            </td>
+                            <td class="col-date">@episode.FirstRun.ToString("yyyy-MM-dd")</td>
+                            <td class="col-duration">
+                                @((int)Math.Round(episode.Duration.TotalMinutes, MidpointRounding.AwayFromZero))<span class="duration-unit">min</span>
+                            </td>
+                            <td class="col-copyable">
+                                @episode.EpisodeTitle
+                                @if (!string.IsNullOrWhiteSpace(episode.EpisodeTitle))
+                                {
+                                    string titleKey = $"{episode.EpisodeRuvId}-title";
+                                    @if (_copied.Contains(titleKey))
+                                    {
+                                        <span class="icon-button copy-button copy-button--copied">
+                                            <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
+                                        </span>
+                                    }
+                                    else if (_copyFailed.Contains(titleKey))
+                                    {
+                                        <span class="icon-button copy-button copy-button--failed">
+                                            <Icon Type="IconType.Warning" Class="icon" AriaLabel="Copy failed" />
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeTitle, titleKey)" title="Copy title">
+                                            <Icon Type="IconType.Copy" Class="icon" AriaLabel="Copy" />
+                                        </button>
+                                    }
+                                }
+                            </td>
+                            <td class="col-description col-copyable">
+                                @episode.EpisodeDescription
+                                @if (!string.IsNullOrWhiteSpace(episode.EpisodeDescription))
+                                {
+                                    string descKey = $"{episode.EpisodeRuvId}-desc";
+                                    @if (_copied.Contains(descKey))
+                                    {
+                                        <span class="icon-button copy-button copy-button--copied">
+                                            <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Copied" />
+                                        </span>
+                                    }
+                                    else if (_copyFailed.Contains(descKey))
+                                    {
+                                        <span class="icon-button copy-button copy-button--failed">
+                                            <Icon Type="IconType.Warning" Class="icon" AriaLabel="Copy failed" />
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <button class="icon-button copy-button" @onclick="() => CopyToClipboard(episode.EpisodeDescription, descKey)" title="Copy description">
+                                            <Icon Type="IconType.Copy" Class="icon" AriaLabel="Copy" />
+                                        </button>
+                                    }
+                                }
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    <span title="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation on TVDB" : "No Icelandic translation on TVDB")">
+                                        <IcelandicFlag Class="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? null : "flag--dimmed")"
+                                                       AriaLabel="@(episode.TvdbMatches.Any(m => m.HasIslTranslation) ? "Has Icelandic translation" : "No Icelandic translation")" />
+                                    </span>
+                                    @if (episode.TvdbMatches.FirstOrDefault()?.TvdbUrl is { } tvdbUrl)
+                                    {
+                                        <a class="badge--tvdb" href="@tvdbUrl" target="_blank" rel="noopener noreferrer">TVDB</a>
+                                    }
+                                    @if (episode.RuvUrl is not null)
+                                    {
+                                        <a class="badge--ruv" href="@episode.RuvUrl" target="_blank" rel="noopener noreferrer">RÚV</a>
+                                    }
+                                    @if (_program.SeriesName is not null)
+                                    {
+                                        <button class="icon-button" @onclick="() => OpenMatchDialog(episode.EpisodeRuvId, episode.TvdbMatches, episode.EpisodeTitle)" title="Match to TVDB">
+                                            <Icon Type="IconType.LinkDiagonal" Class="icon" AriaLabel="Match to TVDB" />
+                                        </button>
+                                    }
+                                    @if (_downloading.Contains(episode.EpisodeRuvId))
+                                    {
+                                        <Icon Type="IconType.Spinner" Class="icon icon--spinning" AriaLabel="Queuing" />
+                                    }
+                                    else if (_queued.Contains(episode.EpisodeRuvId))
+                                    {
+                                        <Icon Type="IconType.Checkmark" Class="icon" AriaLabel="Queued" />
+                                    }
+                                    else if (_failed.Contains(episode.EpisodeRuvId))
+                                    {
+                                        <button class="icon-button icon-button--error" @onclick="() => Download(episode.EpisodeRuvId)" title="Retry">
+                                            <Icon Type="IconType.Refresh" Class="icon" AriaLabel="Retry" />
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="icon-button" @onclick="() => Download(episode.EpisodeRuvId)" title="Download">
+                                            <Icon Type="IconType.Download" Class="icon" AriaLabel="Download" />
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 }
 

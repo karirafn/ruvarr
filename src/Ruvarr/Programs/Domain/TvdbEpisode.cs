@@ -1,3 +1,5 @@
+using Ruvarr.Contracts;
+
 namespace Ruvarr.Programs.Domain;
 
 internal sealed class TvdbEpisode
@@ -12,18 +14,17 @@ internal sealed class TvdbEpisode
 
     public required int EpisodeNumber { get; init; }
 
-    public bool IsMissing { get; internal set; }
+    public SonarrEpisodeStatus SonarrStatus { get; internal set; }
 
     public bool HasIslTranslation { get; internal set; }
 
-    internal static TvdbEpisode Create(int tvdbId, int seasonNumber, int episodeNumber, bool isMissing, bool hasIslTranslation = false)
+    internal static TvdbEpisode Create(int tvdbId, int seasonNumber, int episodeNumber, bool hasIslTranslation = false)
     {
         return new TvdbEpisode
         {
             TvdbId = tvdbId,
             SeasonNumber = seasonNumber,
             EpisodeNumber = episodeNumber,
-            IsMissing = isMissing,
             HasIslTranslation = hasIslTranslation,
         };
     }

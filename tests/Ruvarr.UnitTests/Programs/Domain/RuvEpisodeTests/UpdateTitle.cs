@@ -46,7 +46,7 @@ public sealed class UpdateTitle
         // count to assert against -- the assertion would be vacuous if LookupCount were 0.
         RuvEpisodeBuilder builder = new RuvEpisodeBuilder();
         RuvEpisode sut = builder.BuildWithScheduledLookup();
-        sut.Match(tvdbId: 42, season: 1, episode: 3, isMissing: false);
+        sut.Match(tvdbId: 42, season: 1, episode: 3, sonarrStatuses: SonarrStatuses.NotTracked);
 
         int originalLookupCount = sut.LookupCount;
         DateTime? originalMatched = sut.Matched;

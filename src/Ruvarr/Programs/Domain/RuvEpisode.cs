@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Downloads.Domain;
 using Ruvarr.Extensions;
 using Ruvarr.Programs.Events;
@@ -112,38 +113,81 @@ internal sealed partial class RuvEpisode
         return $"{filename}-RUV.mp4";
     }
 
-    public void Match(int tvdbId, int season, int episode, bool isMissing, bool hasIslTranslation = false)
+    public SonarrEpisodeStatus? SonarrStatus => CombineSonarrStatus([.. _tvdbEpisodes.Select(e => e.SonarrStatus)]);
+
+    /// <summary>
+    /// The Sonarr episode status of a RÚV episode from the statuses of its TVDB links: Downloaded only when
+    /// every link is, otherwise Missing when any link is, otherwise NotTracked; <c>null</c> when unmatched.
+    /// </summary>
+    public static SonarrEpisodeStatus? CombineSonarrStatus(IReadOnlyCollection<SonarrEpisodeStatus> linkStatuses)
     {
-        MatchMultiple([TvdbEpisode.Create(tvdbId, season, episode, isMissing, hasIslTranslation)]);
+        ArgumentNullException.ThrowIfNull(linkStatuses);
+
+        if (linkStatuses.Count == 0)
+        {
+            return null;
+        }
+
+        if (linkStatuses.All(s => s == SonarrEpisodeStatus.Downloaded))
+        {
+            return SonarrEpisodeStatus.Downloaded;
+        }
+
+        return linkStatuses.Contains(SonarrEpisodeStatus.Missing)
+            ? SonarrEpisodeStatus.Missing
+            : SonarrEpisodeStatus.NotTracked;
     }
 
-    public void MatchMultiple(IReadOnlyList<TvdbEpisode> tvdbEpisodes)
+    public void Match(int tvdbId, int season, int episode, SonarrEpisodeStatuses sonarrStatuses, bool hasIslTranslation = false)
     {
+        MatchMultiple([TvdbEpisode.Create(tvdbId, season, episode, hasIslTranslation)], sonarrStatuses);
+    }
+
+    public void MatchMultiple(IReadOnlyList<TvdbEpisode> tvdbEpisodes, SonarrEpisodeStatuses sonarrStatuses)
+    {
+        ArgumentNullException.ThrowIfNull(tvdbEpisodes);
+        ArgumentNullException.ThrowIfNull(sonarrStatuses);
+
+        SonarrEpisodeStatus? previousStatus = SonarrStatus;
+        Dictionary<int, SonarrEpisodeStatus> storedStatuses = [];
+        foreach (TvdbEpisode existing in _tvdbEpisodes)
+        {
+            storedStatuses.TryAdd(existing.TvdbId, existing.SonarrStatus);
+        }
+
+        foreach (TvdbEpisode tvdbEpisode in tvdbEpisodes)
+        {
+            tvdbEpisode.SonarrStatus = sonarrStatuses.StatusFor(
+                tvdbEpisode.TvdbId,
+                storedStatuses.GetValueOrDefault(tvdbEpisode.TvdbId, SonarrEpisodeStatus.NotTracked));
+        }
+
         _domainEvents.Add(new EpisodeMatchedEvent(this));
         Matched = DateTime.UtcNow;
         NextLookup = null;
         _tvdbEpisodes.Clear();
         _tvdbEpisodes.AddRange(tvdbEpisodes);
 
-        bool anyMissing = _tvdbEpisodes.Any(e => e.IsMissing);
-        if (anyMissing)
-        {
-            _domainEvents.Add(new EpisodeMissingEvent(this));
-        }
+        RaiseEpisodeMissingOnTransition(previousStatus);
     }
 
-    public void UpdateMissingStatus(HashSet<int> missingTvdbIds)
+    public void UpdateSonarrStatus(IReadOnlyDictionary<int, SonarrEpisodeStatus> sonarrStatuses)
     {
-        bool wasMissing = _tvdbEpisodes.Any(e => e.IsMissing);
+        ArgumentNullException.ThrowIfNull(sonarrStatuses);
+
+        SonarrEpisodeStatus? previousStatus = SonarrStatus;
 
         foreach (TvdbEpisode tvdbEpisode in _tvdbEpisodes)
         {
-            tvdbEpisode.IsMissing = missingTvdbIds.Contains(tvdbEpisode.TvdbId);
+            tvdbEpisode.SonarrStatus = sonarrStatuses.GetValueOrDefault(tvdbEpisode.TvdbId, SonarrEpisodeStatus.NotTracked);
         }
 
-        bool nowMissing = _tvdbEpisodes.Any(e => e.IsMissing);
+        RaiseEpisodeMissingOnTransition(previousStatus);
+    }
 
-        if (nowMissing && !wasMissing)
+    private void RaiseEpisodeMissingOnTransition(SonarrEpisodeStatus? previousStatus)
+    {
+        if (previousStatus != SonarrEpisodeStatus.Missing && SonarrStatus == SonarrEpisodeStatus.Missing)
         {
             _domainEvents.Add(new EpisodeMissingEvent(this));
         }
