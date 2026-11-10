@@ -14,4 +14,8 @@ internal interface ISonarrClient
     Task<Result<IReadOnlyList<RootFolder>>> GetRootFoldersAsync(CancellationToken cancellationToken = default);
     Task<Result<IReadOnlyList<QualityProfile>>> GetQualityProfilesAsync(CancellationToken cancellationToken = default);
     Task<Series?> AddSeriesAsync(AddSeriesRequest request, CancellationToken cancellationToken = default);
+    Task<Result<IReadOnlyList<SonarrNotification>>> GetNotificationsAsync(CancellationToken cancellationToken = default);
+    Task<RuvarrResult> TestNotificationAsync(SonarrNotification notification, CancellationToken cancellationToken = default);
+    Task<RuvarrResult> CreateNotificationAsync(SonarrNotification notification, CancellationToken cancellationToken = default);
+    Task<RuvarrResult> UpdateNotificationAsync(int id, SonarrNotification notification, CancellationToken cancellationToken = default);
 }

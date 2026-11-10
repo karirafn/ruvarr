@@ -35,6 +35,9 @@ The process of linking each `RuvEpisode` to its TVDB season/episode so it can be
 
   Not the same as a download queue item's `Downloaded` stage, which means Ruvarr fetched the file, not that Sonarr holds it.
 - **Combined Sonarr episode status** — The Sonarr episode status of a `RuvEpisode`, combined from its TVDB links: Downloaded when every link is Downloaded, otherwise Missing when any link is Missing, otherwise Not tracked. None for an unmatched episode.
+- **Sonarr webhook** — The Webhook entry named `Ruvarr` in Sonarr's Connect settings, which Ruvarr registers and keeps registered itself. Sonarr posts a **delivery** to Ruvarr when it imports, upgrades, renames, or deletes an episode file. A delivery is a **nudge**: it queues a RÚV episode sync for the programs of that series and is never read as status.
+- **Callback URL** — The address Sonarr posts deliveries to. Ruvarr discovers it by offering candidate addresses to Sonarr's notification test and keeping the first one Sonarr can reach.
+- **Webhook reconcile** — The check that makes Sonarr's entry match what Ruvarr expects, creating or restoring it when missing or changed. Runs at startup, every 10 minutes, and when settings are saved.
 
 ## Downloads
 

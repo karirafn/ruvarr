@@ -7,6 +7,7 @@ using NSubstitute;
 using Ruvarr.Abstractions;
 using Ruvarr.Dashboard;
 using Ruvarr.Dashboard.Queries.GetDashboard;
+using Ruvarr.SonarrWebhook;
 
 using Shouldly;
 
@@ -1269,6 +1270,157 @@ public sealed class DashboardTests : BunitContext
         failAlerts.ShouldAllBe(el => el.GetAttribute("role") == "status");
     }
 
+    private IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> RenderWithSonarrWebhook(SonarrWebhookCardInfo sonarrWebhook)
+    {
+        RegisterHandler(CreateDashboardData(sonarrWebhook: sonarrWebhook));
+        RegisterBroadcaster();
+        return Render<Ruvarr.Dashboard.Components.Dashboard>();
+    }
+
+    private static SonarrWebhookCardInfo SonarrWebhookCard(SonarrWebhookStatus status, Uri? callbackUrl = null, params Uri[] triedUrls) =>
+        new(status, callbackUrl, triedUrls, LastAttemptAt: null, NextAttemptUtc: null);
+
+    [Fact]
+    public void SonarrWebhookCard_IsPlacedAfterDownloadsCardAndBeforeTables()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(DefaultSonarrWebhookCard);
+
+        // Assert
+        IElement card = cut.Find("section.webhook-card");
+        card.GetAttribute("aria-label").ShouldBe("Sonarr Webhook");
+        card.QuerySelector("h2")!.TextContent.ShouldBe("Sonarr Webhook");
+        card.PreviousElementSibling!.ClassList.ShouldContain("download-card");
+        card.NextElementSibling!.ClassList.ShouldContain("dashboard-section");
+    }
+
+    [Fact]
+    public void SonarrWebhookCard_WhenRegistered_ShowsQuietRegisteredBadgeAndCallbackUrl()
+    {
+        // Arrange
+        Uri callbackUrl = new("http://172.17.0.5:8080/api/sonarr/webhook");
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(SonarrWebhookCard(SonarrWebhookStatus.Registered, callbackUrl));
+
+        // Assert
+        IElement card = cut.Find("section.webhook-card");
+        card.QuerySelector(".card-header__badges")!.TextContent.Trim().ShouldBe("Registered");
+        card.QuerySelector(".card-fail-badge").ShouldBeNull();
+        IElement alert = card.QuerySelector(".card-fail-alert")!;
+        alert.ClassList.ShouldNotContain("card-fail-alert--active");
+        alert.TextContent.Trim().ShouldBeEmpty();
+        card.QuerySelector(".webhook-card__url")!.TextContent.ShouldBe(callbackUrl.AbsoluteUri);
+    }
+
+    [Fact]
+    public void SonarrWebhookCard_ShowsCallbackUrlLastAndNextAttemptDetails()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(SonarrWebhookCard(SonarrWebhookStatus.Pending));
+
+        // Assert
+        IReadOnlyList<IElement> details = cut.FindAll("section.webhook-card .refresh-card__details--compact .refresh-card__detail");
+        details.Select(d => d.QuerySelector("dt")!.TextContent).ShouldBe(["Callback URL", "Last attempt", "Next attempt"]);
+        details.Select(d => d.QuerySelector("dd")!.TextContent).ShouldBe(["—", "Never", "—"]);
+    }
+
+    [Fact]
+    public void SonarrWebhookCard_WhenPending_ShowsPendingBadgeWithoutAlert()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(SonarrWebhookCard(SonarrWebhookStatus.Pending));
+
+        // Assert
+        IElement card = cut.Find("section.webhook-card");
+        card.QuerySelector(".card-header__badges")!.TextContent.Trim().ShouldBe("Pending");
+        card.QuerySelector(".card-fail-alert")!.ClassList.ShouldNotContain("card-fail-alert--active");
+    }
+
+    [Fact]
+    public void SonarrWebhookCard_WhenNotConfigured_ShowsSettingsHint()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(SonarrWebhookCard(SonarrWebhookStatus.NotConfigured));
+
+        // Assert
+        IElement card = cut.Find("section.webhook-card");
+        card.QuerySelector(".empty-message")!.TextContent.ShouldBe("Set the Sonarr URL and API key in Settings to register the webhook.");
+        card.QuerySelector(".card-fail-badge").ShouldBeNull();
+    }
+
+    [Fact]
+    public void SonarrWebhookCard_WhenSonarrUnreachable_ShowsFailingAlertWithSettingsLink()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(SonarrWebhookCard(SonarrWebhookStatus.SonarrUnreachable));
+
+        // Assert
+        IElement card = cut.Find("section.webhook-card");
+        card.QuerySelector(".card-header__badges")!.TextContent.Trim().ShouldBe("Failing");
+        card.QuerySelector(".card-fail-badge").ShouldNotBeNull();
+        IElement alert = card.QuerySelector(".card-fail-alert")!;
+        alert.ClassList.ShouldContain("card-fail-alert--active");
+        alert.GetAttribute("role").ShouldBe("status");
+        alert.GetAttribute("aria-atomic").ShouldBe("true");
+        alert.QuerySelector(".card-fail-alert__text")!.TextContent.Trim().ShouldBe("Registration failing — Sonarr unreachable");
+        IElement error = alert.QuerySelector(".card-fail-alert__error")!;
+        error.TextContent.ShouldBe("Could not connect to Sonarr. Check the Sonarr URL and API key in Settings.");
+        error.QuerySelector("a")!.GetAttribute("href").ShouldBe("/settings");
+    }
+
+    [Fact]
+    public void SonarrWebhookCard_WhenCallbackUnreachableAtOneUrl_NamesTheUrl()
+    {
+        // Arrange
+        Uri tried = new("http://172.17.0.5:8080/api/sonarr/webhook");
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(SonarrWebhookCard(SonarrWebhookStatus.CallbackUnreachable, null, tried));
+
+        // Assert
+        IElement alert = cut.Find("section.webhook-card .card-fail-alert");
+        alert.ClassList.ShouldContain("card-fail-alert--active");
+        alert.QuerySelector(".card-fail-alert__text")!.TextContent.Trim().ShouldBe("Registration failing — Sonarr could not reach Ruvarr");
+        alert.QuerySelector(".card-fail-alert__error")!.TextContent
+            .ShouldBe($"Sonarr could not reach Ruvarr at {tried.AbsoluteUri}. Make sure Ruvarr is reachable from the Sonarr host.");
+        alert.QuerySelector(".webhook-card__tried-urls").ShouldBeNull();
+    }
+
+    [Fact]
+    public void SonarrWebhookCard_WhenCallbackUnreachableAtSeveralUrls_ListsEachUrl()
+    {
+        // Arrange
+        Uri first = new("http://172.17.0.5:8080/api/sonarr/webhook");
+        Uri second = new("http://ruvarr:8080/api/sonarr/webhook");
+
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(SonarrWebhookCard(SonarrWebhookStatus.CallbackUnreachable, null, first, second));
+
+        // Assert
+        IElement alert = cut.Find("section.webhook-card .card-fail-alert");
+        alert.QuerySelector(".card-fail-alert__error")!.TextContent.ShouldBe("Sonarr could not reach Ruvarr at any address tried:");
+        IElement list = alert.QuerySelector("ul.webhook-card__tried-urls")!;
+        list.QuerySelectorAll("li code").Select(c => c.TextContent).ShouldBe([first.AbsoluteUri, second.AbsoluteUri]);
+        list.Closest(".card-fail-alert__error").ShouldBeNull();
+        alert.TextContent.ShouldContain("Make sure Ruvarr is reachable from the Sonarr host.");
+    }
+
+    [Fact]
+    public void SubscribesToSonarrWebhookReconciledEvent()
+    {
+        // Arrange
+        RegisterHandler(CreateDashboardData());
+        IDomainEventBroadcaster broadcaster = Substitute.For<IDomainEventBroadcaster>();
+        Services.AddSingleton(broadcaster);
+
+        // Act
+        Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        broadcaster.Received(1).Subscribe<SonarrWebhookReconciledEvent>(Arg.Any<CancellationToken>());
+    }
+
     private void RegisterHandler(DashboardData data)
     {
         IRequestHandler<GetDashboardQuery, DashboardData> handler =
@@ -1294,7 +1446,8 @@ public sealed class DashboardTests : BunitContext
         EpisodeSyncCardInfo? episodeSync = null,
         TvdbSeriesLookupCardInfo? tvdbSeriesLookup = null,
         TvdbEpisodeLookupCardInfo? tvdbEpisodeLookup = null,
-        DownloadCardInfo? download = null)
+        DownloadCardInfo? download = null,
+        SonarrWebhookCardInfo? sonarrWebhook = null)
     {
         return new DashboardData(
             recentlyAdded ?? [],
@@ -1311,8 +1464,16 @@ public sealed class DashboardTests : BunitContext
             episodeSync ?? DefaultEpisodeSyncCard,
             tvdbSeriesLookup ?? DefaultTvdbSeriesLookupCard,
             tvdbEpisodeLookup ?? DefaultTvdbEpisodeLookupCard,
-            download ?? DefaultDownloadCard);
+            download ?? DefaultDownloadCard,
+            sonarrWebhook ?? DefaultSonarrWebhookCard);
     }
+
+    private static readonly SonarrWebhookCardInfo DefaultSonarrWebhookCard = new(
+        SonarrWebhookStatus.Registered,
+        new Uri("http://172.17.0.5:8080/api/sonarr/webhook"),
+        [],
+        LastAttemptAt: null,
+        NextAttemptUtc: null);
 
     private static readonly ProgramRefreshCardInfo DefaultProgramRefreshCard = new(
         LastEnqueuedAt: null,

@@ -22,6 +22,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Infrastructure\Ruv\Fixtures\featured-tv-sample.json" />
     <EmbeddedResource Include="Infrastructure\Ruv\Fixtures\featured-tv-firstrun-null.json" />
+    <EmbeddedResource Include="Infrastructure\Sonarr\Fixtures\*.json" />
   </ItemGroup>
 
   <ItemGroup>

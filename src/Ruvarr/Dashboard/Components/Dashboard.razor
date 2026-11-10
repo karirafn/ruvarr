@@ -7,6 +7,7 @@
 @using Ruvarr.Dashboard.Queries.GetDashboard
 @using Ruvarr.Downloads.Events
 @using Ruvarr.Programs.Events
+@using Ruvarr.SonarrWebhook
 @inject IServiceScopeFactory ScopeFactory
 @inject IDomainEventBroadcaster Broadcaster
 
@@ -506,6 +507,94 @@ else
         }
     </section>
 
+    SonarrWebhookCardInfo webhook = _data.SonarrWebhook;
+    bool webhookFailing = webhook.Status is SonarrWebhookStatus.SonarrUnreachable or SonarrWebhookStatus.CallbackUnreachable;
+    <section class="webhook-card" aria-label="Sonarr Webhook">
+        <div class="webhook-card__header">
+            <h2 class="dashboard-section-title">Sonarr Webhook</h2>
+            <span class="card-header__badges">
+                @if (webhook.Status == SonarrWebhookStatus.Registered)
+                {
+                    <span class="refresh-card__badge refresh-card__badge--idle">
+                        <Icon Type="IconType.Checkmark" Class="icon" />
+                        Registered
+                    </span>
+                }
+                else if (webhook.Status == SonarrWebhookStatus.Pending)
+                {
+                    <span class="refresh-card__badge refresh-card__badge--idle">
+                        <Icon Type="IconType.Clock" Class="icon" />
+                        Pending
+                    </span>
+                }
+                else if (webhookFailing)
+                {
+                    <span class="card-fail-badge">
+                        <Icon Type="IconType.Warning" Class="icon" />
+                        Failing
+                    </span>
+                }
+            </span>
+        </div>
+
+        <div class="card-fail-alert @(webhookFailing ? "card-fail-alert--active" : "")" role="status" aria-atomic="true">
+            @if (webhook.Status == SonarrWebhookStatus.SonarrUnreachable)
+            {
+                <div class="card-fail-alert__headline">
+                    <Icon Type="IconType.Warning" Class="icon card-fail-alert__icon" />
+                    <span class="card-fail-alert__text">Registration failing &mdash; Sonarr unreachable</span>
+                </div>
+                <p class="card-fail-alert__error">Could not connect to Sonarr. Check the Sonarr URL and API key in <a href="/settings">Settings</a>.</p>
+            }
+            else if (webhook.Status == SonarrWebhookStatus.CallbackUnreachable)
+            {
+                <div class="card-fail-alert__headline">
+                    <Icon Type="IconType.Warning" Class="icon card-fail-alert__icon" />
+                    <span class="card-fail-alert__text">Registration failing &mdash; Sonarr could not reach Ruvarr</span>
+                </div>
+                @if (webhook.TriedUrls.Count == 1)
+                {
+                    <p class="card-fail-alert__error">Sonarr could not reach Ruvarr at <code class="webhook-card__url">@webhook.TriedUrls[0].AbsoluteUri</code>. Make sure Ruvarr is reachable from the Sonarr host.</p>
+                }
+                else if (webhook.TriedUrls.Count > 1)
+                {
+                    <p class="card-fail-alert__error">Sonarr could not reach Ruvarr at any address tried:</p>
+                    <ul class="webhook-card__tried-urls">
+                        @foreach (Uri tried in webhook.TriedUrls)
+                        {
+                            <li><code class="webhook-card__url">@tried.AbsoluteUri</code></li>
+                        }
+                    </ul>
+                    <p class="card-fail-alert__error">Make sure Ruvarr is reachable from the Sonarr host.</p>
+                }
+                else
+                {
+                    <p class="card-fail-alert__error">Ruvarr is not listening on a plain HTTP address to offer Sonarr.</p>
+                }
+            }
+        </div>
+
+        @if (webhook.Status == SonarrWebhookStatus.NotConfigured)
+        {
+            <p class="empty-message">Set the Sonarr URL and API key in Settings to register the webhook.</p>
+        }
+
+        <dl class="refresh-card__details refresh-card__details--compact">
+            <div class="refresh-card__detail">
+                <dt>Callback URL</dt>
+                <dd class="webhook-card__url">@(webhook.CallbackUrl?.AbsoluteUri ?? "—")</dd>
+            </div>
+            <div class="refresh-card__detail">
+                <dt>Last attempt</dt>
+                <dd>@FormatTimestamp(webhook.LastAttemptAt)</dd>
+            </div>
+            <div class="refresh-card__detail">
+                <dt>Next attempt</dt>
+                <dd>@FormatNextRun(webhook.NextAttemptUtc)</dd>
+            </div>
+        </dl>
+    </section>
+
     <section class="dashboard-section" aria-label="Recently Added Episodes">
         <h2 class="dashboard-section-title">Recently Added Episodes</h2>
         @if (_data.RecentlyAddedEpisodes.Count == 0)
@@ -631,6 +720,7 @@ else
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<ProgramRefreshQueueItemSummary>>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<SonarrWebhookReconciledEvent>(_cts.Token));
         return Task.CompletedTask;
     }
 

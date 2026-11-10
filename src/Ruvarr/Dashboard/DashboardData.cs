@@ -1,3 +1,5 @@
+using Ruvarr.SonarrWebhook;
+
 namespace Ruvarr.Dashboard;
 
 internal sealed record DashboardData(
@@ -10,7 +12,8 @@ internal sealed record DashboardData(
     EpisodeSyncCardInfo EpisodeSync,
     TvdbSeriesLookupCardInfo TvdbSeriesLookup,
     TvdbEpisodeLookupCardInfo TvdbEpisodeLookup,
-    DownloadCardInfo Download);
+    DownloadCardInfo Download,
+    SonarrWebhookCardInfo SonarrWebhook);
 
 internal sealed record JobFailureInfo(
     int ConsecutiveFailures,
@@ -114,5 +117,12 @@ internal sealed record TvdbEpisodeLookupCardInfo(
     DateTimeOffset? LastLookedUpAt,
     int RetryCount,
     JobFailureInfo? Failure);
+
+internal sealed record SonarrWebhookCardInfo(
+    SonarrWebhookStatus Status,
+    Uri? CallbackUrl,
+    IReadOnlyList<Uri> TriedUrls,
+    DateTimeOffset? LastAttemptAt,
+    DateTimeOffset? NextAttemptUtc);
 
 internal sealed record DownloadCardPendingItem(string ProgramName, string EpisodeTitle);

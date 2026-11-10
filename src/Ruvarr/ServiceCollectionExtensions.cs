@@ -15,6 +15,8 @@ using Ruvarr.Jobs;
 using Ruvarr.Jobs.Monitoring;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Settings;
+using Ruvarr.SonarrWebhook;
+using Ruvarr.SonarrWebhook.Jobs;
 using Ruvarr.TvdbEpisodeLookup;
 using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
@@ -50,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddDashboard();
         services.AddPrograms();
         services.AddDownloads();
+        services.AddSonarrWebhook();
 
         services.AddQuartz(options =>
         {
@@ -115,6 +118,14 @@ public static class ServiceCollectionExtensions
                     .ForJob(downloadRetry)
                     .StartNow()
                     .WithSimpleSchedule(x => x.WithInterval(TimeSpan.FromMinutes(10))
+                    .RepeatForever()));
+
+            // No StartNow: the startup reconcile is triggered once the host listens (SonarrWebhookStartupReconcile).
+            options.AddJob<SonarrWebhookReconcileJob>(x => x.WithIdentity(SonarrWebhookReconcileJob.Key))
+                .AddTrigger(trigger => trigger
+                    .ForJob(SonarrWebhookReconcileJob.Key)
+                    .StartAt(DateTimeOffset.UtcNow.Add(SonarrWebhookReconcileJob.Interval))
+                    .WithSimpleSchedule(x => x.WithInterval(SonarrWebhookReconcileJob.Interval)
                     .RepeatForever()));
 
             JobKey tvdbIslTranslationBackfill = new(nameof(TvdbIslTranslationBackfillJob));
