@@ -22,7 +22,7 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
                 x.RuvId,
                 x.Description,
                 TvdbEpisodes = x.TvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber)
-                    .Select(e => new { e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.IsMissing, e.HasIslTranslation })
+                    .Select(e => new { e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.SonarrStatus, e.HasIslTranslation })
                     .ToList(),
                 x.FirstRun,
                 ProgramSlug = x.Program.Slug,
@@ -43,7 +43,7 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
                     : null;
 
                 return new TvdbEpisodeSummary(
-                    e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.IsMissing, e.HasIslTranslation,
+                    e.TvdbId, e.SeasonNumber, e.EpisodeNumber, e.SonarrStatus, e.HasIslTranslation,
                     seriesUrl is not null ? new Uri($"{seriesUrl}/episodes/{e.TvdbId}") : null);
             })
                 .ToList(),
@@ -51,7 +51,8 @@ internal sealed class GetProgramEpisodesHandler(RuvarrDbContext dbContext) : IRe
             string.IsNullOrEmpty(x.ProgramSlug)
                 ? null
                 : new Uri($"https://www.ruv.is/sjonvarp/spila/{Uri.EscapeDataString(x.ProgramSlug)}/{x.ProgramRuvId}/{x.RuvId}"),
-            x.Duration))
+            x.Duration,
+            RuvEpisode.CombineSonarrStatus([.. x.TvdbEpisodes.Select(e => e.SonarrStatus)])))
             .ToList();
     }
 }

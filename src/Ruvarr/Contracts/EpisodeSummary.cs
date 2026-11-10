@@ -7,4 +7,5 @@ public sealed record EpisodeSummary(
     IReadOnlyList<TvdbEpisodeSummary> TvdbMatches,
     DateTime FirstRun,
     Uri? RuvUrl,
-    TimeSpan Duration);
+    TimeSpan Duration,
+    SonarrEpisodeStatus? SonarrStatus);

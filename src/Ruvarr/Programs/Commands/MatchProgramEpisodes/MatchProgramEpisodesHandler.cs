@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-
-using Ruvarr.Abstractions;
+﻿using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
@@ -17,9 +16,8 @@ internal sealed class MatchProgramEpisodesHandler(
 {
     public async Task<RuvarrResult> Handle(MatchProgramEpisodesCommand request, CancellationToken cancellationToken)
     {
-        RuvProgram? program = await dbcontext.Set<RuvProgram>()
-            .Where(x => x.RuvId == request.RuvId)
-            .FirstOrDefaultAsync(cancellationToken);
+        // Existing TVDB links are loaded so a re-match keeps their stored Sonarr status when Sonarr is unreachable.
+        RuvProgram? program = await dbcontext.FindRuvProgramAsync(request.RuvId, cancellationToken);
 
         if (program is null)
         {
@@ -54,16 +52,17 @@ internal sealed class MatchProgramEpisodesHandler(
             return ProgramErrors.ProgramEpisodeCountMismatch;
         }
 
-        Result<HashSet<int>> missingResult = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
-        // Linking to TVDB does not depend on Sonarr; the next healthy RÚV episode sync sets the missing status.
-        HashSet<int> missingTvdbIds = missingResult.Match(
-            ids => ids,
+        Result<IReadOnlyDictionary<int, SonarrEpisodeStatus>> statusResult =
+            await sonarr.GetEpisodeStatusesAsync(program.Series.TvdbId, cancellationToken);
+        // Linking to TVDB does not depend on Sonarr; the next healthy RÚV episode sync sets the Sonarr status.
+        SonarrEpisodeStatuses sonarrStatuses = statusResult.Match(
+            SonarrEpisodeStatuses.From,
             error =>
             {
                 logger.LogWarning(
-                    "Sonarr missing-episodes lookup failed ({ErrorCode}); storing matches as not missing until the next episode sync",
+                    "Sonarr episode status lookup failed ({ErrorCode}); keeping stored Sonarr statuses until the next episode sync",
                     error.Code);
-                return [];
+                return SonarrEpisodeStatuses.Unavailable;
             });
 
         foreach (RuvEpisode episode in program.Episodes)
@@ -78,7 +77,7 @@ internal sealed class MatchProgramEpisodesHandler(
                 return ProgramErrors.EpisodeNotFound;
             }
 
-            episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, missingTvdbIds.Contains(tvdbEpisode.Id), tvdbEpisode.NameTranslations?.Contains("isl") ?? false);
+            episode.Match(tvdbEpisode.Id, tvdbEpisode.SeasonNumber, tvdbEpisode.Number, sonarrStatuses, tvdbEpisode.NameTranslations?.Contains("isl") ?? false);
             logger.LogInformation(
                 "Matched RÚV episode {Episode} with TVDB episode '{TvdbSeries}' - '{TvdbEpisodeName}'",
                 episode.ToString(),

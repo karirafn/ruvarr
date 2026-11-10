@@ -61,7 +61,7 @@ public sealed class ToFilename
         RuvEpisode sut = new RuvEpisodeBuilder()
             .WithProgram(program)
             .Build();
-        sut.Match(1234, 2, 3, isMissing: false);
+        sut.Match(1234, 2, 3, sonarrStatuses: SonarrStatuses.NotTracked);
 
         // Act
         string result = sut.ToFilename();
@@ -84,9 +84,9 @@ public sealed class ToFilename
             .Build();
         sut.MatchMultiple(
         [
-            TvdbEpisode.Create(100, 1, 1, false),
-            TvdbEpisode.Create(101, 1, 2, false),
-        ]);
+            TvdbEpisode.Create(100, 1, 1),
+            TvdbEpisode.Create(101, 1, 2),
+        ], SonarrStatuses.NotTracked);
 
         // Act
         string result = sut.ToFilename();

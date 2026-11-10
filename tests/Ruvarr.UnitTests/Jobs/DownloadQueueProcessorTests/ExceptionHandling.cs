@@ -130,7 +130,7 @@ public sealed class ExceptionHandling : IDisposable
         program.TryAddEpisode("ep0001", new Uri("http://test.com/stream"), "Episode 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 5001, season: 1, episode: 1, isMissing: true);
+        episode.Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(5001));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 

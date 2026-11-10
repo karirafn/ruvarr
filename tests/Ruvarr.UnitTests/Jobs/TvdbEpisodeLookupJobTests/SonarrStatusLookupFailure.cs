@@ -6,7 +6,6 @@ using Quartz;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Infrastructure.Sonarr;
-using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
 using Ruvarr.Programs.Domain;
@@ -21,7 +20,7 @@ using Shouldly;
 
 namespace Ruvarr.UnitTests.Jobs.TvdbEpisodeLookupJobTests;
 
-public sealed class SonarrMissingLookupFailure
+public sealed class SonarrStatusLookupFailure
 {
     private readonly IJobExecutionContext _context = Substitute.For<IJobExecutionContext>();
     private readonly ITvdbClient _tvdb = Substitute.For<ITvdbClient>();
@@ -32,10 +31,10 @@ public sealed class SonarrMissingLookupFailure
     private readonly ISettingsStore _settingsStore = Substitute.For<ISettingsStore>();
     private readonly RecordingLogger<TvdbEpisodeLookupJob> _logger = new();
 
-    public SonarrMissingLookupFailure()
+    public SonarrStatusLookupFailure()
     {
-        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new Result<IReadOnlyCollection<MissingEpisode>>(ApiClientErrors.RequestFailed));
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<Ruvarr.Infrastructure.Sonarr.Models.Series>>(ApiClientErrors.RequestFailed));
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
@@ -65,14 +64,14 @@ public sealed class SonarrMissingLookupFailure
     }
 
     [Fact]
-    public async Task MatchesWithNoEpisodesMissing()
+    public async Task MatchesWithSonarrStatusesUnavailable()
     {
         // Act
         await RunLookupAsync(TestContext.Current.CancellationToken);
 
         // Assert
         await _matcher.Received(1).MatchAsync(
-            Arg.Is<EpisodeMatchingContext>(ctx => ctx.MissingTvdbIds.Count == 0),
+            Arg.Is<EpisodeMatchingContext>(ctx => ctx.SonarrStatuses == SonarrEpisodeStatuses.Unavailable),
             Arg.Any<CancellationToken>());
     }
 

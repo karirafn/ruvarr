@@ -14,5 +14,9 @@ internal sealed class TvdbEpisodeConfiguration : IEntityTypeConfiguration<TvdbEp
 
         builder.HasIndex("episode_id", nameof(TvdbEpisode.TvdbId))
             .IsUnique();
+
+        builder.Property(x => x.SonarrStatus)
+            .HasConversion<string>()
+            .IsRequired();
     }
 }

@@ -14,9 +14,9 @@ public sealed class TryResolveSonarrEpisodeIds
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
         sut.MatchMultiple(
         [
-            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1, isMissing: false),
-            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2, isMissing: false),
-        ]);
+            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
+            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
+        ], SonarrStatuses.NotTracked);
 
         Dictionary<int, int> map = new()
         {
@@ -39,9 +39,9 @@ public sealed class TryResolveSonarrEpisodeIds
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
         sut.MatchMultiple(
         [
-            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1, isMissing: false),
-            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2, isMissing: false),
-        ]);
+            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
+            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
+        ], SonarrStatuses.NotTracked);
 
         Dictionary<int, int> map = new()
         {
@@ -63,9 +63,9 @@ public sealed class TryResolveSonarrEpisodeIds
         RuvEpisode sut = new RuvEpisodeBuilder().Build();
         sut.MatchMultiple(
         [
-            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1, isMissing: false),
-            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2, isMissing: false),
-        ]);
+            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
+            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
+        ], SonarrStatuses.NotTracked);
 
         Dictionary<int, int> map = new()
         {

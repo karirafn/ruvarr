@@ -302,13 +302,14 @@ namespace Ruvarr.Migrations
                         .HasColumnType("INTEGER")
                         .HasColumnName("has_isl_translation");
 
-                    b.Property<bool>("IsMissing")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("is_missing");
-
                     b.Property<int>("SeasonNumber")
                         .HasColumnType("INTEGER")
                         .HasColumnName("season_number");
+
+                    b.Property<string>("SonarrStatus")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("sonarr_status");
 
                     b.Property<int>("TvdbId")
                         .HasColumnType("INTEGER")

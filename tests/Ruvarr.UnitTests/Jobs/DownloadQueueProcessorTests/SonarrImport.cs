@@ -59,7 +59,7 @@ public sealed class SonarrImport : IDisposable
         program.TryAddEpisode("ep0001", new Uri("http://test.com/stream"), "Episode 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(series);
         RuvEpisode episode = program.Episodes[0];
-        episode.Match(tvdbId: 5001, season: 1, episode: 1, isMissing: true);
+        episode.Match(tvdbId: 5001, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Missing(5001));
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -78,9 +78,9 @@ public sealed class SonarrImport : IDisposable
         program.MatchTvdb(series);
         RuvEpisode episode = program.Episodes[0];
         episode.MatchMultiple([
-            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1, isMissing: true),
-            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2, isMissing: true),
-        ]);
+            TvdbEpisode.Create(tvdbId: 5001, seasonNumber: 1, episodeNumber: 1),
+            TvdbEpisode.Create(tvdbId: 5002, seasonNumber: 1, episodeNumber: 2),
+        ], SonarrStatuses.NotTracked);
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -134,7 +134,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new[] { file });
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true) });
 
         SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
 
@@ -270,7 +270,7 @@ public sealed class SonarrImport : IDisposable
             .Returns(new[] { file });
         // Sonarr episode has a different TvdbId — no match for episode's TvdbId 5001
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 1, EpisodeNumber: 1) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true) });
 
         SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
 
@@ -305,7 +305,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new[] { file });
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true) });
 
         SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
 
@@ -340,7 +340,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new[] { file });
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
-            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 99, EpisodeNumber: 99) });
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 99, EpisodeNumber: 99, HasFile: false, Monitored: true) });
 
         SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
 
@@ -378,9 +378,9 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[]
             {
-                new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1),
-                new SonarrEpisode(Id: 202, SeriesId: 42, TvdbId: 5002, SeasonNumber: 1, EpisodeNumber: 2),
-                new SonarrEpisode(Id: 203, SeriesId: 42, TvdbId: 5003, SeasonNumber: 2, EpisodeNumber: 1),
+                new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true),
+                new SonarrEpisode(Id: 202, SeriesId: 42, TvdbId: 5002, SeasonNumber: 1, EpisodeNumber: 2, HasFile: false, Monitored: true),
+                new SonarrEpisode(Id: 203, SeriesId: 42, TvdbId: 5003, SeasonNumber: 2, EpisodeNumber: 1, HasFile: false, Monitored: true),
             });
 
         SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);

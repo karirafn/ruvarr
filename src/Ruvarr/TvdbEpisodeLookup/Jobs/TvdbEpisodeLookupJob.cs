@@ -67,19 +67,20 @@ internal sealed class TvdbEpisodeLookupJob(
                 return;
             }
 
-            Result<HashSet<int>> missingResult = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
-            // Linking to TVDB does not depend on Sonarr; the next healthy RÚV episode sync sets the missing status.
-            HashSet<int> missingTvdbIds = missingResult.Match(
-                ids => ids,
+            Result<IReadOnlyDictionary<int, SonarrEpisodeStatus>> statusResult =
+                await sonarr.GetEpisodeStatusesAsync(program.Series.TvdbId, cancellationToken);
+            // Linking to TVDB does not depend on Sonarr; the next healthy RÚV episode sync sets the Sonarr status.
+            SonarrEpisodeStatuses sonarrStatuses = statusResult.Match(
+                SonarrEpisodeStatuses.From,
                 error =>
                 {
                     logger.LogWarning(
-                        "Sonarr missing-episodes lookup failed ({ErrorCode}); storing matches as not missing until the next episode sync",
+                        "Sonarr episode status lookup failed ({ErrorCode}); keeping stored Sonarr statuses until the next episode sync",
                         error.Code);
-                    return [];
+                    return SonarrEpisodeStatuses.Unavailable;
                 });
 
-            EpisodeMatchingContext matchingContext = new(program, seriesData, missingTvdbIds);
+            EpisodeMatchingContext matchingContext = new(program, seriesData, sonarrStatuses);
             await matcher.MatchAsync(matchingContext, cancellationToken);
 
             await ScheduleLookupAsync(program, cancellationToken);

@@ -23,7 +23,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, false);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads Part 1").WithSeasonNumber(1).WithNumber(3).Build();
@@ -32,7 +32,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode1, tvdbEpisode2).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         PartOneSiblingMatchingStrategy sut = CreateSut();
 
         // Act
@@ -52,7 +52,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar - fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar - síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(601, 2, 5, false);
+        program.Episodes[0].Match(601, 2, 5, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(601).WithName("Christmas Lads (1)").WithSeasonNumber(2).WithNumber(5).Build();
@@ -61,7 +61,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode1, tvdbEpisode2).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         PartOneSiblingMatchingStrategy sut = CreateSut();
 
         // Act
@@ -84,7 +84,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
 
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         PartOneSiblingMatchingStrategy sut = CreateSut();
 
         // Act
@@ -102,7 +102,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, false);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads Part 1").WithSeasonNumber(1).WithNumber(3).Build();
@@ -111,7 +111,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode1, tvdbEpisodeUnrelated).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         PartOneSiblingMatchingStrategy sut = CreateSut();
 
         // Act
@@ -129,7 +129,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, síðari hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, false);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads").WithSeasonNumber(1).WithNumber(3).Build();
@@ -138,7 +138,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode1, tvdbEpisode2).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         PartOneSiblingMatchingStrategy sut = CreateSut();
 
         // Act
@@ -156,7 +156,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "Jólasveinar, fyrri hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "Jólasveinar, seinni hluti", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(501, 1, 3, false);
+        program.Episodes[0].Match(501, 1, 3, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder()
             .WithId(501).WithName("Christmas Lads Part 1").WithSeasonNumber(1).WithNumber(3).Build();
@@ -165,7 +165,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode1, tvdbEpisode2).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         PartOneSiblingMatchingStrategy sut = CreateSut();
 
         // Act
@@ -187,7 +187,7 @@ public sealed class PartOneSiblingMatchingStrategyTests
 
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         PartOneSiblingMatchingStrategy sut = CreateSut();
 
         // Act

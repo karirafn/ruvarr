@@ -163,9 +163,10 @@ table {
 
 .episodes-table th:nth-child(1), .episodes-table td:nth-child(1) { width: 7%; }
 .episodes-table th:nth-child(2), .episodes-table td:nth-child(2) { width: 7%; }
-.episodes-table th:nth-child(3), .episodes-table td:nth-child(3) { white-space: nowrap; width: 8rem; }
-.episodes-table th:nth-child(4), .episodes-table td:nth-child(4) { white-space: nowrap; width: 5rem; }
-.episodes-table th:nth-child(5), .episodes-table td:nth-child(5) { width: 20rem; }
+.episodes-table th:nth-child(3), .episodes-table td:nth-child(3) { width: 1%; white-space: nowrap; }
+.episodes-table th:nth-child(4), .episodes-table td:nth-child(4) { white-space: nowrap; width: 8rem; }
+.episodes-table th:nth-child(5), .episodes-table td:nth-child(5) { white-space: nowrap; width: 5rem; }
+.episodes-table th:nth-child(6), .episodes-table td:nth-child(6) { width: 20rem; }
 
 thead {
     background-color: rgba(255, 255, 255, 0.08);
@@ -683,10 +684,11 @@ dialog input[type="number"]:focus {
     white-space: nowrap;
 }
 
-/* Monitored / missing icons */
+/* Monitored / missing / downloaded icons */
 .icon--monitored { color: var(--color-teal); }
 .icon--unmonitored { color: rgba(255, 255, 255, 0.2); }
 .icon--missing { color: var(--color-amber); }
+.icon--downloaded { color: var(--color-green); }
 .icon--matched-all { color: var(--color-teal); }
 .icon--matched-partial { color: var(--color-amber); }
 .icon--matched-none { color: rgba(255, 255, 255, 0.2); }

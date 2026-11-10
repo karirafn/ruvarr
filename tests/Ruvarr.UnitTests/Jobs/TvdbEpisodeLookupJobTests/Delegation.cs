@@ -6,16 +6,17 @@ using NSubstitute;
 using Quartz;
 
 using Ruvarr.Abstractions;
+using Ruvarr.Contracts;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Infrastructure.Tvdb;
 using Ruvarr.Infrastructure.Tvdb.Models;
+using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
+using Ruvarr.Testing.Builders;
 using Ruvarr.TvdbEpisodeLookup;
 using Ruvarr.TvdbEpisodeLookup.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Notifiers;
-using Ruvarr.Programs.Domain;
-using Ruvarr.Testing.Builders;
 
 using Shouldly;
 
@@ -34,6 +35,7 @@ public sealed class Delegation
     public Delegation()
     {
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Array.Empty<MissingEpisode>());
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<Ruvarr.Infrastructure.Sonarr.Models.Series>());
         _serviceProvider.GetService(Arg.Any<Type>()).Returns(Array.Empty<object>());
         _settingsStore.Current.Returns(new RuvarrSettings(
             SonarrBaseAddress: "http://sonarr", SonarrApiKey: "key",
@@ -79,7 +81,7 @@ public sealed class Delegation
     }
 
     [Fact]
-    public async Task PassesMissingTvdbIdsToMatcher()
+    public async Task PassesSonarrStatusesToMatcher()
     {
         // Arrange
         using RuvarrDbContext dbContext = CreateDbContext();
@@ -94,6 +96,9 @@ public sealed class Delegation
         MissingEpisode missingEpisode = new MissingEpisodeBuilder().WithTvdbId(101).Build();
         _tvdb.GetSeriesAsync(1000, Arg.Any<CancellationToken>()).Returns(seriesData);
         _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(new[] { missingEpisode });
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>()).Returns(new[] { SonarrSeriesBuilder.Build(id: 42, tvdbId: 1000) });
+        _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
+            .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 101, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true) });
         _notifier.Enqueue(1, program.Name);
         TvdbEpisodeLookupJob sut = CreateJob(dbContext);
 
@@ -102,7 +107,8 @@ public sealed class Delegation
 
         // Assert
         await _matcher.Received(1).MatchAsync(
-            Arg.Is<EpisodeMatchingContext>(ctx => ctx.MissingTvdbIds.Contains(101)),
+            Arg.Is<EpisodeMatchingContext>(ctx =>
+                ctx.SonarrStatuses.StatusFor(101, SonarrEpisodeStatus.NotTracked) == SonarrEpisodeStatus.Missing),
             Arg.Any<CancellationToken>());
     }
 

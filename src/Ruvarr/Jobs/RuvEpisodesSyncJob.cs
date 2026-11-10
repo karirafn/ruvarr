@@ -37,7 +37,7 @@ internal sealed class RuvEpisodesSyncJob(
         logger.LogDebug("Starting RÚV episode sync job");
 
         List<IQueueLease> leases = [];
-#pragma warning disable CA2000 // Loaded-item leases dispose via their using scope in the per-item foreach. Unloaded-id leases and the Sonarr-failure early-return paths dispose via explicit loops.
+#pragma warning disable CA2000 // Loaded-item leases dispose via their using scope in the per-item foreach. Unloaded-id leases and the Sonarr-failure early-return path dispose via explicit loops.
         while (syncQueue.TryLeaseNext() is IQueueLease lease)
         {
             leases.Add(lease);
@@ -59,40 +59,25 @@ internal sealed class RuvEpisodesSyncJob(
             .Select(x => new { x.RuvId, x.Name })
             .ToListAsync(cancellationToken);
 
-        Result<HashSet<int>> missingResult;
+        Result<IReadOnlyList<Series>> seriesResult;
 
         try
         {
-            missingResult = await sonarr.GetMissingTvdbIdsAsync(cancellationToken);
+            seriesResult = await sonarr.GetSeriesAsync(cancellationToken);
         }
 #pragma warning disable CA1031 // Catch all non-cancellation exceptions to prevent queue items from getting stuck in Processing state
         catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
         {
-            logger.LogError(ex, "Sonarr GetMissingEpisodesAsync threw during RÚV episode sync");
+            logger.LogError(ex, "Sonarr GetSeriesAsync threw during RÚV episode sync");
             ReleaseAll(leases);
             return;
         }
-
-        if (missingResult.IsFailure)
-        {
-            // Treating the failure as "nothing missing" would clear every IsMissing flag and
-            // re-raise EpisodeMissingEvent for each one once Sonarr recovers.
-            logger.LogError(
-                "Sonarr GetMissingEpisodesAsync failed during RÚV episode sync ({ErrorCode}); skipping episode missing-status updates",
-                missingResult.Error.Code);
-            ReleaseAll(leases);
-            return;
-        }
-
-        HashSet<int> missingTvdbIds = missingResult.FromResult();
-
-        Result<IReadOnlyList<Series>> seriesResult = await sonarr.GetSeriesAsync(cancellationToken);
 
         if (seriesResult.IsFailure)
         {
             logger.LogError(
-                "Sonarr GetSeriesAsync failed during RÚV episode sync ({ErrorCode}); skipping monitored/missing-episode updates",
+                "Sonarr GetSeriesAsync failed during RÚV episode sync ({ErrorCode}); skipping monitored/missing-episode and Sonarr episode status updates",
                 seriesResult.Error.Code);
             ReleaseAll(leases);
             return;
@@ -129,7 +114,7 @@ internal sealed class RuvEpisodesSyncJob(
                 await ProcessProgramAsync(
                     ruvId,
                     programName,
-                    missingTvdbIds,
+                    sonarrSeries,
                     monitoredTvdbIds,
                     missingEpisodesTvdbIds,
                     cancellationToken);
@@ -184,7 +169,7 @@ internal sealed class RuvEpisodesSyncJob(
     private async Task ProcessProgramAsync(
         int ruvId,
         string programName,
-        HashSet<int> missingTvdbIds,
+        IReadOnlyList<Series> sonarrSeries,
         HashSet<int> monitoredTvdbIds,
         HashSet<int> missingEpisodesTvdbIds,
         CancellationToken cancellationToken)
@@ -256,9 +241,9 @@ internal sealed class RuvEpisodesSyncJob(
             program.RemoveEpisode(episode);
         }
 
-        foreach (RuvEpisode episode in program.Episodes.Where(x => x.TvdbEpisodes.Count > 0))
+        if (program.Series is not null)
         {
-            episode.UpdateMissingStatus(missingTvdbIds);
+            await UpdateSonarrStatusAsync(program, program.Series.TvdbId, sonarrSeries, cancellationToken);
         }
 
         bool isMonitored = program.Series is not null &&
@@ -270,6 +255,41 @@ internal sealed class RuvEpisodesSyncJob(
         program.SetHasMissingEpisodes(hasMissingEpisodes);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpdateSonarrStatusAsync(
+        RuvProgram program,
+        int tvdbSeriesId,
+        IReadOnlyList<Series> sonarrSeries,
+        CancellationToken cancellationToken)
+    {
+        List<RuvEpisode> matchedEpisodes = [.. program.Episodes.Where(x => x.TvdbEpisodes.Count > 0)];
+
+        if (matchedEpisodes is [])
+        {
+            return;
+        }
+
+        Result<IReadOnlyDictionary<int, SonarrEpisodeStatus>> statusResult =
+            await sonarr.GetEpisodeStatusesAsync(tvdbSeriesId, sonarrSeries, cancellationToken);
+
+        if (statusResult.IsFailure)
+        {
+            // Treating the failure as "not tracked" would clear every Missing status and
+            // re-raise EpisodeMissingEvent for each one once Sonarr recovers.
+            logger.LogWarning(
+                "Sonarr episode status lookup failed for RÚV program '{Name}' ({ErrorCode}); keeping stored Sonarr statuses",
+                program.Name,
+                statusResult.Error.Code);
+            return;
+        }
+
+        IReadOnlyDictionary<int, SonarrEpisodeStatus> statuses = statusResult.FromResult();
+
+        foreach (RuvEpisode episode in matchedEpisodes)
+        {
+            episode.UpdateSonarrStatus(statuses);
+        }
     }
 
     private static string StripNewlines(string? value) =>

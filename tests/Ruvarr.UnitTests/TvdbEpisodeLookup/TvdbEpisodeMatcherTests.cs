@@ -38,7 +38,7 @@ public sealed class TvdbEpisodeMatcherTests
 
         RuvProgram program = new RuvProgramBuilder().Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder().Build();
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
 
         // Act
         await sut.MatchAsync(context, CancellationToken.None);
@@ -59,7 +59,7 @@ public sealed class TvdbEpisodeMatcherTests
 
         RuvProgram program = new RuvProgramBuilder().Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder().Build();
-        HashSet<int> missingIds = [42];
+        SonarrEpisodeStatuses missingIds = SonarrStatuses.Missing(42);
         EpisodeMatchingContext context = new(program, seriesData, missingIds);
 
         // Act
@@ -79,7 +79,7 @@ public sealed class TvdbEpisodeMatcherTests
 
         RuvProgram program = new RuvProgramBuilder().Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder().Build();
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
 
         // Act
         Func<Task> act = () => sut.MatchAsync(context, CancellationToken.None);

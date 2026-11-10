@@ -7,8 +7,8 @@ using NSubstitute;
 
 using Ruvarr.Abstractions;
 using Ruvarr.Contracts;
-using Ruvarr.Programs.Components;
 using Ruvarr.Programs.Commands.MatchEpisode;
+using Ruvarr.Programs.Components;
 using Ruvarr.Programs.Queries.GetTvdbSeriesEpisodes;
 
 namespace Ruvarr.UnitTests.Programs.MatchEpisodeDialogTests;
@@ -77,7 +77,7 @@ public sealed class HandleKeyDown : BunitContext
     {
         // Arrange
         IRenderedComponent<MatchEpisodeDialog> cut = Render<MatchEpisodeDialog>();
-        List<TvdbEpisodeSummary> currentMatches = [new(99999, 1, 1, false, false, null)];
+        List<TvdbEpisodeSummary> currentMatches = [new(99999, 1, 1, SonarrEpisodeStatus.NotTracked, false, null)];
         await cut.Instance.OpenAsync("ruv-1", currentMatches: currentMatches, tvdbSeriesId: 42, episodeTitle: "þáttur 1", siblingEpisodes: []);
         await cut.WaitForStateAsync(() => cut.FindAll("input[role=combobox]").Count > 0);
 

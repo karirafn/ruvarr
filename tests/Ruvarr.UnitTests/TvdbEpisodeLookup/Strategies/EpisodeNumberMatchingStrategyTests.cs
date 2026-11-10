@@ -26,7 +26,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act
@@ -47,7 +47,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
 
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act
@@ -70,7 +70,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode1, tvdbEpisode2).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act
@@ -91,7 +91,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act
@@ -109,14 +109,14 @@ public sealed class EpisodeNumberMatchingStrategyTests
         program.TryAddEpisode("ep0001", new Uri("http://test.com"), "þáttur 1", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0002", new Uri("http://test.com"), "þáttur 2", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(201, 2, 1, false);
+        program.Episodes[0].Match(201, 2, 1, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode201 = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
         Episode tvdbEpisode202 = new TvdbEpisodeDataBuilder().WithId(202).WithSeasonNumber(2).WithNumber(2).Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode201, tvdbEpisode202).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act
@@ -138,7 +138,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
         Episode tvdbEpisode = new TvdbEpisodeDataBuilder().WithId(301).WithSeasonNumber(3).WithNumber(1).Build();
         SeriesData seriesData = new TvdbSeriesDataBuilder().WithId(1000).WithEpisodes(tvdbEpisode).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act
@@ -162,7 +162,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
         SeriesData seriesData = new TvdbSeriesDataBuilder()
             .WithId(1000).WithEpisodes(tvdbEpisode2, tvdbEpisode4).Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act
@@ -185,10 +185,10 @@ public sealed class EpisodeNumberMatchingStrategyTests
         program.TryAddEpisode("ep0005", new Uri("http://test.com"), "þáttur 5", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.TryAddEpisode("ep0006", new Uri("http://test.com"), "þáttur 6", "", DateTime.UtcNow, TimeSpan.FromMinutes(30));
         program.MatchTvdb(new TvdbSeriesBuilder().WithId(1000).Build());
-        program.Episodes[0].Match(201, 2, 1, false);
-        program.Episodes[1].Match(202, 2, 2, false);
-        program.Episodes[2].Match(203, 2, 3, false);
-        program.Episodes[3].Match(204, 2, 4, false);
+        program.Episodes[0].Match(201, 2, 1, SonarrStatuses.NotTracked);
+        program.Episodes[1].Match(202, 2, 2, SonarrStatuses.NotTracked);
+        program.Episodes[2].Match(203, 2, 3, SonarrStatuses.NotTracked);
+        program.Episodes[3].Match(204, 2, 4, SonarrStatuses.NotTracked);
 
         Episode tvdbEpisode1 = new TvdbEpisodeDataBuilder().WithId(201).WithSeasonNumber(2).WithNumber(1).Build();
         Episode tvdbEpisode2 = new TvdbEpisodeDataBuilder().WithId(202).WithSeasonNumber(2).WithNumber(2).Build();
@@ -201,7 +201,7 @@ public sealed class EpisodeNumberMatchingStrategyTests
             .WithEpisodes(tvdbEpisode1, tvdbEpisode2, tvdbEpisode3, tvdbEpisode4, tvdbEpisode5, tvdbEpisode6)
             .Build();
 
-        EpisodeMatchingContext context = new(program, seriesData, []);
+        EpisodeMatchingContext context = new(program, seriesData, SonarrStatuses.NotTracked);
         EpisodeNumberMatchingStrategy sut = CreateSut();
 
         // Act

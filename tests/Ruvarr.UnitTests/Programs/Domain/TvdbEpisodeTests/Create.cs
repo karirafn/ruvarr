@@ -10,7 +10,7 @@ public sealed class Create
     public void SetsHasIslTranslationTrue()
     {
         // Arrange & Act
-        TvdbEpisode sut = TvdbEpisode.Create(tvdbId: 1, seasonNumber: 1, episodeNumber: 1, isMissing: false, hasIslTranslation: true);
+        TvdbEpisode sut = TvdbEpisode.Create(tvdbId: 1, seasonNumber: 1, episodeNumber: 1, hasIslTranslation: true);
 
         // Assert
         sut.HasIslTranslation.ShouldBeTrue();
@@ -20,7 +20,7 @@ public sealed class Create
     public void SetsHasIslTranslationFalse()
     {
         // Arrange & Act
-        TvdbEpisode sut = TvdbEpisode.Create(tvdbId: 1, seasonNumber: 1, episodeNumber: 1, isMissing: false, hasIslTranslation: false);
+        TvdbEpisode sut = TvdbEpisode.Create(tvdbId: 1, seasonNumber: 1, episodeNumber: 1, hasIslTranslation: false);
 
         // Assert
         sut.HasIslTranslation.ShouldBeFalse();

@@ -55,7 +55,7 @@ public sealed class ExceptionHandling
         dbContext.Set<RuvProgram>().Add(program);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        _sonarr.GetMissingEpisodesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("Sonarr unavailable"));
 
         _syncQueue.Enqueue(1, program.Name);
