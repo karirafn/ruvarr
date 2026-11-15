@@ -33,8 +33,8 @@ internal sealed class GetProgramsHandler(RuvarrDbContext dbContext) : IStreaming
                 HasSeries = x.Series != null,
                 EpisodeCount = x.Episodes.Count,
                 HasAnyEpisodes = x.Episodes.Any(),
-                AllEpisodesMatched = x.Episodes.All(e => e.TvdbEpisodes.Any()),
-                AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbEpisodes.Any()),
+                AllEpisodesMatched = x.Episodes.All(e => e.TvdbEpisodes.Count > 0),
+                AnyEpisodeMatched = x.Episodes.Any(e => e.TvdbEpisodes.Count > 0),
                 HasMovie = x.Movie != null,
                 x.ManualSeasons,
             })

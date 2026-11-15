@@ -38,7 +38,7 @@ internal sealed class TvdbIslTranslationBackfillJob(
 
         List<RuvProgram> programs = await dbContext.Set<RuvProgram>()
             .Where(p => p.Series != null)
-            .Where(p => p.Episodes.Any(e => e.TvdbEpisodes.Any()))
+            .Where(p => p.Episodes.Any(e => e.TvdbEpisodes.Count > 0))
             .Include(p => p.Episodes)
                 .ThenInclude(e => e.TvdbEpisodes)
             .ToListAsync(cancellationToken);

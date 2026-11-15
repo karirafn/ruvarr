@@ -28,7 +28,7 @@ if [ "$LOCAL" != "$REMOTE" ]; then
         --user 99:100 \
         -p 9484:8080 \
         -v /mnt/user/appdata/ruvarr:/app/data \
-        -v /mnt/user/downloads:/downloads \
+        -v /mnt/user/data/torrents:/downloads \
         --restart unless-stopped \
         ruvarr:latest
 
