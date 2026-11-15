@@ -64,16 +64,16 @@ internal static class GetProgramsQueryExtensions
                 EpisodeMatchStatus.FullyMatched => query.Where(x =>
                     x.Series != null &&
                     x.Episodes.Any() &&
-                    x.Episodes.All(e => e.TvdbEpisodes.Any())),
+                    x.Episodes.All(e => e.TvdbEpisodes.Count > 0)),
                 EpisodeMatchStatus.PartiallyMatched => query.Where(x =>
                     x.Series != null &&
                     x.Episodes.Any() &&
-                    x.Episodes.Any(e => e.TvdbEpisodes.Any()) &&
-                    !x.Episodes.All(e => e.TvdbEpisodes.Any())),
+                    x.Episodes.Any(e => e.TvdbEpisodes.Count > 0) &&
+                    !x.Episodes.All(e => e.TvdbEpisodes.Count > 0)),
                 _ => query.Where(x =>
                     x.Series == null ||
                     !x.Episodes.Any() ||
-                    !x.Episodes.Any(e => e.TvdbEpisodes.Any())),
+                    !x.Episodes.Any(e => e.TvdbEpisodes.Count > 0)),
             };
         }
 
