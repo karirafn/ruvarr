@@ -1,5 +1,7 @@
 # Bounded Download Retry with an Exhausted Terminal State
 
+> **2026-11-19 — Amended:** the Decision clause that makes `Exhausted` terminal with only a manual `RetryNow()` exit is replaced by [ADR 0015](0015-failed-downloads-exit-automatically-when-their-cause-clears.md), which adds automatic exits when the failure's cause clears.
+
 ## Context
 
 `Failed` was a dead-end terminal state with no automatic exit, violating the design rule that every degraded state must have an automatic exit.
