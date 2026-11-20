@@ -27,6 +27,9 @@ internal sealed class DownloadFileStore(ILogger<DownloadFileStore> logger)
         return completedPath;
     }
 
+    public void DeleteCompleted(RuvarrSettings settings, string fileName) =>
+        TryDelete(CompletedPath(settings, fileName));
+
     public void DeleteIncomplete(RuvarrSettings settings, string fileName)
     {
         string filePath = IncompletePath(settings, fileName);

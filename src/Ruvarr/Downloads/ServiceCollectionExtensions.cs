@@ -29,6 +29,7 @@ internal static class ServiceCollectionExtensions
         services.AddTransient<IDomainEventHandler<DownloadProgressUpdatedEvent>, BroadcastEventHandler<DownloadProgressUpdatedEvent>>();
         services.AddTransient<IDomainEventHandler<DownloadRetryScheduledEvent>, BroadcastEventHandler<DownloadRetryScheduledEvent>>();
         services.AddTransient<IDomainEventHandler<DownloadDismissedEvent>, BroadcastEventHandler<DownloadDismissedEvent>>();
+        services.AddTransient<IDomainEventHandler<DownloadDismissedEvent>, DeleteDismissedDownloadFilesHandler>();
 
         return services;
     }

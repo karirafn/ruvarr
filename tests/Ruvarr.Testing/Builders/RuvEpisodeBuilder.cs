@@ -1,3 +1,4 @@
+using Ruvarr.Contracts;
 using Ruvarr.Programs.Domain;
 
 namespace Ruvarr.Testing.Builders;
@@ -74,6 +75,13 @@ internal sealed class RuvEpisodeBuilder
     {
         RuvEpisode episode = Build();
         episode.Match(tvdbId: tvdbId, season: season, episode: episodeNumber, sonarrStatuses: SonarrStatuses.NotTracked, origin: MatchOrigin.Automatic);
+        return episode;
+    }
+
+    public RuvEpisode BuildMatchedWithStatus(SonarrEpisodeStatus status, int tvdbId = 1)
+    {
+        RuvEpisode episode = Build();
+        episode.Match(tvdbId: tvdbId, season: 1, episode: 1, sonarrStatuses: SonarrStatuses.Of(tvdbId, status), origin: MatchOrigin.Automatic);
         return episode;
     }
 }
