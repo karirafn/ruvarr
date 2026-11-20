@@ -77,6 +77,7 @@ Required settings:
 - **TVDB API key** — for series/episode metadata matching
 - **TMDB API key** — for movie metadata matching
 - **Sonarr URL and API key** — for missing episode detection and import triggering
+
 Deployment configuration:
 - **`Ruvarr:DownloadsRoot`** (environment variable `Ruvarr__DownloadsRoot`) — where downloaded files are written (default: `/downloads`). Mount the downloads share at this path, and use the same container path in Sonarr, so Sonarr can import the files Ruvarr writes.
 
