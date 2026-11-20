@@ -54,7 +54,8 @@ The lifecycle of a file from download start to import-ready.
 - **Incomplete directory** — `<DownloadsRoot>/incomplete`. Flat, derived from `DownloadsRoot`, not user-configurable. Holds a download while it is being written and trimmed. Shared with other download clients, so Ruvarr only ever touches paths it recorded — it never enumerates the directory.
 - **Completed directory** — the resolved `EpisodeDownloadDirectory`. A file arrives here only by a single rename, already downloaded and trimmed. Presence there means the file is final and ready for Sonarr to import.
 - **Download file name** — the filename recorded on a `DownloadQueueItem` when its download starts. Both directories are derived from it plus *current* settings, so the item can locate its own file even if the episode is re-matched or the download directories are reconfigured afterwards.
-- **Dismiss** — Remove a Failed or Exhausted download queue item without retrying it. The row is deleted. Use it for a failure that's already been superseded, or one you've given up on. Pending, Downloading and Complete items can't be dismissed.
+- **Dismiss** — Remove a Failed or Exhausted download queue item without retrying it. The row is deleted, and so are Ruvarr's recorded files for it: the completed file and the incomplete file (with its `.tmp` sibling), each skipped when absent. Use it for a failure you've given up on; import a file by hand before dismissing it. Superseded downloads are dismissed automatically. Pending, Downloading and Complete items can't be dismissed.
+- **Superseded download** — A Failed or Exhausted download queue item whose episode's combined Sonarr episode status is Downloaded: Sonarr got the episode some other way, so a retry would import a duplicate. The download retry job dismisses it, ahead of any due retry.
 
 ## Lookup & Refresh
 

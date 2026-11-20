@@ -41,6 +41,8 @@ internal sealed class DownloadQueueItem
 
     public bool CanDismiss => Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted;
 
+    public bool IsSuperseded => CanDismiss && Episode.SonarrStatus == SonarrEpisodeStatus.Downloaded;
+
     public static DownloadQueueItem Create(RuvEpisode episode) => new()
     {
         Episode = episode,
