@@ -76,14 +76,14 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
             ? store.Current.TmdbApiKey
             : command.TmdbApiKey;
 
-        RuvarrSettings settings = new(
-            command.SonarrBaseAddress.ToString(),
-            sonarrApiKey,
-            tvdbApiKey,
-            tmdbApiKey,
-            command.EpisodeDownloadDirectory,
-            command.MovieDownloadDirectory)
+        RuvarrSettings settings = store.Current with
         {
+            SonarrBaseAddress = command.SonarrBaseAddress.ToString(),
+            SonarrApiKey = sonarrApiKey,
+            TvdbApiKey = tvdbApiKey,
+            TmdbApiKey = tmdbApiKey,
+            EpisodeDownloadDirectory = command.EpisodeDownloadDirectory,
+            MovieDownloadDirectory = command.MovieDownloadDirectory,
             IgnoredChannels = command.IgnoredChannels,
             IgnoredPrograms = command.IgnoredPrograms
         };

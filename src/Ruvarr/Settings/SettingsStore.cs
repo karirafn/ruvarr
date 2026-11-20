@@ -11,13 +11,17 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
     };
 
     private readonly string _filePath;
+    private readonly string _downloadsRoot;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private volatile RuvarrSettings _current;
 
-    public SettingsStore(string filePath)
+    public SettingsStore(string filePath, string downloadsRoot = RuvarrSettings.DefaultDownloadsRoot)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(downloadsRoot);
+
         _filePath = filePath;
-        _current = LoadFromFile(filePath);
+        _downloadsRoot = downloadsRoot;
+        _current = LoadFromFile(filePath, downloadsRoot);
     }
 
     public RuvarrSettings Current => _current;
@@ -43,7 +47,7 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
             }
 
             File.Move(tempPath, _filePath, overwrite: true);
-            _current = settings;
+            _current = settings with { DownloadsRoot = _downloadsRoot };
             SettingsChanged?.Invoke();
         }
         finally
@@ -57,7 +61,7 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
         _writeLock.Dispose();
     }
 
-    private static RuvarrSettings LoadFromFile(string filePath)
+    private static RuvarrSettings LoadFromFile(string filePath, string downloadsRoot)
     {
         if (!File.Exists(filePath))
         {
@@ -70,11 +74,11 @@ internal sealed class SettingsStore : ISettingsStore, IDisposable
             string json = JsonSerializer.Serialize(RuvarrSettings.Empty, SerializerOptions);
             File.WriteAllText(filePath, json);
 
-            return RuvarrSettings.Empty;
+            return RuvarrSettings.Empty with { DownloadsRoot = downloadsRoot };
         }
 
         string content = File.ReadAllText(filePath);
-        RuvarrSettings settings = JsonSerializer.Deserialize<RuvarrSettings>(content) ?? RuvarrSettings.Empty;
+        RuvarrSettings settings = (JsonSerializer.Deserialize<RuvarrSettings>(content) ?? RuvarrSettings.Empty) with { DownloadsRoot = downloadsRoot };
 
         return MigrateAbsolutePaths(settings);
     }
