@@ -45,5 +45,11 @@ internal sealed class DownloadQueueItemConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.FailureReason)
             .HasColumnName("failure_reason")
             .HasMaxLength(512);
+
+        builder.Property(x => x.FailureKind)
+            .HasColumnName("failure_kind")
+            .HasConversion<string>()
+            .HasDefaultValue(DownloadFailureKind.Unclassified)
+            .IsRequired();
     }
 }

@@ -72,10 +72,7 @@ internal sealed class SonarrImporter(
                 .FirstOrDefault(x => x.Path.EndsWith(fileName, StringComparison.OrdinalIgnoreCase));
             if (file is null)
             {
-                logger.LogWarning(
-                    "Sonarr scan of {Folder} did not include {Filename}. Marking {Episode} failed",
-                    settings.ResolvedEpisodeDownloadDirectory, fileName, item.Episode.ToString());
-                item.MarkFailed("Sonarr scan did not include the file");
+                MarkMissingFromScan(item, settings, fileName);
                 await dbContext.SaveChangesAsync(outcomeWrite);
                 return;
             }
@@ -147,5 +144,28 @@ internal sealed class SonarrImporter(
             item.MarkFailed("Sonarr import failed");
             await dbContext.SaveChangesAsync(outcomeWrite);
         }
+    }
+
+    private void MarkMissingFromScan(DownloadQueueItem item, RuvarrSettings settings, string fileName)
+    {
+        string folder = settings.ResolvedEpisodeDownloadDirectory;
+
+        // A file that exists on Ruvarr's side but is absent from Sonarr's scan of the same path almost
+        // always means the two containers mount the downloads share at different paths.
+        if (DownloadFileStore.CompletedFileExists(settings, fileName))
+        {
+            logger.LogWarning(
+                "Sonarr can't see the download folder {Folder}: its scan did not include {Filename}, which is on disk. Marking {Episode} failed",
+                folder, fileName, item.Episode.ToString());
+            item.MarkFailed(
+                $"Sonarr can't see the download folder {folder}; retries when the folder check passes",
+                DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+            return;
+        }
+
+        logger.LogWarning(
+            "Sonarr scan of {Folder} did not include {Filename}. Marking {Episode} failed",
+            folder, fileName, item.Episode.ToString());
+        item.MarkFailed("Sonarr scan did not include the file");
     }
 }

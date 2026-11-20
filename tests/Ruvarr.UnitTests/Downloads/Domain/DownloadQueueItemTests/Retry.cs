@@ -144,7 +144,56 @@ public sealed class RetryBehavior
         @event.Item.ShouldBe(sut);
     }
 
+    [Fact]
+    public async Task RequeueForRetry_ResetsFailureKind()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
+        item.MarkDownloading();
+        item.MarkFailed("folder not visible", DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+        DownloadQueueItem sut = await SaveAndBackdateAsync(dbContext, item, TestContext.Current.CancellationToken);
+
+        // Act
+        sut.RequeueForRetry();
+
+        // Assert
+        sut.FailureKind.ShouldBe(DownloadFailureKind.Unclassified);
+    }
+
+    [Fact]
+    public async Task RequeueForRetry_ClearsFailureReason()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem sut = await SaveAndBackdateAsync(
+            dbContext,
+            new DownloadQueueItemBuilder().Failed("original reason").Build(),
+            TestContext.Current.CancellationToken);
+
+        // Act
+        sut.RequeueForRetry();
+
+        // Assert
+        sut.FailureReason.ShouldBeNull();
+    }
+
     // RetryNow tests
+
+    [Fact]
+    public void RetryNow_ResetsFailureKind()
+    {
+        // Arrange
+        DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
+        sut.MarkDownloading();
+        sut.MarkFailed("folder not visible", DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+
+        // Act
+        sut.RetryNow();
+
+        // Assert
+        sut.FailureKind.ShouldBe(DownloadFailureKind.Unclassified);
+    }
 
     [Fact]
     public void RetryNow_SetsPendingStatus_FromFailed()
