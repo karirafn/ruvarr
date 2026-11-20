@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.Channels;
 
 using AngleSharp.Dom;
 
@@ -15,6 +16,7 @@ using Ruvarr.Settings.Commands.SaveSettings;
 using Ruvarr.Settings.Queries.GetDistinctChannels;
 using Ruvarr.Settings.Queries.GetSettings;
 using Ruvarr.Settings.Queries.TestSonarrConnection;
+using Ruvarr.SonarrFolderCheck;
 
 using Shouldly;
 
@@ -22,6 +24,18 @@ namespace Ruvarr.UnitTests.Settings.Components;
 
 public sealed class SettingsTests : BunitContext
 {
+    private readonly SonarrFolderCheckHealth _folderCheck = new();
+    private readonly Channel<SonarrFolderCheckedEvent> _folderCheckedEvents = Channel.CreateUnbounded<SonarrFolderCheckedEvent>();
+
+    public SettingsTests()
+    {
+        IDomainEventBroadcaster broadcaster = Substitute.For<IDomainEventBroadcaster>();
+        broadcaster.Subscribe<SonarrFolderCheckedEvent>(Arg.Any<CancellationToken>())
+            .Returns(call => _folderCheckedEvents.Reader.ReadAllAsync(call.Arg<CancellationToken>()));
+        Services.AddSingleton(broadcaster);
+        Services.AddSingleton(_folderCheck);
+    }
+
     [Fact]
     public void RendersExistingIgnoredChannelsAsTags()
     {
@@ -453,6 +467,63 @@ public sealed class SettingsTests : BunitContext
         // Assert
         cut.FindAll(".save-warning").Count.ShouldBe(0);
         await saveHandler.Received(1).Handle(Arg.Any<SaveSettingsCommand>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void ShowsFolderCheckWarningFirstInDirectoriesSection_WhenCheckIsFailing()
+    {
+        // Arrange
+        RegisterDefaultHandlers();
+        _folderCheck.Record(new SonarrFolderCheckResult(SonarrFolderCheckStatus.Failing, "/downloads/tv", DateTimeOffset.UtcNow));
+
+        // Act
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Assert
+        IElement heading = cut.FindAll("h2.settings-section-title").Single(h => h.TextContent == "Directories");
+        IElement warning = heading.NextElementSibling!;
+        warning.ClassList.ShouldContain("folder-check-warning");
+        warning.QuerySelector("code.folder-check-warning__path")!.TextContent.ShouldBe("/downloads/tv");
+    }
+
+    [Theory]
+    [InlineData(SonarrFolderCheckStatus.Passing)]
+    [InlineData(SonarrFolderCheckStatus.Unknown)]
+    public void ShowsNoFolderCheckWarning_UnlessCheckIsFailing(SonarrFolderCheckStatus status)
+    {
+        // Arrange
+        RegisterDefaultHandlers();
+        _folderCheck.Record(new SonarrFolderCheckResult(status, "/downloads/tv", DateTimeOffset.UtcNow));
+
+        // Act
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+
+        // Assert
+        cut.Find(".folder-check-warning").TextContent.Trim().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ShowsFolderCheckWarning_WhenSonarrFolderCheckedEventArrives()
+    {
+        // Arrange
+        RegisterDefaultHandlers();
+        IRenderedComponent<Ruvarr.Settings.Settings> cut = Render<Ruvarr.Settings.Settings>();
+        cut.Find(".folder-check-warning").TextContent.Trim().ShouldBeEmpty();
+
+        // Act
+        _folderCheck.Record(new SonarrFolderCheckResult(SonarrFolderCheckStatus.Failing, "/downloads/tv", DateTimeOffset.UtcNow));
+        await _folderCheckedEvents.Writer.WriteAsync(new SonarrFolderCheckedEvent(), Xunit.TestContext.Current.CancellationToken);
+
+        // Assert
+        await cut.WaitForAssertionAsync(() => cut.Find(".folder-check-warning__strip").ShouldNotBeNull());
+    }
+
+    private void RegisterDefaultHandlers()
+    {
+        RegisterGetSettingsHandler(new RuvarrSettings { IgnoredChannels = [], IgnoredPrograms = [] });
+        RegisterSaveSettingsHandler();
+        RegisterTestConnectionHandler();
+        RegisterGetDistinctChannelsHandler([]);
     }
 
     private void RegisterGetSettingsHandler(RuvarrSettings settings)

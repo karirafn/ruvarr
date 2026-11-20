@@ -1,0 +1,23 @@
+@namespace Ruvarr.SonarrFolderCheck.Components
+@using Ruvarr.SonarrFolderCheck
+
+@* The live region is always rendered so the strip's appearance is announced; only Failing warns. *@
+<div class="folder-check-warning" role="status" aria-atomic="true">
+    @if (Check is { Status: SonarrFolderCheckStatus.Failing } failing)
+    {
+        <div class="caution-strip folder-check-warning__strip">
+            <Icon Type="IconType.Warning" Class="icon caution-strip__icon" />
+            <div class="caution-strip__text folder-check-warning__text">
+                <p class="folder-check-warning__headline"><span class="visually-hidden">Warning: </span>Sonarr can't see Ruvarr's download folder</p>
+                <p class="folder-check-warning__body">Ruvarr asked Sonarr to scan <code class="folder-check-warning__path">@failing.Folder</code>, and Sonarr did not find Ruvarr's files there. Mount the downloads share at the same container path in both Ruvarr and Sonarr.</p>
+                <p class="folder-check-warning__body">Imports fail until this is fixed. Downloads that failed for this reason retry automatically once the check passes.</p>
+                <p class="folder-check-warning__meta">Last checked <time datetime="@failing.CheckedAt.ToString("o", System.Globalization.CultureInfo.InvariantCulture)">@failing.CheckedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)</time> · rechecked every 10 minutes</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public SonarrFolderCheckResult? Check { get; set; }
+}

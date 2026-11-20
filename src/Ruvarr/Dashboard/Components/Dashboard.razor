@@ -7,6 +7,8 @@
 @using Ruvarr.Dashboard.Queries.GetDashboard
 @using Ruvarr.Downloads.Events
 @using Ruvarr.Programs.Events
+@using Ruvarr.SonarrFolderCheck
+@using Ruvarr.SonarrFolderCheck.Components
 @using Ruvarr.SonarrWebhook
 @inject IServiceScopeFactory ScopeFactory
 @inject IDomainEventBroadcaster Broadcaster
@@ -507,6 +509,58 @@ else
         }
     </section>
 
+    SonarrFolderCheckCardInfo folderCheck = _data.SonarrFolderCheck;
+    <section class="folder-check-card" aria-label="Sonarr Folder Check">
+        <div class="folder-check-card__header">
+            <h2 class="dashboard-section-title">Sonarr Folder Check</h2>
+            <span class="card-header__badges">
+                @if (folderCheck.Status == SonarrFolderCheckStatus.Passing)
+                {
+                    <span class="refresh-card__badge refresh-card__badge--idle">
+                        <Icon Type="IconType.Checkmark" Class="icon" />
+                        Passing
+                    </span>
+                }
+                else if (folderCheck.Status == SonarrFolderCheckStatus.Failing)
+                {
+                    <span class="card-fail-badge">
+                        <Icon Type="IconType.Warning" Class="icon" />
+                        Failing
+                    </span>
+                }
+                else
+                {
+                    <span class="refresh-card__badge refresh-card__badge--idle">
+                        <Icon Type="IconType.Clock" Class="icon" />
+                        Unknown
+                    </span>
+                }
+            </span>
+        </div>
+
+        <SonarrFolderCheckWarning Check="folderCheck.LastCheck" />
+
+        @if (folderCheck.Status == SonarrFolderCheckStatus.Unknown)
+        {
+            <p class="empty-message">Ruvarr checks this folder once Sonarr is configured and reachable.</p>
+        }
+
+        <dl class="refresh-card__details refresh-card__details--compact">
+            <div class="refresh-card__detail">
+                <dt>Folder</dt>
+                <dd class="folder-check-card__path">@(folderCheck.LastCheck?.Folder ?? "—")</dd>
+            </div>
+            <div class="refresh-card__detail">
+                <dt>Last checked</dt>
+                <dd>@FormatTimestamp(folderCheck.LastCheck?.CheckedAt)</dd>
+            </div>
+            <div class="refresh-card__detail">
+                <dt>Next check</dt>
+                <dd>@FormatNextRun(folderCheck.NextCheckUtc)</dd>
+            </div>
+        </dl>
+    </section>
+
     SonarrWebhookCardInfo webhook = _data.SonarrWebhook;
     bool webhookFailing = webhook.Status is SonarrWebhookStatus.SonarrUnreachable or SonarrWebhookStatus.CallbackUnreachable;
     <section class="webhook-card" aria-label="Sonarr Webhook">
@@ -721,6 +775,7 @@ else
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbSeriesLookupQueueItemSummary>>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<QueueChangedEvent<TvdbEpisodeLookupQueueItemSummary>>(_cts.Token));
         _ = WatchAsync(Broadcaster.Subscribe<SonarrWebhookReconciledEvent>(_cts.Token));
+        _ = WatchAsync(Broadcaster.Subscribe<SonarrFolderCheckedEvent>(_cts.Token));
         return Task.CompletedTask;
     }
 

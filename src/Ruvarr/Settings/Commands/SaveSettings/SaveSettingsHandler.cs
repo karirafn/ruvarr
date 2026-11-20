@@ -5,6 +5,7 @@ using Quartz;
 using Ruvarr.Abstractions;
 using Ruvarr.Jobs;
 using Ruvarr.Programs.Domain;
+using Ruvarr.SonarrFolderCheck.Jobs;
 using Ruvarr.SonarrWebhook.Jobs;
 
 namespace Ruvarr.Settings.Commands.SaveSettings;
@@ -129,6 +130,7 @@ internal sealed class SaveSettingsHandler(ISettingsStore store, ISchedulerFactor
         }
 
         await SonarrWebhookReconcileJob.TriggerReprobeAsync(schedulerFactory, cancellationToken);
+        await SonarrFolderCheckJob.TriggerAsync(schedulerFactory, cancellationToken);
 
         return RuvarrResult.Success;
     }

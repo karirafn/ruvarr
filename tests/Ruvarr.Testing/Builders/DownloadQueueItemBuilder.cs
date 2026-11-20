@@ -8,6 +8,7 @@ internal sealed class DownloadQueueItemBuilder
     private RuvEpisode _episode = new RuvEpisodeBuilder().Build();
     private string _failedReason = "test reason";
     private ItemState _state = ItemState.Pending;
+    private DownloadFailureKind _failureKind = DownloadFailureKind.Unclassified;
 
     private enum ItemState
     {
@@ -21,6 +22,12 @@ internal sealed class DownloadQueueItemBuilder
     public DownloadQueueItemBuilder WithEpisode(RuvEpisode episode)
     {
         _episode = episode;
+        return this;
+    }
+
+    public DownloadQueueItemBuilder WithFailureKind(DownloadFailureKind kind)
+    {
+        _failureKind = kind;
         return this;
     }
 
@@ -79,14 +86,14 @@ internal sealed class DownloadQueueItemBuilder
         {
             case ItemState.Failed:
                 item.MarkDownloading();
-                item.MarkFailed(_failedReason);
+                item.MarkFailed(_failedReason, _failureKind);
                 break;
 
             case ItemState.Exhausted:
                 item.MarkDownloading();
                 for (int i = 0; i <= RetrySchedule.MaxRetries; i++)
                 {
-                    item.MarkFailed("exhaustion failure");
+                    item.MarkFailed("exhaustion failure", _failureKind);
                 }
                 break;
 

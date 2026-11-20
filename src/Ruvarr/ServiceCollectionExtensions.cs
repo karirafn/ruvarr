@@ -15,6 +15,8 @@ using Ruvarr.Jobs;
 using Ruvarr.Jobs.Monitoring;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Settings;
+using Ruvarr.SonarrFolderCheck;
+using Ruvarr.SonarrFolderCheck.Jobs;
 using Ruvarr.SonarrWebhook;
 using Ruvarr.SonarrWebhook.Jobs;
 using Ruvarr.TvdbEpisodeLookup;
@@ -53,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddPrograms();
         services.AddDownloads();
         services.AddSonarrWebhook();
+        services.AddSonarrFolderCheck();
 
         services.AddQuartz(options =>
         {
@@ -126,6 +129,14 @@ public static class ServiceCollectionExtensions
                     .ForJob(SonarrWebhookReconcileJob.Key)
                     .StartAt(DateTimeOffset.UtcNow.Add(SonarrWebhookReconcileJob.Interval))
                     .WithSimpleSchedule(x => x.WithInterval(SonarrWebhookReconcileJob.Interval)
+                    .RepeatForever()));
+
+            // StartNow runs the check at startup; the save handler triggers it on demand.
+            options.AddJob<SonarrFolderCheckJob>(x => x.WithIdentity(SonarrFolderCheckJob.Key))
+                .AddTrigger(trigger => trigger
+                    .ForJob(SonarrFolderCheckJob.Key)
+                    .StartNow()
+                    .WithSimpleSchedule(x => x.WithInterval(SonarrFolderCheckJob.Interval)
                     .RepeatForever()));
 
             JobKey tvdbIslTranslationBackfill = new(nameof(TvdbIslTranslationBackfillJob));
