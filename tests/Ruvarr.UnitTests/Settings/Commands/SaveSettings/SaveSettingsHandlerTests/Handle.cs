@@ -381,4 +381,38 @@ public sealed class Handle
             Arg.Any<JobDataMap?>(),
             Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task KeepsIslTranslationBackfillCompleteWhenSaving()
+    {
+        // Arrange
+        _store.Current.Returns(RuvarrSettings.Empty with { IslTranslationBackfillComplete = true });
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", [], []);
+
+        // Act
+        await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _store.Received(1).SaveAsync(
+            Arg.Is<RuvarrSettings>(s => s.IslTranslationBackfillComplete),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task KeepsDownloadsRootWhenSaving()
+    {
+        // Arrange
+        _store.Current.Returns(RuvarrSettings.Empty with { DownloadsRoot = "/data/torrents" });
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", [], []);
+
+        // Act
+        await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _store.Received(1).SaveAsync(
+            Arg.Is<RuvarrSettings>(s => s.DownloadsRoot == "/data/torrents"),
+            Arg.Any<CancellationToken>());
+    }
 }

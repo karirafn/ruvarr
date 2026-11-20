@@ -10,7 +10,9 @@ internal static class ServiceCollectionExtensions
 {
     internal static IServiceCollection AddSettings(this IServiceCollection services, string settingsFilePath)
     {
-        services.AddSingleton<SettingsStore>(_ => new SettingsStore(settingsFilePath));
+        services.AddSingleton<SettingsStore>(sp => new SettingsStore(
+            settingsFilePath,
+            sp.GetRequiredService<IConfiguration>()["Ruvarr:DownloadsRoot"] ?? RuvarrSettings.DefaultDownloadsRoot));
         services.AddSingleton<ISettingsStore>(sp => sp.GetRequiredService<SettingsStore>());
         services.AddTransient<IRequestHandler<SaveSettingsCommand>, SaveSettingsHandler>();
         services.AddTransient<IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>>, GetSettingsHandler>();

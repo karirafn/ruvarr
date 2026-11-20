@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Ruvarr.Settings;
 
 internal sealed record RuvarrSettings(
@@ -8,7 +10,11 @@ internal sealed record RuvarrSettings(
     string EpisodeDownloadDirectory = "tv",
     string MovieDownloadDirectory = "movies")
 {
-    public string DownloadsRoot { get; init; } = "/downloads";
+    public const string DefaultDownloadsRoot = "/downloads";
+
+    // The root is decided by the container mount, so it comes from deployment configuration, not settings.json.
+    [JsonIgnore]
+    public string DownloadsRoot { get; init; } = DefaultDownloadsRoot;
 
     public bool IslTranslationBackfillComplete { get; init; }
 
