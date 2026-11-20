@@ -33,6 +33,8 @@ internal sealed class DownloadQueueItem
 
     public string? FailureReason { get; private set; }
 
+    public DownloadFailureKind FailureKind { get; private set; } = DownloadFailureKind.Unclassified;
+
     public string? CompletedFileName => Status is DownloadQueueStatus.Failed or DownloadQueueStatus.Exhausted
         ? FileName
         : null;
@@ -63,9 +65,10 @@ internal sealed class DownloadQueueItem
         _domainEvents.Add(new DownloadCompletedEvent(this));
     }
 
-    public void MarkFailed(string reason)
+    public void MarkFailed(string reason, DownloadFailureKind kind = DownloadFailureKind.Unclassified)
     {
         FailureReason = reason;
+        FailureKind = kind;
         RetryCount++;
 
         if (RetryCount <= RetrySchedule.MaxRetries)
@@ -96,6 +99,8 @@ internal sealed class DownloadQueueItem
 
         Status = DownloadQueueStatus.Pending;
         NextRetryAt = null;
+        FailureReason = null;
+        FailureKind = DownloadFailureKind.Unclassified;
         _domainEvents.Add(new DownloadRetryScheduledEvent(this));
     }
 
@@ -112,6 +117,7 @@ internal sealed class DownloadQueueItem
         Status = DownloadQueueStatus.Pending;
         NextRetryAt = null;
         FailureReason = null;
+        FailureKind = DownloadFailureKind.Unclassified;
         _domainEvents.Add(new DownloadRetryScheduledEvent(this));
     }
 

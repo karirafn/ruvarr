@@ -50,6 +50,46 @@ public sealed class MarkFailed
     }
 
     [Fact]
+    public void WithoutKind_RecordsUnclassified()
+    {
+        // Arrange
+        DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
+
+        // Act
+        sut.MarkFailed("FFmpeg download failed");
+
+        // Assert
+        sut.FailureKind.ShouldBe(DownloadFailureKind.Unclassified);
+    }
+
+    [Fact]
+    public void WithKind_RecordsKind()
+    {
+        // Arrange
+        DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
+
+        // Act
+        sut.MarkFailed("folder not visible", DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+
+        // Assert
+        sut.FailureKind.ShouldBe(DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+    }
+
+    [Fact]
+    public void WithUnclassifiedKind_AfterClassifiedFailure_OverwritesKind()
+    {
+        // Arrange
+        DownloadQueueItem sut = DownloadQueueItem.Create(new RuvEpisodeBuilder().Build());
+        sut.MarkFailed("folder not visible", DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+
+        // Act
+        sut.MarkFailed("FFmpeg download failed");
+
+        // Assert
+        sut.FailureKind.ShouldBe(DownloadFailureKind.Unclassified);
+    }
+
+    [Fact]
     public void IncrementsRetryCount()
     {
         // Arrange

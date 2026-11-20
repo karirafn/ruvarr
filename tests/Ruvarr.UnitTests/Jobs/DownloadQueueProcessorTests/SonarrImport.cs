@@ -429,6 +429,83 @@ public sealed class SonarrImport : IDisposable
         item.FailureReason.ShouldBe("Sonarr scan did not include the file");
     }
 
+    [Fact]
+    public async Task WhenSonarrScanDoesNotIncludeFile_AndCompletedFileIsAbsent_RecordsUnclassified()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
+        (string fileName, string completedPath) = await ArrangePostDownloadStateAsync(item, dbContext);
+
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<ManualImportFile>());
+
+        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+
+        // Act
+        await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
+
+        // Assert
+        item.ShouldSatisfyAllConditions(
+            () => item.FailureKind.ShouldBe(DownloadFailureKind.Unclassified),
+            () => item.FailureReason.ShouldBe("Sonarr scan did not include the file"));
+    }
+
+    [Fact]
+    public async Task WhenSonarrScanDoesNotIncludeFile_AndCompletedFileIsOnDisk_RecordsSonarrCannotSeeDownloadFolder()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
+        (string fileName, string completedPath) = await ArrangePostDownloadStateAsync(item, dbContext);
+        await WriteCompletedFileAsync(completedPath);
+
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<ManualImportFile>());
+
+        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+
+        // Act
+        await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
+
+        // Assert
+        item.ShouldSatisfyAllConditions(
+            () => item.Status.ShouldBe(DownloadQueueStatus.Failed),
+            () => item.FailureKind.ShouldBe(DownloadFailureKind.SonarrCannotSeeDownloadFolder),
+            () => item.FailureReason.ShouldBe(
+                $"Sonarr can't see the download folder {_settings.ResolvedEpisodeDownloadDirectory}; retries when the folder check passes"));
+    }
+
+    [Fact]
+    public async Task WhenSonarrCannotSeeDownloadFolder_FollowsRetrySchedule()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
+        (string fileName, string completedPath) = await ArrangePostDownloadStateAsync(item, dbContext);
+        await WriteCompletedFileAsync(completedPath);
+
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<ManualImportFile>());
+
+        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        DateTime before = DateTime.UtcNow;
+
+        // Act
+        await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
+
+        // Assert
+        item.ShouldSatisfyAllConditions(
+            () => item.RetryCount.ShouldBe(1),
+            () => item.NextRetryAt.ShouldNotBeNull().ShouldBeGreaterThanOrEqualTo(before.AddHours(1)));
+    }
+
     private static async Task<DownloadQueueItem> SeedUnmatchedEpisodeAsync(RuvarrDbContext dbContext)
     {
         RuvProgram program = new RuvProgramBuilder().WithRuvId(1).Build();

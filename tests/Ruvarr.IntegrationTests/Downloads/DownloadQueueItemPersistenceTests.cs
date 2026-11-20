@@ -109,6 +109,31 @@ public sealed class DownloadQueueItemPersistenceTests(IntegrationTestFactory fac
     }
 
     [Fact]
+    public async Task WhenClassifiedFailureSaved_FailureKindRoundTrips()
+    {
+        // Arrange
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await using AsyncServiceScope arrangeScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        RuvEpisode episode = await AddEpisodeAsync(arrangeContext, "PERSIST05", cancellationToken);
+
+        DownloadQueueItem item = DownloadQueueItem.Create(episode);
+        item.MarkDownloading();
+        item.MarkFailed("folder not visible", DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+        arrangeContext.Set<DownloadQueueItem>().Add(item);
+        await arrangeContext.SaveChangesAsync(cancellationToken);
+
+        // Act
+        await using AsyncServiceScope verifyScope = factory.Services.CreateAsyncScope();
+        RuvarrDbContext verifyContext = verifyScope.ServiceProvider.GetRequiredService<RuvarrDbContext>();
+        DownloadQueueItem saved = await verifyContext.Set<DownloadQueueItem>().SingleAsync(cancellationToken);
+
+        // Assert
+        saved.FailureKind.ShouldBe(DownloadFailureKind.SonarrCannotSeeDownloadFolder);
+    }
+
+    [Fact]
     public async Task WhenSecondUnfinishedItemSavedForEpisode_UniqueIndexRejectsIt()
     {
         // Arrange

@@ -32,6 +32,13 @@ namespace Ruvarr.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("downloaded");
 
+                    b.Property<string>("FailureKind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Unclassified")
+                        .HasColumnName("failure_kind");
+
                     b.Property<string>("FailureReason")
                         .HasMaxLength(512)
                         .HasColumnType("TEXT")
