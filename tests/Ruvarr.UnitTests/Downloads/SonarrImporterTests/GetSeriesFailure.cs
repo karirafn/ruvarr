@@ -11,6 +11,7 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
+using Ruvarr.SonarrFolderCheck;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -81,7 +82,7 @@ public sealed class GetSeriesFailure
         _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
             .Returns(new Result<IReadOnlyList<Series>>(ApiClientErrors.RequestFailed));
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, cancellationToken);

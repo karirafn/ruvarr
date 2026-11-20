@@ -3,12 +3,14 @@ using Ruvarr.Downloads.Domain;
 using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Settings;
+using Ruvarr.SonarrFolderCheck;
 
 namespace Ruvarr.Downloads;
 
 internal sealed class SonarrImporter(
     ISonarrClient sonarr,
     RuvarrDbContext dbContext,
+    SonarrFolderCheckHealth folderCheck,
     ILogger<SonarrImporter> logger)
 {
     public async Task ImportAsync(
@@ -151,8 +153,11 @@ internal sealed class SonarrImporter(
         string folder = settings.ResolvedEpisodeDownloadDirectory;
 
         // A file that exists on Ruvarr's side but is absent from Sonarr's scan of the same path almost
-        // always means the two containers mount the downloads share at different paths.
-        if (DownloadFileStore.CompletedFileExists(settings, fileName))
+        // always means the two containers mount the downloads share at different paths. While the folder
+        // check passes, Sonarr can see the folder, so the cause is something else; classifying it as the
+        // folder kind would let every Passing check re-queue it again.
+        if (folderCheck.Status != SonarrFolderCheckStatus.Passing
+            && DownloadFileStore.CompletedFileExists(settings, fileName))
         {
             logger.LogWarning(
                 "Sonarr can't see the download folder {Folder}: its scan did not include {Filename}, which is on disk. Marking {Episode} failed",

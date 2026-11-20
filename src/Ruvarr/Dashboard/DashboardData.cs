@@ -1,3 +1,4 @@
+using Ruvarr.SonarrFolderCheck;
 using Ruvarr.SonarrWebhook;
 
 namespace Ruvarr.Dashboard;
@@ -13,7 +14,8 @@ internal sealed record DashboardData(
     TvdbSeriesLookupCardInfo TvdbSeriesLookup,
     TvdbEpisodeLookupCardInfo TvdbEpisodeLookup,
     DownloadCardInfo Download,
-    SonarrWebhookCardInfo SonarrWebhook);
+    SonarrWebhookCardInfo SonarrWebhook,
+    SonarrFolderCheckCardInfo SonarrFolderCheck);
 
 internal sealed record JobFailureInfo(
     int ConsecutiveFailures,
@@ -126,3 +128,10 @@ internal sealed record SonarrWebhookCardInfo(
     DateTimeOffset? NextAttemptUtc);
 
 internal sealed record DownloadCardPendingItem(string ProgramName, string EpisodeTitle);
+
+internal sealed record SonarrFolderCheckCardInfo(
+    SonarrFolderCheckResult? LastCheck,
+    DateTimeOffset? NextCheckUtc)
+{
+    public SonarrFolderCheckStatus Status => LastCheck?.Status ?? SonarrFolderCheckStatus.Unknown;
+}

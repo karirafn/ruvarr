@@ -16,6 +16,7 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Jobs;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
+using Ruvarr.SonarrFolderCheck;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -82,7 +83,7 @@ public sealed class EarlyReturns : IDisposable
     private DownloadQueueProcessor CreateJob(RuvarrDbContext dbContext) => new(
         NullLogger<DownloadQueueProcessor>.Instance,
         dbContext, _ffmpeg, _streamInspector, _settingsStore, _progressNotifier, _fileStore,
-        new SonarrImporter(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance));
+        new SonarrImporter(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance));
 
     private static async Task<DownloadQueueItem> SeedPendingItemAsync(RuvarrDbContext dbContext)
     {

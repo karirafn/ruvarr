@@ -1,0 +1,30 @@
+.folder-check-warning__strip {
+    margin-block-end: 1rem;
+}
+
+.folder-check-warning__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.folder-check-warning__headline {
+    margin: 0;
+    font-weight: 600;
+}
+
+.folder-check-warning__body,
+.folder-check-warning__meta {
+    margin: 0;
+    font-size: 0.78rem;
+    color: #fcd9a0;
+}
+
+.folder-check-warning__path {
+    overflow-wrap: anywhere;
+}
+
+.folder-check-warning__meta {
+    font-variant-numeric: tabular-nums;
+}

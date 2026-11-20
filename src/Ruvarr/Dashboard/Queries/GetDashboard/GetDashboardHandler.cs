@@ -11,6 +11,8 @@ using Ruvarr.Jobs.Monitoring;
 using Ruvarr.ProgramRefreshQueue.Notifiers;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
+using Ruvarr.SonarrFolderCheck;
+using Ruvarr.SonarrFolderCheck.Jobs;
 using Ruvarr.SonarrWebhook;
 using Ruvarr.SonarrWebhook.Jobs;
 using Ruvarr.TvdbEpisodeLookup.Jobs;
@@ -30,6 +32,7 @@ internal sealed class GetDashboardHandler(
     TimeProvider timeProvider,
     JobOutcomeNotifier jobOutcomeNotifier,
     SonarrWebhookHealth sonarrWebhookHealth,
+    SonarrFolderCheckHealth sonarrFolderCheckHealth,
     ISettingsStore settingsStore)
     : IRequestHandler<GetDashboardQuery, DashboardData>
 {
@@ -53,8 +56,9 @@ internal sealed class GetDashboardHandler(
         Task<TvdbEpisodeLookupCardInfo> tvdbEpisodeLookupTask = GetTvdbEpisodeLookupCardInfoAsync(cancellationToken);
         Task<DownloadCardInfo> downloadCardTask = GetDownloadCardInfoAsync(cancellationToken);
         Task<SonarrWebhookCardInfo> sonarrWebhookTask = GetSonarrWebhookCardInfoAsync(cancellationToken);
+        Task<SonarrFolderCheckCardInfo> sonarrFolderCheckTask = GetSonarrFolderCheckCardInfoAsync(cancellationToken);
 
-        await Task.WhenAll(queueStatusTask, programRefreshTask, episodeSyncTask, tvdbSeriesLookupTask, tvdbEpisodeLookupTask, downloadCardTask, sonarrWebhookTask);
+        await Task.WhenAll(queueStatusTask, programRefreshTask, episodeSyncTask, tvdbSeriesLookupTask, tvdbEpisodeLookupTask, downloadCardTask, sonarrWebhookTask, sonarrFolderCheckTask);
 
         return new DashboardData(
             await recentlyAddedTask,
@@ -67,7 +71,8 @@ internal sealed class GetDashboardHandler(
             await tvdbSeriesLookupTask,
             await tvdbEpisodeLookupTask,
             await downloadCardTask,
-            await sonarrWebhookTask);
+            await sonarrWebhookTask,
+            await sonarrFolderCheckTask);
     }
 
     private async Task<IReadOnlyList<DashboardRecentlyAddedItem>> GetRecentlyAddedEpisodesAsync(CancellationToken cancellationToken)
@@ -388,6 +393,25 @@ internal sealed class GetDashboardHandler(
         }
 
         return ToSonarrWebhookCard(settingsStore.Current.IsSonarrConfigured, sonarrWebhookHealth.LastOutcome, nextAttemptUtc);
+    }
+
+    private async Task<SonarrFolderCheckCardInfo> GetSonarrFolderCheckCardInfoAsync(CancellationToken cancellationToken)
+    {
+        DateTimeOffset? nextCheckUtc = null;
+        try
+        {
+            IScheduler scheduler = await schedulerFactory.GetScheduler(cancellationToken);
+            PagedResult<TriggerHeader> result = await scheduler.QueryTriggers(
+                new TriggerQuery { Job = SonarrFolderCheckJob.Key },
+                cancellationToken);
+            nextCheckUtc = result.Items.Count > 0 ? result.Items[0].NextFireTimeUtc : null;
+        }
+        catch (SchedulerException)
+        {
+            // Scheduler not started or job not found
+        }
+
+        return new SonarrFolderCheckCardInfo(sonarrFolderCheckHealth.LastResult, nextCheckUtc);
     }
 
     internal static SonarrWebhookCardInfo ToSonarrWebhookCard(

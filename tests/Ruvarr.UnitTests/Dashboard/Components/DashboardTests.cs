@@ -7,6 +7,7 @@ using NSubstitute;
 using Ruvarr.Abstractions;
 using Ruvarr.Dashboard;
 using Ruvarr.Dashboard.Queries.GetDashboard;
+using Ruvarr.SonarrFolderCheck;
 using Ruvarr.SonarrWebhook;
 
 using Shouldly;
@@ -1281,7 +1282,7 @@ public sealed class DashboardTests : BunitContext
         new(status, callbackUrl, triedUrls, LastAttemptAt: null, NextAttemptUtc: null);
 
     [Fact]
-    public void SonarrWebhookCard_IsPlacedAfterDownloadsCardAndBeforeTables()
+    public void SonarrWebhookCard_IsPlacedAfterFolderCheckCardAndBeforeTables()
     {
         // Act
         IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrWebhook(DefaultSonarrWebhookCard);
@@ -1290,7 +1291,7 @@ public sealed class DashboardTests : BunitContext
         IElement card = cut.Find("section.webhook-card");
         card.GetAttribute("aria-label").ShouldBe("Sonarr Webhook");
         card.QuerySelector("h2")!.TextContent.ShouldBe("Sonarr Webhook");
-        card.PreviousElementSibling!.ClassList.ShouldContain("download-card");
+        card.PreviousElementSibling!.ClassList.ShouldContain("folder-check-card");
         card.NextElementSibling!.ClassList.ShouldContain("dashboard-section");
     }
 
@@ -1421,6 +1422,112 @@ public sealed class DashboardTests : BunitContext
         broadcaster.Received(1).Subscribe<SonarrWebhookReconciledEvent>(Arg.Any<CancellationToken>());
     }
 
+    private IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> RenderWithSonarrFolderCheck(SonarrFolderCheckCardInfo folderCheck)
+    {
+        RegisterHandler(CreateDashboardData(sonarrFolderCheck: folderCheck));
+        RegisterBroadcaster();
+        return Render<Ruvarr.Dashboard.Components.Dashboard>();
+    }
+
+    private static SonarrFolderCheckCardInfo FolderCheckCard(SonarrFolderCheckStatus status) =>
+        new(new SonarrFolderCheckResult(status, "/data/torrents/tv", new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero)), NextCheckUtc: null);
+
+    [Fact]
+    public void SonarrFolderCheckCard_IsPlacedBetweenDownloadsAndWebhookCards()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrFolderCheck(DefaultSonarrFolderCheckCard);
+
+        // Assert
+        IElement card = cut.Find("section.folder-check-card");
+        card.GetAttribute("aria-label").ShouldBe("Sonarr Folder Check");
+        card.QuerySelector("h2")!.TextContent.ShouldBe("Sonarr Folder Check");
+        card.PreviousElementSibling!.ClassList.ShouldContain("download-card");
+        card.NextElementSibling!.ClassList.ShouldContain("webhook-card");
+    }
+
+    [Fact]
+    public void SonarrFolderCheckCard_WhenPassing_ShowsPassingBadgeAndNoWarning()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrFolderCheck(FolderCheckCard(SonarrFolderCheckStatus.Passing));
+
+        // Assert
+        IElement card = cut.Find("section.folder-check-card");
+        card.QuerySelector(".card-header__badges")!.TextContent.Trim().ShouldBe("Passing");
+        card.QuerySelector(".card-header__badges .refresh-card__badge--idle").ShouldNotBeNull();
+        card.QuerySelector(".folder-check-warning__strip").ShouldBeNull();
+        card.QuerySelector(".empty-message").ShouldBeNull();
+    }
+
+    [Fact]
+    public void SonarrFolderCheckCard_WhenUnknown_ShowsUnknownBadgeAndHintWithoutPathMismatchCopy()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrFolderCheck(FolderCheckCard(SonarrFolderCheckStatus.Unknown));
+
+        // Assert
+        IElement card = cut.Find("section.folder-check-card");
+        card.QuerySelector(".card-header__badges")!.TextContent.Trim().ShouldBe("Unknown");
+        card.QuerySelector(".card-fail-badge").ShouldBeNull();
+        card.QuerySelector(".empty-message")!.TextContent.ShouldBe("Ruvarr checks this folder once Sonarr is configured and reachable.");
+        card.QuerySelector(".folder-check-warning__strip").ShouldBeNull();
+    }
+
+    [Fact]
+    public void SonarrFolderCheckCard_WhenFailing_ShowsFailingBadgeAndWarningStrip()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrFolderCheck(FolderCheckCard(SonarrFolderCheckStatus.Failing));
+
+        // Assert
+        IElement card = cut.Find("section.folder-check-card");
+        card.QuerySelector(".card-fail-badge")!.TextContent.Trim().ShouldBe("Failing");
+        card.QuerySelector(".folder-check-warning .folder-check-warning__strip").ShouldNotBeNull();
+        card.QuerySelector(".empty-message").ShouldBeNull();
+    }
+
+    [Fact]
+    public void SonarrFolderCheckCard_ShowsFolderLastAndNextCheckDetails()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrFolderCheck(FolderCheckCard(SonarrFolderCheckStatus.Passing));
+
+        // Assert
+        IReadOnlyList<IElement> details = cut.FindAll("section.folder-check-card .refresh-card__details--compact .refresh-card__detail");
+        details.Select(d => d.QuerySelector("dt")!.TextContent).ShouldBe(["Folder", "Last checked", "Next check"]);
+        details[0].QuerySelector("dd.folder-check-card__path")!.TextContent.ShouldBe("/data/torrents/tv");
+        details[1].QuerySelector("dd")!.TextContent.ShouldNotBe("Never");
+    }
+
+    [Fact]
+    public void SonarrFolderCheckCard_BeforeFirstCheck_ShowsUnknownWithEmptyDetails()
+    {
+        // Act
+        IRenderedComponent<Ruvarr.Dashboard.Components.Dashboard> cut = RenderWithSonarrFolderCheck(DefaultSonarrFolderCheckCard);
+
+        // Assert
+        IElement card = cut.Find("section.folder-check-card");
+        card.QuerySelector(".card-header__badges")!.TextContent.Trim().ShouldBe("Unknown");
+        IReadOnlyList<IElement> details = cut.FindAll("section.folder-check-card .refresh-card__detail dd");
+        details.Select(d => d.TextContent).ShouldBe(["—", "Never", "—"]);
+    }
+
+    [Fact]
+    public void SubscribesToSonarrFolderCheckedEvent()
+    {
+        // Arrange
+        RegisterHandler(CreateDashboardData());
+        IDomainEventBroadcaster broadcaster = Substitute.For<IDomainEventBroadcaster>();
+        Services.AddSingleton(broadcaster);
+
+        // Act
+        Render<Ruvarr.Dashboard.Components.Dashboard>();
+
+        // Assert
+        broadcaster.Received(1).Subscribe<SonarrFolderCheckedEvent>(Arg.Any<CancellationToken>());
+    }
+
     private void RegisterHandler(DashboardData data)
     {
         IRequestHandler<GetDashboardQuery, DashboardData> handler =
@@ -1447,7 +1554,8 @@ public sealed class DashboardTests : BunitContext
         TvdbSeriesLookupCardInfo? tvdbSeriesLookup = null,
         TvdbEpisodeLookupCardInfo? tvdbEpisodeLookup = null,
         DownloadCardInfo? download = null,
-        SonarrWebhookCardInfo? sonarrWebhook = null)
+        SonarrWebhookCardInfo? sonarrWebhook = null,
+        SonarrFolderCheckCardInfo? sonarrFolderCheck = null)
     {
         return new DashboardData(
             recentlyAdded ?? [],
@@ -1465,8 +1573,11 @@ public sealed class DashboardTests : BunitContext
             tvdbSeriesLookup ?? DefaultTvdbSeriesLookupCard,
             tvdbEpisodeLookup ?? DefaultTvdbEpisodeLookupCard,
             download ?? DefaultDownloadCard,
-            sonarrWebhook ?? DefaultSonarrWebhookCard);
+            sonarrWebhook ?? DefaultSonarrWebhookCard,
+            sonarrFolderCheck ?? DefaultSonarrFolderCheckCard);
     }
+
+    private static readonly SonarrFolderCheckCardInfo DefaultSonarrFolderCheckCard = new(LastCheck: null, NextCheckUtc: null);
 
     private static readonly SonarrWebhookCardInfo DefaultSonarrWebhookCard = new(
         SonarrWebhookStatus.Registered,

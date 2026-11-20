@@ -8,6 +8,7 @@ using Ruvarr.Abstractions;
 using Ruvarr.Jobs;
 using Ruvarr.Settings;
 using Ruvarr.Settings.Commands.SaveSettings;
+using Ruvarr.SonarrFolderCheck.Jobs;
 using Ruvarr.SonarrWebhook;
 using Ruvarr.SonarrWebhook.Jobs;
 
@@ -360,6 +361,24 @@ public sealed class Handle
         await _scheduler.Received(1).TriggerJob(
             Arg.Is<JobKey>(k => k.Name == nameof(SonarrWebhookReconcileJob)),
             Arg.Is<JobDataMap>(m => SonarrWebhookReconcileJob.ModeFrom(m) == SonarrWebhookReconcileMode.Reprobe),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TriggersSonarrFolderCheckOnSave()
+    {
+        // Arrange
+        _store.Current.Returns(new RuvarrSettings(SonarrBaseAddress: "http://localhost:8989", SonarrApiKey: "existing-key"));
+        SaveSettingsHandler sut = CreateHandler();
+        SaveSettingsCommand command = new(new Uri("http://localhost:8989"), "api-key", "", "", "tv", "movies", [], []);
+
+        // Act
+        await sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await _scheduler.Received(1).TriggerJob(
+            Arg.Is<JobKey>(k => k.Name == nameof(SonarrFolderCheckJob)),
+            Arg.Any<JobDataMap?>(),
             Arg.Any<CancellationToken>());
     }
 

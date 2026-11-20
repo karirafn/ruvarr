@@ -6,8 +6,12 @@
 @using Ruvarr.Settings.Queries.GetDistinctChannels
 @using Ruvarr.Settings.Queries.GetSettings
 @using Ruvarr.Settings.Queries.TestSonarrConnection
+@using Ruvarr.SonarrFolderCheck
+@using Ruvarr.SonarrFolderCheck.Components
 @inject IServiceScopeFactory ScopeFactory
 @inject ISettingsStore SettingsStore
+@inject IDomainEventBroadcaster Broadcaster
+@inject SonarrFolderCheckHealth FolderCheckHealth
 @implements IDisposable
 
 <h1>Settings</h1>
@@ -86,6 +90,7 @@ else
 
         <section class="settings-section">
             <h2 class="settings-section-title">Directories</h2>
+            <SonarrFolderCheckWarning Check="_folderCheck" />
 
             <div class="settings-field">
                 <label for="episode-download-dir">Episode Subdirectory</label>
@@ -270,8 +275,12 @@ else
     private string? _addProgramError;
     private List<string> _ignoredProgramsList = [];
     private HashSet<string> _originalIgnoredPrograms = new(StringComparer.OrdinalIgnoreCase);
+    private SonarrFolderCheckResult? _folderCheck;
     protected override async Task OnInitializedAsync()
     {
+        _folderCheck = FolderCheckHealth.LastResult;
+        _ = WatchFolderCheckAsync();
+
         await using AsyncServiceScope scope = ScopeFactory.CreateAsyncScope();
         IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>> settingsHandler =
             scope.ServiceProvider.GetRequiredService<IRequestHandler<GetSettingsQuery, Result<RuvarrSettings>>>();
@@ -486,6 +495,22 @@ else
         _availableChannels = _allChannels
             .Where(c => !ignored.Contains(c))
             .ToList();
+    }
+
+    private async Task WatchFolderCheckAsync()
+    {
+        try
+        {
+            await foreach (SonarrFolderCheckedEvent _ in Broadcaster.Subscribe<SonarrFolderCheckedEvent>(_cts.Token))
+            {
+                _folderCheck = FolderCheckHealth.LastResult;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Component disposed
+        }
     }
 
     public void Dispose()

@@ -11,6 +11,7 @@ using Ruvarr.Infrastructure.Sonarr;
 using Ruvarr.Infrastructure.Sonarr.Models;
 using Ruvarr.Programs.Domain;
 using Ruvarr.Settings;
+using Ruvarr.SonarrFolderCheck;
 using Ruvarr.Testing.Builders;
 
 using Shouldly;
@@ -136,7 +137,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true) });
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -176,7 +177,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new[] { file });
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -206,7 +207,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new Result<IReadOnlyList<ManualImportFile>>(ApiClientErrors.RequestFailed));
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -238,7 +239,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new Result<IReadOnlyList<SonarrEpisode>>(ApiClientErrors.RequestFailed));
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -272,7 +273,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true) });
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -307,7 +308,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 5001, SeasonNumber: 1, EpisodeNumber: 1, HasFile: false, Monitored: true) });
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -342,7 +343,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetEpisodesAsync(42, Arg.Any<CancellationToken>())
             .Returns(new[] { new SonarrEpisode(Id: 201, SeriesId: 42, TvdbId: 9999, SeasonNumber: 99, EpisodeNumber: 99, HasFile: false, Monitored: true) });
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -383,7 +384,7 @@ public sealed class SonarrImport : IDisposable
                 new SonarrEpisode(Id: 203, SeriesId: 42, TvdbId: 5003, SeasonNumber: 2, EpisodeNumber: 1, HasFile: false, Monitored: true),
             });
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -415,7 +416,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new[] { unrelatedFile });
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -442,7 +443,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<ManualImportFile>());
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -467,7 +468,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<ManualImportFile>());
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
@@ -478,6 +479,35 @@ public sealed class SonarrImport : IDisposable
             () => item.FailureKind.ShouldBe(DownloadFailureKind.SonarrCannotSeeDownloadFolder),
             () => item.FailureReason.ShouldBe(
                 $"Sonarr can't see the download folder {_settings.ResolvedEpisodeDownloadDirectory}; retries when the folder check passes"));
+    }
+
+    [Fact]
+    public async Task WhenSonarrScanDoesNotIncludeFile_AndFolderCheckIsPassing_RecordsUnclassified()
+    {
+        // Arrange
+        using RuvarrDbContext dbContext = CreateDbContext();
+        DownloadQueueItem item = await SeedMatchedEpisodeAsync(dbContext);
+        (string fileName, string completedPath) = await ArrangePostDownloadStateAsync(item, dbContext);
+        await WriteCompletedFileAsync(completedPath);
+
+        _sonarr.GetSeriesAsync(Arg.Any<CancellationToken>())
+            .Returns(new Result<IReadOnlyList<Series>>(Array.Empty<Series>()));
+        _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<ManualImportFile>());
+
+        SonarrFolderCheckHealth folderCheck = new();
+        folderCheck.Record(new SonarrFolderCheckResult(
+            SonarrFolderCheckStatus.Passing, _settings.ResolvedEpisodeDownloadDirectory, DateTimeOffset.UtcNow));
+        SonarrImporter sut = new(_sonarr, dbContext, folderCheck, NullLogger<SonarrImporter>.Instance);
+
+        // Act
+        await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);
+
+        // Assert
+        item.ShouldSatisfyAllConditions(
+            () => item.Status.ShouldBe(DownloadQueueStatus.Failed),
+            () => item.FailureKind.ShouldBe(DownloadFailureKind.Unclassified),
+            () => item.FailureReason.ShouldBe("Sonarr scan did not include the file"));
     }
 
     [Fact]
@@ -494,7 +524,7 @@ public sealed class SonarrImport : IDisposable
         _sonarr.GetManualImportsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(Array.Empty<ManualImportFile>());
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
         DateTime before = DateTime.UtcNow;
 
         // Act
@@ -530,7 +560,7 @@ public sealed class SonarrImport : IDisposable
         DownloadQueueItem item = await SeedUnmatchedEpisodeAsync(dbContext);
         (string fileName, string completedPath) = await ArrangePostDownloadStateAsync(item, dbContext);
 
-        SonarrImporter sut = new(_sonarr, dbContext, NullLogger<SonarrImporter>.Instance);
+        SonarrImporter sut = new(_sonarr, dbContext, new SonarrFolderCheckHealth(), NullLogger<SonarrImporter>.Instance);
 
         // Act
         await sut.ImportAsync(item, _settings, fileName, completedPath, TestContext.Current.CancellationToken);

@@ -305,8 +305,9 @@
     margin: 0;
 }
 
-/* Sonarr Webhook card — copies the .refresh-card block; failing state reuses the card-fail-* amber */
-.webhook-card {
+/* Sonarr Webhook and Folder Check cards — copy the .refresh-card block; failing state reuses the card-fail-* amber */
+.webhook-card,
+.folder-check-card {
     background-color: #2a2a2a;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -314,18 +315,21 @@
     margin-bottom: 1.5rem;
 }
 
-.webhook-card__header {
+.webhook-card__header,
+.folder-check-card__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 1rem;
 }
 
-.webhook-card__header .dashboard-section-title {
+.webhook-card__header .dashboard-section-title,
+.folder-check-card__header .dashboard-section-title {
     margin: 0;
 }
 
-.webhook-card__url {
+.webhook-card__url,
+.folder-check-card__path {
     overflow-wrap: anywhere;
 }
 
