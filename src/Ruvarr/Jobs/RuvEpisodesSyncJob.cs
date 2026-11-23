@@ -52,6 +52,8 @@ internal sealed class RuvEpisodesSyncJob(
 
         List<int> ruvIds = [.. leases.Select(l => l.RuvId)];
 
+        // Untracked projection only: each program is loaded tracked inside its own iteration so
+        // ChangeTracker.Clear() after a failure discards that program's state and nothing else.
         var programs = await dbContext.Set<RuvProgram>()
             .AsNoTracking()
             .Where(x => ruvIds.Contains(x.RuvId))

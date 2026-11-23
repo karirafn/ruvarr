@@ -303,6 +303,8 @@ internal sealed class GetDashboardHandler(
             // Scheduler not started or job not found
         }
 
+        // Stall is judged on ingest completion, not the seconds-apart sync tick. The program refresh
+        // feeds this queue, so the threshold follows its interval and moves when that interval changes.
         DateTimeOffset? lastCompletedAt = programRefreshNotifier.LastCompletedAt;
         DateTimeOffset now = timeProvider.GetUtcNow();
         TimeSpan elapsed = now - (lastCompletedAt ?? programRefreshNotifier.StartedAt);

@@ -22,6 +22,9 @@ internal sealed class DownloadFileStore(ILogger<DownloadFileStore> logger)
         string completedPath = CompletedPath(settings, fileName);
 
         Directory.CreateDirectory(settings.ResolvedEpisodeDownloadDirectory);
+
+        // Overwrite rather than pick a new name: Sonarr imports only the canonical file name, so a
+        // disambiguated copy would be an orphan no queue item ever claims.
         File.Move(incompletePath, completedPath, overwrite: true);
 
         return completedPath;

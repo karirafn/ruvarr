@@ -1,5 +1,8 @@
 namespace Ruvarr.Jobs.Monitoring;
 
+// Keyed by Quartz job-key name, the only job identity JobExecutionListener receives. Registration
+// sets each key to nameof(<JobType>), so a dashboard card reads GetOutcome(nameof(<JobType>)).
+// In-memory on purpose: a still-failing job re-fails within one trigger interval after a restart.
 internal sealed class JobOutcomeNotifier(TimeProvider timeProvider)
 {
     private const int MaxErrorLength = 200;

@@ -62,6 +62,9 @@ internal sealed class DownloadQueueProcessor(
         RuvarrSettings settings = settingsStore.Current;
         string fileName = item.FileName!;
         string completedPath = DownloadFileStore.CompletedPath(settings, fileName);
+
+        // A file in the completed directory is whole (ADR 0002), so a retry after a failed import
+        // goes straight to the import instead of downloading again.
         bool reuseExisting = DownloadFileStore.CompletedFileExists(settings, fileName);
 
         if (!reuseExisting)

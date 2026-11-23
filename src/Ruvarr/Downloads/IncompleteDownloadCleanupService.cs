@@ -42,6 +42,8 @@ internal sealed class IncompleteDownloadCleanupService(
                 fileStore.DeleteIncomplete(settings, orphan.FileName);
             }
 
+            // Reset here rather than in the download job's cancellation path: a hard crash never
+            // reaches that path, so this startup sweep is the one exit for both crash and shutdown.
             orphan.MarkInterrupted();
         }
 
