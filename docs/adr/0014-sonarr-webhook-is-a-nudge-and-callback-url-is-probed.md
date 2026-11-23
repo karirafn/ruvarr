@@ -1,7 +1,8 @@
-# 0014. The Sonarr webhook is a nudge, and its callback URL is found by probing
+---
+reaches: external-contract
+---
 
-**Date:** 2026-11-10
-**Status:** Accepted
+# 0014. The Sonarr webhook is a nudge, and its callback URL is found by probing
 
 ## Context
 

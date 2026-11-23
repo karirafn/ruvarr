@@ -1,15 +1,18 @@
+---
+reaches: non-functional
+---
+
 # Failed Downloads Exit Automatically When Their Cause Clears
 
 ## Context
 
-[ADR 0004](0004-bounded-download-retry-with-exhausted-terminal-state.md) made `Exhausted` terminal, with a manual `RetryNow()` as its only exit.
+[ADR 0004](0004-bounded-download-retry-with-exhausted-terminal-state.md) originally made `Exhausted` terminal, with a manual `RetryNow()` as its only exit.
 In production, three downloads exhausted their budget on a cause no retry could fix.
 Ruvarr and Sonarr mounted the same share at different container paths, so every Sonarr manual-import scan of Ruvarr's folder came back without the file.
 One of the three had meanwhile been imported into Sonarr by another route, so retrying it would only have imported a duplicate.
 Both causes clear outside the retry loop, and neither the backoff schedule nor the budget observes them.
 
-This ADR replaces 0004's clause that `Exhausted` is terminal with only a manual exit.
-The rest of 0004 stands.
+ADR 0004 now defers to this ADR for how `Failed` and `Exhausted` items exit when their cause clears.
 
 ## Decision
 

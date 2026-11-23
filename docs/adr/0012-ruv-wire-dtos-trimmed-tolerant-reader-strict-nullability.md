@@ -1,7 +1,8 @@
-# 0012. RÚV wire DTOs are a trimmed Tolerant Reader with a strict nullability boundary
+---
+reaches: external-contract
+---
 
-**Date:** 2026-10-20
-**Status:** Accepted
+# 0012. RÚV wire DTOs are a trimmed Tolerant Reader with a strict nullability boundary
 
 ## Context
 

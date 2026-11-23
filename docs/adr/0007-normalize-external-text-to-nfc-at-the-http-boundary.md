@@ -1,4 +1,8 @@
-﻿# Normalize External Text to NFC at the HTTP Boundary
+---
+reaches: hidden-invariant
+---
+
+# Normalize External Text to NFC at the HTTP Boundary
 
 ## Context
 

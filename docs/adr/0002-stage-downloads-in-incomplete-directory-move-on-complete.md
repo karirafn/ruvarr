@@ -1,3 +1,7 @@
+---
+reaches: external-contract
+---
+
 # Stage Downloads in a Flat Non-Configurable Incomplete Directory, Move on Complete
 
 ## Context
