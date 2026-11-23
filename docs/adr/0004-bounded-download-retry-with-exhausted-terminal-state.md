@@ -1,6 +1,8 @@
-# Bounded Download Retry with an Exhausted Terminal State
+---
+reaches: non-functional
+---
 
-> **2026-11-19 — Amended:** the Decision clause that makes `Exhausted` terminal with only a manual `RetryNow()` exit is replaced by [ADR 0015](0015-failed-downloads-exit-automatically-when-their-cause-clears.md), which adds automatic exits when the failure's cause clears.
+# Bounded Download Retry with an Exhausted State
 
 ## Context
 
@@ -12,7 +14,8 @@ A naive always-retry loop would hammer a broken download source indefinitely, pr
 Mirror the `LookupSchedule` backoff pattern via a `RetrySchedule` value object (1 h → 2 h → 4 h → 1 d → 7 d).
 `MarkFailed(reason)` increments `RetryCount` and, when the budget is not yet spent, schedules `NextRetryAt` and sets status to `Failed`.
 A `DownloadRetryJob` runs periodically and re-queues `Failed` items whose `NextRetryAt` has elapsed back to `Pending`, where the existing download processor picks them up.
-Once `RetryCount` exceeds the budget, the item moves to a new terminal `Exhausted` state (`NextRetryAt = null`).
+Once `RetryCount` exceeds the budget, the item moves to a new `Exhausted` state (`NextRetryAt = null`), which the backoff schedule never leaves.
+An `Exhausted` item leaves it automatically only when the failure's cause clears, as [ADR 0015](0015-failed-downloads-exit-automatically-when-their-cause-clears.md) records; otherwise its exit is manual.
 `Exhausted` items are always visible on the `/downloads` page, and a manual `RetryNow()` action is always reachable from there.
 `RetryNow()` accepts both `Failed` and `Exhausted` items, ignores cooldown, preserves `RetryCount` (so a re-fail lands on the correct backoff rung or stays `Exhausted` rather than resetting the budget), and moves the item back to `Pending`.
 
@@ -29,3 +32,7 @@ They are immediately manually retryable via `RetryNow()`, and auto-retry resumes
 
 - Downloads auto-recover within a bounded, exponentially-backed-off window, then surface for manual action — satisfying both the automatic-exit and the liveness-of-the-exit rules.
 - The backoff switch duplicates logic already in `LookupSchedule`; this is the second occurrence, kept as-is per the rule-of-three (extract on third).
+
+## Revisions
+
+- 2026-11-19 — `Exhausted` is no longer terminal with only a manual `RetryNow()` exit: items also leave it automatically when the failure's cause clears (ADR 0015)
